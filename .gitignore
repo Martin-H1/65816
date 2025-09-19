@@ -1,0 +1,16 @@
+# Emacs temporary files
+*~
+
+# Object files
+*.o
+
+# Linker output
+*.map
+
+# Executables
+*.hex
+*.rom
+*.srec
+
+# Debug files
+*.lst
