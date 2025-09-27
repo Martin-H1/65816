@@ -5,6 +5,7 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+.include "ascii.inc"
 .include "common.inc"
 
 ;
@@ -86,7 +87,7 @@ conioSetEcho:
 .export cgets
 cgets:
 .scope
-	ACC8
+	OFF16MEM
 	phy
 	ldy _writeIdx
 _while:
@@ -97,20 +98,20 @@ _while:
 	lda _tib,y
 	jsr putch
 noecho:	lda _tib,y
-	cmp #AscBS
+	cmp #BKSP
 	bne keepchar
 	_decIdx
 	bra _while
 keepchar:
 	_incIdx
-	cmp #AscCR
+	cmp #C_RETURN
 	beq _end
-	cmp #AscNull
+	cmp #NULL
 	bne _while
 _end:
 	sty _writeIdx
 	ply
-	ACC16
+	ON16MEM
 	rts
 
 _getch:
@@ -122,7 +123,7 @@ _getch:
 .export cputs
 cputs:
 .scope
-	ACC8
+	OFF16MEM
 	phy
 	ldy #$0000
 _loop:	lda (ARG1, s),y		; get the string via address from zero page
@@ -131,7 +132,7 @@ _loop:	lda (ARG1, s),y		; get the string via address from zero page
 	iny			; get the next byte
 	bra _loop
 _exit:	ply
-	ACC16
+	ON16MEM
 	rts
 .endscope
 
@@ -140,7 +141,7 @@ _exit:	ply
 .export getch
 getch:
 .scope
-	ACC8
+	OFF16MEM
 	phy
 	ldy _readIdx
 	cpy _writeIdx
@@ -150,7 +151,7 @@ noget:	lda _tib,y
 	_incIdx
 	sty _readIdx		; store next read index.
 	ply
-	ACC16
+	ON16MEM
 	and #$00FF		; clear high byte .
 	rts
 .endscope
@@ -159,14 +160,14 @@ noget:	lda _tib,y
 .export ungetch
 ungetch:
 .scope
-	ACC8
+	OFF16MEM
 	phy
 	ldy _readIdx
 	_decIdx
 	sta _tib,y
 	sty _readIdx
 	ply
-	ACC16
+	ON16MEM
 	rts
 .endscope
 
