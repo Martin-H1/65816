@@ -3,6 +3,9 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+; Set the assembler into 16 bit mode.
+.include "common.inc"
+
 ;
 ; Aliases
 ;
@@ -11,9 +14,11 @@
 ; Data segments
 ;
 .segment "BSS"
+Abortvector:	.res 3		; holds application abort vector
 BRKvector:	.res 3		; holds application break vector
+COPvector:	.res 3		; holds application cop vector
 RESvector:	.res 3		; holds application reset vector & checksum
-INTvector:	.res 3		; holds application interrupt vector & checksum
+INTvector:	.res 3		; holds application interrpt vector & checksum
 NMIvector:	.res 3		; holds application NMI vector & checksum
 
 .segment "CODE"
@@ -27,32 +32,54 @@ NMIvector:	.res 3		; holds application NMI vector & checksum
 ;
 .import main
 
+brkv:	jmp (BRKvector)
+copv:	jmp (COPvector)
+irqv:	jmp (INTvector)
+nmiv:	jmp (NMIvector)
+abortv:	jmp (Abortvector)
+
 ; Interrupt handler for RESET button, also boot sequence. 
 resetv:
 	sei		; diable interupts, until interupt vectors are set.
 	cld		; clear decimal mode
-	ldx #$FF	; reset stack pointer
+	clc		; clear carry to enter 65816 native mode
+	xce		; exchange carry with emulation flag
+	rep #$30	; set 16-bit accumulator and index registers.
+	ldx #$01FF	; reset stack pointer
 	txs
 
-	lda #$00	; clear all three registers
+	lda #$0000	; clear all three registers
 	tax
 	tay
 
 	pha		; clear all flags
 	plp
-	jmp main	; go to monitor or main program initialization.
+	jmp main	; go to ROM monitor or main program initialization.
 
-irqv:	jmp (INTvector)
+eirqv:	jmp (INTvector)
+
+eabortv:
+	jmp (Abortvector)
 
 ; redirect the NMI interrupt vector here to be safe, but this 
 ; should never be reached for py65mon.
-nmiv:
+enmiv:
 panic:
+unused:
 	jmp (NMIvector)
 
-; Interrupt vectors.
-.org $FFFA
+; Native Mode Interrupt vectors.
+.org $FFE4
+.word copv
+.word brkv
+.word abortv
+.word nmiv
+.word unused
+.word irqv
 
-.word nmiv    ; NMI vector 
+; Emulation Mode Interrupt vectors.
+.org $FFF8
+.word eabortv
+.word enmiv    ; NMI vector 
 .word resetv  ; RESET vector
-.word irqv    ; IRQ vector
+.word eirqv    ; IRQ vector
