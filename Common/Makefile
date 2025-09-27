@@ -13,7 +13,7 @@ tests: $(TESTS)
 conioTest: tests/conioTest.rom
 
 tests/conioTest.rom: tests/conioTest.o conio.o vectors.o
-	$(LD65) -C tests/test.cfg -o tests/conioTest.rom tests/conioTest.o conio.o vectors.o
+	$(LD65) -C tests/test.cfg -o tests/conioTest.rom -m tests/conioTest.map tests/conioTest.o conio.o vectors.o
 
 test.srec : test.rom
 	$(SREC_CAT) test.rom -binary -offset 0x8000 -O -Motorola -DISable Header -DISable Footer > test.srec
