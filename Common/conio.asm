@@ -7,15 +7,6 @@
 
 .include "common.inc"
 
-; establish module level scope to hide module locals.
-.scope
-
-;
-; Module assumes native mode with 16 bit registers.
-;
-.A16
-.I16
-
 ;
 ; Numeric constants
 ;
@@ -187,4 +178,3 @@ putch:
         jmp (_STDOUT)
 .endscope
 
-.endscope
