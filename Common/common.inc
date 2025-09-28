@@ -73,3 +73,12 @@ IND16	= $10
        .I8
        sep #(MEM16 | IND16)
 .endmacro
+
+.macro PUBLIC function_name
+.export function_name
+.proc function_name
+.endmacro
+
+.macro ENDPUBLIC
+.endproc
+.endmacro

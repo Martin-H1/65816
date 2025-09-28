@@ -11,8 +11,7 @@
 RamSize = $7EFF			; def $8000 for 32 kb x 8 bit RAM
 
 ; Main entry point for the interpreter test
-.export main
-main:
+PUBLIC main
 	jsr putch_test
 	jsr getch_test
 	jsr cputs_test
@@ -20,6 +19,7 @@ main:
 	jsr echo_test
 	jsr ungetch_test
 	brk
+ENDPUBLIC
 
 putch_test:
 	println @name
