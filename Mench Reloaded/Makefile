@@ -1,7 +1,14 @@
 include ../common.mk
 
 SOURCES =  \
+	echo.asm \
 	helloWorld.asm
+
+echo.rom: echo.o
+	$(LD65) -C mench.cfg -o echo.rom -m echo.map echo.o
+
+echo.srec : echo.rom
+	$(SREC_CAT) -address-length=3 echo.rom -binary -offset 0x0300 -O -Motorola -DISable Header -DISable Footer > echo.srec
 
 helloWorld.rom: helloWorld.o
 	$(LD65) -C mench.cfg -o helloWorld.rom -m helloWorld.map helloWorld.o
@@ -15,8 +22,4 @@ clean:
 	-$(RM) *.map
 	-$(RM) *.o
 	-$(RM) *.rom
-	-$(RM) tests$/*.lst
-	-$(RM) tests$/*.map
-	-$(RM) tests$/*.o
-	-$(RM) tests$/*.rom
-	-$(RM) tests$/*.srec
+	-$(RM) *.srec
