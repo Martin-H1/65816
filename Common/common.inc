@@ -4,7 +4,8 @@
 ; -----------------------------------------------------------------------------
 
 ;
-; Assume native mode with 16 bit registers.
+; Put assembler in 16 bit mode, as 8 bit mode is the exception
+; selected at module level.
 ;
 .A16
 .I16
@@ -17,47 +18,67 @@
 ARG1	= $02
 ARG2	= $04
 
-; Common character codes (ASCII / UTF-8)
-AscNull = $00	; null termination character
-AscBell	= $07	; bell (Control-G) ASCII character
-AscBS	= $08	; backspace ASCII character
-AscCC	= $03	; break (Control-C) ASCII character
-AscCR	= $0D	; carriage return ASCII character
-AscDEL	= $7F	; DEL ASCII character
-AscESC	= $1B	; Escape ASCII character
-AscFF	= $0C	; Formfeed ASCII character
-AscLF	= $0A	; line feed ASCII character
-AscSP	= $20	; space ASCII character
-AscTAB	= $09	; tab ASCII character
-AscVT	= $0B	; vertical tab ASCII character
+; masking building symbols
+LOWNIB	= $0F
+HINIB	= $F0
+
+Bit0	= $01
+Bit1	= $02
+Bit2	= $04
+Bit3	= $08
+Bit4	= $10
+Bit5	= $20
+Bit6	= $40
+Bit7	= $80
+
+; control bits for REP and SEP
+MEM16	= $20
+IND16	= $10
 
 ;
 ; Macros
 ;
-.macro ACC8
-	sep #$20		; set 8-bit accumulator mode
-	.A8			; tell the assembler about it
+
+; These are from the WDC 65c265 monitor ROM listing. Reusing them allows
+; using code from the monitor with minimal changes.
+
+.macro ON16MEM
+       .A16		; tell the assembler about mode
+       rep #MEM16	; set 8-bit accumulator mode
 .endmacro
 
-.macro ACC16
-	rep #$20		; set 16-bit accumulator mode
-	.A16			; tell the assembler about it
+.macro OFF16MEM
+       .A8
+       sep #MEM16
 .endmacro
 
-; Syntactic sugar around print to package the argument.
-.macro print str
-	pea str
-	jsr cputs
+.macro ON16X
+       .I16
+       rep #IND16
 .endmacro
 
-; Prints the string an adds a line feed.
-.macro println str
-	print str
-	printcr
+.macro OFF16X
+       .I8
+       sep #IND16
 .endmacro
 
-; Prints a line feed.
-.macro printcr
-	lda #AscLF
-	jsr putch
+.macro ON16
+       .A16
+       .I16
+       rep #(MEM16 | IND16)
+.endmacro
+
+.macro OFF16
+       .A8
+       .I8
+       sep #(MEM16 | IND16)
+.endmacro
+
+.macro PUBLIC function_name
+.export function_name
+.proc function_name
+.endmacro
+
+.macro ENDPUBLIC
+.endproc
 .endmacro

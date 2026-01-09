@@ -3,14 +3,15 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+.include "../ascii.inc"
 .include "../common.inc"
 .include "../conio.inc"
+.include "../print.inc"
 
 RamSize = $7EFF			; def $8000 for 32 kb x 8 bit RAM
 
 ; Main entry point for the interpreter test
-.export main
-main:
+PUBLIC main
 	jsr putch_test
 	jsr getch_test
 	jsr cputs_test
@@ -18,6 +19,7 @@ main:
 	jsr echo_test
 	jsr ungetch_test
 	brk
+ENDPUBLIC
 
 putch_test:
 	println @name
@@ -63,8 +65,8 @@ _loop:	jsr getch
 	bra _loop
 _end:	printcr
 	rts
-@data:	.byte "This is the first line to buffer.",AscCR,AscLF
-	.byte "Now another line to fill the buffer.",AscCR,AscLF
+@data:	.byte "This is the first line to buffer.",C_RETURN,L_FEED
+	.byte "Now another line to fill the buffer.",C_RETURN,L_FEED
 	.byte "This is the final line.",0
 @name:	.byte "*** cgets test ***",0
 
@@ -77,7 +79,7 @@ echo_test:
 	jsr cgets
 	printcr
 	rts
-@data:	.byte "This is the first line to buffer.",AscCR,AscLF,0
+@data:	.byte "This is the first line to buffer.",C_RETURN,L_FEED,0
 @name:	.byte "*** echo test ***",0
 
 ungetch_test:

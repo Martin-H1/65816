@@ -5,46 +5,47 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+.include "ascii.inc"
 .include "common.inc"
 
 ;
 ; Numeric constants
 ;
-_tibSize = _tibEnd - _tib
+tibSize = tibEnd - tib
 
 ;
 ; Data segments
 ;
 .segment "BSS"
-_tib:		.res $50	; a line buffer for buffered reads.
-_tibEnd:	.res $00	; end marker to compute buffer size.
-_writeIdx:	.res $02	; current write position in the buffer.
-_readIdx:	.res $03	; current read position in the buffer.
-_STDOUT:	.res $02	; pointer to console output routine.
-_STDIN:		.res $02	; pointer to console input routine.
-_echo:		.res $02	; control echo during line edit mode.
+tib:		.res $50	; a line buffer for buffered reads.
+tibEnd:		.res $00	; end marker to compute buffer size.
+writeIdx:	.res $02	; current write position in the buffer.
+readIdx:	.res $03	; current read position in the buffer.
+STDOUT:		.res $02	; pointer to console output routine.
+STDIN:		.res $02	; pointer to console input routine.
+echo:		.res $02	; control echo during line edit mode.
 
 .segment "CODE"
 
 ;
 ; Macros
 ;
-.macro _incIdx
+.macro incIdx
 .scope
 	iny
-	cpy #_tibSize
-	bne _skip
+	cpy #tibSize
+	bne skip
 	ldy #$0000
-_skip:
+skip:
 .endscope
 .endmacro
 
-.macro _decIdx
+.macro decIdx
 .scope
 	dey
-	bpl _skip
-	ldy #_tibSize - 1
-_skip:
+	bpl skip
+	ldy #tibSize - 1
+skip:
 .endscope
 .endmacro
 
@@ -55,126 +56,111 @@ _skip:
 ; Routine to initialize console pointers and state.
 ; input - two pointers on the stack
 ; output - none
-.export conioInit
-conioInit:
-.scope
+PUBLIC conioInit
 	lda ARG1,s
-	sta _STDOUT
+	sta STDOUT
 	lda ARG2,s
-	sta _STDIN
-	stz _echo
-	stz _readIdx
-	stz _writeIdx
+	sta STDIN
+	stz echo
+	stz readIdx
+	stz writeIdx
 	rts
-.endscope
+ENDPUBLIC
 
 ; Enable or disable character echo during line editing mode.
 ; input - boolean in accumulator
 ; output - none
-.export conioSetEcho
-conioSetEcho:
-.scope
-	sta _echo
+PUBLIC conioSetEcho
+	sta echo
 	rts
-.endscope
+ENDPUBLIC
 
 ; cgets is similar to the MSDOS console I/O function that reads an entire
-; line from _stdin. A line is terminated by a CR, and backspace deletes
+; line from stdin. A line is terminated by a CR, and backspace deletes
 ; the previous character in the buffer.
 ; input - implicit from init function.
 ; output - implicit in that the line buffer is filled.
-.export cgets
-cgets:
-.scope
-	ACC8
+PUBLIC cgets
+	OFF16MEM
 	phy
-	ldy _writeIdx
-_while:
-	jsr _getch
-	sta _tib,y
-	lda _echo
+	ldy writeIdx
+while:
+	jsr getch
+	sta tib,y
+	lda echo
 	beq noecho
-	lda _tib,y
+	lda tib,y
 	jsr putch
-noecho:	lda _tib,y
-	cmp #AscBS
+noecho:	lda tib,y
+	cmp #BKSP
 	bne keepchar
-	_decIdx
-	bra _while
+	decIdx
+	bra while
 keepchar:
-	_incIdx
-	cmp #AscCR
-	beq _end
-	cmp #AscNull
-	bne _while
-_end:
-	sty _writeIdx
+	incIdx
+	cmp #C_RETURN
+	beq end
+	cmp #NULL
+	bne while
+end:
+	sty writeIdx
 	ply
-	ACC16
+	ON16MEM
 	rts
 
-_getch:
-	jmp (_STDIN)
-.endscope
+getch:
+	jmp (STDIN)
+ENDPUBLIC
 
 ; cputs is like the MSDOS console I/O function. It prints a null terminated
 ; string to the console using putch.
-.export cputs
-cputs:
-.scope
-	ACC8
+PUBLIC cputs
+	OFF16MEM
 	phy
 	ldy #$0000
-_loop:	lda (ARG1, s),y		; get the string via address from zero page
-	beq _exit		; if it is a zero, we quit and leave
+loop:	lda (ARG1, s),y		; get the string via address from zero page
+	beq exit		; if it is a zero, we quit and leave
 	jsr putch		; if not, write one character
 	iny			; get the next byte
-	bra _loop
-_exit:	ply
-	ACC16
+	bra loop
+exit:	ply
+	ON16MEM
 	rts
-.endscope
+ENDPUBLIC
 
 ; gets a character from the terminal input buffer, or gets more
 ; characters if it is empty.
-.export getch
-getch:
-.scope
-	ACC8
+PUBLIC getch
+	OFF16MEM
 	phy
-	ldy _readIdx
-	cpy _writeIdx
+	ldy readIdx
+	cpy writeIdx
 	bne noget
 	jsr cgets		; buffer empty, get more characters.
-noget:	lda _tib,y
-	_incIdx
-	sty _readIdx		; store next read index.
+noget:	lda tib,y
+	incIdx
+	sty readIdx		; store next read index.
 	ply
-	ACC16
+	ON16MEM
 	and #$00FF		; clear high byte .
 	rts
-.endscope
+ENDPUBLIC
 
 ; puts a character in the accumulator back into the terminal input buffer.
-.export ungetch
-ungetch:
-.scope
-	ACC8
+PUBLIC ungetch
+	OFF16MEM
 	phy
-	ldy _readIdx
-	_decIdx
-	sta _tib,y
-	sty _readIdx
+	ldy readIdx
+	decIdx
+	sta tib,y
+	sty readIdx
 	ply
-	ACC16
+	ON16MEM
 	rts
-.endscope
+ENDPUBLIC
 
 ; puts a character in accumulator to stdout by doing an indirect jump to
 ; that handler. The handler will RTS to our caller.
-.export putch
-putch:
-.scope
-        jmp (_STDOUT)
-.endscope
-
+PUBLIC putch
+        jmp (STDOUT)
+ENDPUBLIC

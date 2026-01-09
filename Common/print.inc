@@ -4,18 +4,20 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
-;
-; Aliases
-;
+; Syntactic sugar around print to package the argument.
+.macro print str
+	pea str
+	jsr cputs
+.endmacro
 
-;
-; Data segments
-;
+; Prints the string an adds a line feed.
+.macro println str
+	print str
+	printcr
+.endmacro
 
-;
-; Macros
-;
-
-;
-; Functions
-;
+; Prints a line feed.
+.macro printcr
+	lda #L_FEED
+	jsr putch
+.endmacro
