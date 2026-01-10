@@ -1,5 +1,5 @@
 ; -----------------------------------------------------------------------------
-; Hello World sample for the Mench Reloaded SBC.
+; Echo sample for the Mench Reloaded SBC. Echos until control-C is entered.
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
