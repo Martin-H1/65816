@@ -1,21 +1,22 @@
 include ../common.mk
 
 SOURCES =  \
+	blink.asm \
 	echo.asm \
 	helloWorld.asm \
 	via.asm
 
-echo.rom: echo.o
-	$(LD65) -C mench.cfg -o echo.rom -m echo.map echo.o
+%.srec : %.bin
+	$(SREC_CAT) -address-length=3 -execution_start_address 0x000300 $< -binary -offset 0x0300 -O -Motorola -DISable Header > $@
 
-echo.srec : echo.rom
-	$(SREC_CAT) -address-length=3 -execution_start_address 0x000300 echo.rom -binary -offset 0x0300 -O -Motorola -DISable Header > echo.srec
+blink.bin: blink.o via.o
+	$(LD65) -C mench.cfg -o blink.bin -m blink.map blink.o via.o
 
-helloWorld.rom: helloWorld.o
-	$(LD65) -C mench.cfg -o helloWorld.rom -m helloWorld.map helloWorld.o
+echo.bin: echo.o
+	$(LD65) -C mench.cfg -o echo.bin -m echo.map echo.o
 
-helloWorld.srec : helloWorld.rom
-	$(SREC_CAT) -address-length=3 -execution_start_address 0x000300 helloWorld.rom -binary -offset 0x0300 -O -Motorola -DISable Header -DISable Footer > helloWorld.srec
+helloWorld.bin: helloWorld.o
+	$(LD65) -C mench.cfg -o helloWorld.bin -m helloWorld.map helloWorld.o
 
 clean:
 	-$(RM) *.bin
