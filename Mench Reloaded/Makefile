@@ -2,7 +2,8 @@ include ../common.mk
 
 SOURCES =  \
 	echo.asm \
-	helloWorld.asm
+	helloWorld.asm \
+	via.asm
 
 echo.rom: echo.o
 	$(LD65) -C mench.cfg -o echo.rom -m echo.map echo.o
