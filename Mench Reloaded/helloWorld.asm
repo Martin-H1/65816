@@ -10,10 +10,12 @@
 
 ; Main entry point for the interpreter test
 .proc main
+	jsl SEND_CR
 	lda #$00
 	ldx #hello
 	jsl PUT_STR
+	jsl SEND_CR
 	rtl
 .endproc
 
-hello:	.asciiz "Hello World!\n"
+hello:	.asciiz "Hello World!"
