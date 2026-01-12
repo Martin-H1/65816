@@ -52,15 +52,17 @@ ENDPUBLIC
 PUBLIC viaTimer2Delay
 	php
 	OFF16MEM		; Enter byte transfer mode.
-	lda #$00
+@while:	lda #$00
 	sta VIA_BASE+VIA_ACR	; select one shot mode
 	sta VIA_BASE+VIA_T2CL	; set lower latch to zero
-	lda #$ff		; delay duration
+	lda #$0f		; one ms delay duration
 	sta VIA_BASE+VIA_T2CH	; high part = 01.  Start
 	lda #$20		; mask
 @loop:	bit VIA_BASE+VIA_IFR	; time out?
 	beq @loop
 	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt
+	dex
+	bpl @while
 	plp
 	rts
 ENDPUBLIC
