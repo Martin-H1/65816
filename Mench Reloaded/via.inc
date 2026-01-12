@@ -6,7 +6,7 @@
 ; -----------------------------------------------------------------------------
 
 ; I/O Locations for the 6522 VIA chip registers
-VIA_BASE	= $df00
+VIA_BASE	= $dfd0
 VIA_PRB		= $00
 VIA_PRA		= $01
 VIA_DDRB	= $02
@@ -32,5 +32,8 @@ LOW = 0
 
 .import viaInit
 .import viaTimer2Delay
-
+; .import viaFreqOut
+; .import viaPulseOut
+; .import viaPWNOut
+; .import viaRCTime
 .endif
