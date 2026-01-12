@@ -26,5 +26,6 @@
 	lda #LOW
 	sta VIA_BASE+VIA_PRA	; Turn the LED OFF
 	jsr viaTimer2Delay	; Wait for 1 second
+
 	bra @while
 .endproc
