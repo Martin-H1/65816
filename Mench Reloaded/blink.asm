@@ -21,10 +21,12 @@
 @while:
 	lda #HIGH		; Turn the LED ON
 	sta VIA_BASE+VIA_PRA
+	ldx #1000
 	jsr viaTimer2Delay	; Wait for 1 second
 
 	lda #LOW
 	sta VIA_BASE+VIA_PRA	; Turn the LED OFF
+	ldx #1000
 	jsr viaTimer2Delay	; Wait for 1 second
 
 	bra @while
