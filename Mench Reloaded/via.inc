@@ -6,7 +6,7 @@
 ; -----------------------------------------------------------------------------
 
 ; I/O Locations for the 6522 VIA chip registers
-VIA_BASE	= $dfd0
+VIA_BASE	= $dfe0
 VIA_PRB		= $00
 VIA_PRA		= $01
 VIA_DDRB	= $02
