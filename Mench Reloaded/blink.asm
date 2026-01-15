@@ -6,6 +6,7 @@
 
 .include "ascii.inc"
 .include "common.inc"
+.include "pbasic.inc"
 .include "via.inc"
 .include "w65c265Monitor.inc"
 
@@ -22,12 +23,12 @@
 	lda #HIGH		; Turn the LED ON
 	sta VIA_BASE+VIA_PRA
 	ldx #1000
-	jsr viaTimer2Delay	; Wait for 1 second
+	jsr pbPause		; Wait for 1 second
 
 	lda #LOW
 	sta VIA_BASE+VIA_PRA	; Turn the LED OFF
 	ldx #1000
-	jsr viaTimer2Delay	; Wait for 1 second
+	jsr pbPause		; Wait for 1 second
 
 	bra @while
 .endproc
