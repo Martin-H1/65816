@@ -24,9 +24,6 @@ VIA_IFR		= $0d
 VIA_IER		= $0e
 VIA_PRA1	= $0f
 
-HIGH = 1
-LOW = 0
-
 ; Conditionally import via functions in consuming modules.
 .ifndef __via_asm__
 

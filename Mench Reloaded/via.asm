@@ -14,21 +14,6 @@ __via_asm__ = 1
 ; Note: This module sets accumulator to 8 bit mode as the VIA is a byte
 ; oriented device. But it restores prior settings before returning to caller.
 
-; Ideally create a set of PBasic like functions for pin I/O
-; CONFIGPIN	CONFIGPIN Mode, PinMask
-; COUNT		COUNT Pin, Duration, Variable
-; FREQOUT		FREQOUT Pin, Duration, Freq1 {, Freq2 }
-; HIGH		HIGH Pin
-; INPUT		INPUT Pin
-; LOW		LOW Pin
-; OUTPUT		OUTPUT Pin
-; PAUSE		PAUSE Duration
-; PULSIN		PULSIN Pin, State, Variable
-; PULSOUT		PULSOUT Pin, Duration
-; PWM		PWM Pin, Duty, Duration
-; RCTIME		RCTIME Pin, State, Variable
-; TOGGLE		TOGGLE Pin
-
 ;
 ; Functions
 ;
@@ -45,24 +30,6 @@ PUBLIC viaInit
 	lda #$7f		; init two upper registers.
 	sta VIA_BASE + VIA_IFR
 	sta VIA_BASE + VIA_IER
-	plp
-	rts
-ENDPUBLIC
-
-PUBLIC viaTimer2Delay
-	php
-	OFF16MEM		; Enter byte transfer mode.
-@while:	lda #$00
-	sta VIA_BASE+VIA_ACR	; select one shot mode
-	sta VIA_BASE+VIA_T2CL	; set lower latch to zero
-	lda #$0f		; one ms delay duration
-	sta VIA_BASE+VIA_T2CH	; high part = 01.  Start
-	lda #$20		; mask
-@loop:	bit VIA_BASE+VIA_IFR	; time out?
-	beq @loop
-	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt
-	dex
-	bpl @while
 	plp
 	rts
 ENDPUBLIC
