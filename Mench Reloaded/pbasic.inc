@@ -17,7 +17,6 @@ LOW = 0
 .import pbPause
 .import pbPulsin
 .import pbPulsout
-.import pbToggle
 .import pbRCTime
 .import pbToggle
 .endif

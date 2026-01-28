@@ -1,7 +1,7 @@
 ; -----------------------------------------------------------------------------
 ; VIA function definitions.
-; Took code from Rich Cini's SBC OS, made it generic using macros, and ported
-; to the 65816.
+; Took code from Rich Cini's SBC OS, made it more generic using aliases, and
+; later ported to the 65816 and ca65.
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
@@ -9,7 +9,6 @@ __via_asm__ = 1
 
 .include "common.inc"
 .include "via.inc"
-.include "w65c265Monitor.inc"
 
 ; Note: This module sets accumulator to 8 bit mode as the VIA is a byte
 ; oriented device. But it restores prior settings before returning to caller.

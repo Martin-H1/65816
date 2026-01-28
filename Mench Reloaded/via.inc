@@ -1,11 +1,15 @@
 ; -----------------------------------------------------------------------------
 ; VIA definitions, macros, and function prototypes.
-; Took code from Rich Cini's SBC OS, made it generic using macros, and
-; ported to the 65816 and ca65.
+; Took code from Rich Cini's SBC OS, made it more generic using aliases, and
+; later ported to the 65816 and ca65.
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
-; I/O Locations for the 6522 VIA chip registers
+;
+; Aliases
+;
+
+; Base address of the 6522 VIA chip and I/O registers offsets.
 VIA_BASE	= $dfe0
 VIA_PRB		= $00
 VIA_PRA		= $01
@@ -26,11 +30,5 @@ VIA_PRA1	= $0f
 
 ; Conditionally import via functions in consuming modules.
 .ifndef __via_asm__
-
 .import viaInit
-.import viaTimer2Delay
-; .import viaFreqOut
-; .import viaPulseOut
-; .import viaPWNOut
-; .import viaRCTime
 .endif
