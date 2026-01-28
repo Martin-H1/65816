@@ -10,24 +10,26 @@
 .include "via.inc"
 .include "w65c265Monitor.inc"
 
+LED_PIN = $0000			; Port A pin 0
+
 ; Main entry point for the program.
 .proc main
-@setup:
-	OFF16MEM		; ensure accumulator is in 8 bit mode.
-
-	jsr viaInit
-	lda #$ff
-	sta VIA_BASE+VIA_DDRA	; Set port A as output.
+	jsr viaInit		; one time VIA initialization.
+	ON16MEM
+	lda #LED_PIN
+	jsr pbOutput		; Set pin 0 (port A pin 0) as output.
 
 @while:
-	lda #HIGH		; Turn the LED ON
-	sta VIA_BASE+VIA_PRA
-	ldx #1000
+	lda #LED_PIN
+	jsr pbHigh		; Turn the LED ON
+
+	lda #1000
 	jsr pbPause		; Wait for 1 second
 
-	lda #LOW
-	sta VIA_BASE+VIA_PRA	; Turn the LED OFF
-	ldx #1000
+	lda #LED_PIN
+	jsr pbLow		; Turn the LED OFF
+
+	lda #1000
 	jsr pbPause		; Wait for 1 second
 
 	bra @while
