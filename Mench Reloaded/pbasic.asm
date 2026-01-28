@@ -36,7 +36,7 @@ bitsetMask:	.word $0100, $0200, $0400, $0800, $1000, $2000, $4000, $8000
 ;
 
 ; Debugged: pbHigh, pbInput, pbLow, pbOutput, pbPause, pbToggle
-; Todo: pbCount, pbFreqOut, pbPulsin, pbPulsout, pbRCTime
+; Todo: pbCount, pbFreqOut, pbINX, pbPulsin, pbPulsout, pbPWM, pbRCTime
 
 
 ; pbCount - counts the number of cycles (0-1-0 or 1-0-1) on the specified pin
@@ -53,9 +53,9 @@ PUBLIC pbCount
 	pea $0000		; initialize count stack local
 	txy			; save time parameter to Y
 	jsr pbInput		; set pin to input
-	phx			; initialize pin mask stack local
-	txa
-	ora VIA_BASE+VIA_PRB	; Get initial the value
+	lda bitsetMask,x	; transform the index into a bitmask.
+	pha			; initialize pin mask stack local
+	and VIA_BASE+VIA_PRB	; Get initial the value and set
 	pha			; initial value stack local
 
 @while:	OFF16MEM		; enter byte transfer mode.
@@ -67,15 +67,17 @@ PUBLIC pbCount
 	ON16MEM
 
 @loop:	lda PIN_MASK,s
-	ora VIA_BASE+VIA_PRB	; get the current state
+	and VIA_BASE+VIA_PRB	; get the current state
 	eor LAST_VALUE,s	; compare with previous state
 	beq @endif
 
 	lda COUNT,s		; increment the count
 	inc
 	sta COUNT,s
-	lda VIA_BASE+VIA_PRB	; update current state.
-	sta LAST_VALUE,s
+
+	lda PIN_MASK,s
+	and VIA_BASE+VIA_PRB	; get the current state
+	sta LAST_VALUE,s	; update current state.
 
 @endif:	lda #T2IF		; timer 2 mask
 	bit VIA_BASE+VIA_IFR	; timed out?
@@ -128,6 +130,21 @@ PUBLIC pbInput
 	eor #$ffff		; invert to clear the bit.
 	and VIA_BASE+VIA_DDRB	; or with existing pin state.
 	sta VIA_BASE+VIA_DDRB	; set the pin's bit high.
+	rts
+ENDPUBLIC
+
+; pbINX - sets the pin as input and returns the current state.
+; Inputs:
+;   A - index (0-15) of the I/O pin to read. Pin is set to input mode.
+; Outputs:
+;   A - boolean pin state
+PUBLIC pbINX
+	jsr pbInput		; set pin to input
+	lda bitsetMask,x	; transform the index into a bitmask.
+	and VIA_BASE+VIA_PRB	; Get initial the value and set
+	beq @return
+	lda #$0001
+@return:
 	rts
 ENDPUBLIC
 
