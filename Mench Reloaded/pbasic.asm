@@ -28,8 +28,24 @@ T2IF = $20			; Timer 2 interupt flag bit
 ;
 ; Static data
 ;
-bitsetMask:	.word $0100, $0200, $0400, $0800, $1000, $2000, $4000, $8000
-		.word $0001, $0002, $0004, $0008, $0010, $0020, $0040, $0080
+bitsetMask:
+         .word %0000000100000000 ; port 'A' masks.
+         .word %0000001000000000
+         .word %0000010000000000
+         .word %0000100000000000
+         .word %0001000000000000
+         .word %0010000000000000
+         .word %0100000000000000
+         .word %1000000000000000
+
+         .word %0000000000000001 ; port 'B' masks.
+         .word %0000000000000010
+         .word %0000000000000100
+         .word %0000000000001000
+         .word %0000000000010000
+         .word %0000000000100000
+         .word %0000000001000000
+         .word %0000000010000000
 
 ;
 ; Functions
@@ -42,19 +58,18 @@ bitsetMask:	.word $0100, $0200, $0400, $0800, $1000, $2000, $4000, $8000
 ; pbCount - counts the number of cycles (0-1-0 or 1-0-1) on the specified pin
 ; during the duration time frame and return that number.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to use. Pin is set to input mode.
+;   C - index (0-15) of the I/O pin to use. Pin is set to input mode.
 ;   X - unsigned quantity (1-65535) specifying the time in milliseconds.
 ; Outputs:
-;   A - the number of transitions.
+;   C - the number of transitions.
 PUBLIC pbCount
-	LAST_VALUE = 0		; stack offsets for local variables.
-	PIN_MASK = 2
 	COUNT = 4
+	PORT_MASK = 2
+	LAST_VALUE = 0		; stack offsets for local variables.
 	pea $0000		; initialize count stack local
 	txy			; save time parameter to Y
-	jsr pbInput		; set pin to input
-	lda bitsetMask,x	; transform the index into a bitmask.
-	pha			; initialize pin mask stack local
+	jsr pbInput		; set pin to input, return C as port mask
+	pha			; initialize port mask stack local
 	and VIA_BASE+VIA_PRB	; Get initial the value and set
 	pha			; initial value stack local
 
@@ -66,7 +81,7 @@ PUBLIC pbCount
 	sta VIA_BASE+VIA_T2CH	; set upper latch
 	ON16MEM
 
-@loop:	lda PIN_MASK,s
+@loop:	lda PORT_MASK,s
 	and VIA_BASE+VIA_PRB	; get the current state
 	eor LAST_VALUE,s	; compare with previous state
 	beq @endif
@@ -75,15 +90,19 @@ PUBLIC pbCount
 	inc
 	sta COUNT,s
 
-	lda PIN_MASK,s
+	lda PORT_MASK,s
 	and VIA_BASE+VIA_PRB	; get the current state
 	sta LAST_VALUE,s	; update current state.
 
-@endif:	lda #T2IF		; timer 2 mask
+@endif:	OFF16MEM
+	lda #T2IF		; timer 2 mask
 	bit VIA_BASE+VIA_IFR	; timed out?
+	ON16MEM
 	beq @loop
 
+	OFF16MEM
 	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt flag
+	ON16MEM
 	dey
 	bpl @while
 
@@ -108,12 +127,14 @@ ENDPUBLIC
 ; Inputs:
 ;   A - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ; Outputs:
-;   None
+;   Port mask in C, mask table index in X
+;
+; Notes:
+;   pbHigh calls pbOutput, which results in A returning with the required
+;   mask. Hence pbHigh doesn't need to reload it.
 PUBLIC pbHigh
-	jsr pbOutput
-	lda bitsetMask,x	; transform the index into a bitmask.
-	ora VIA_BASE+VIA_PRB	; use mask to set pin high
-	sta VIA_BASE+VIA_PRB
+	jsr pbOutput		; set data direction...see above note
+	tsb VIA_BASE+VIA_PRB	; use mask to set pin high
 	rts
 ENDPUBLIC
 
@@ -121,15 +142,13 @@ ENDPUBLIC
 ; Inputs:
 ;   A - index (0-15) of the I/O pin to use. Pin is set to input mode.
 ; Outputs:
-;   None
+;   Port mask in C, mask table index in X
 PUBLIC pbInput
-	ora #$000f		; contrain input to valid values.
+	and #%1111		; constrain input to valid values.
 	asl			; convert to word index.
 	tax
-	lda bitsetMask,x	; transform the index into a bitmask.
-	eor #$ffff		; invert to clear the bit.
-	and VIA_BASE+VIA_DDRB	; or with existing pin state.
-	sta VIA_BASE+VIA_DDRB	; set the pin's bit high.
+	lda bitsetMask,x      	; transform the index into a bitmask.
+	trb VIA_BASE+VIA_DDRB	; set the corresponding pin's bit high.
 	rts
 ENDPUBLIC
 
@@ -139,9 +158,8 @@ ENDPUBLIC
 ; Outputs:
 ;   A - boolean pin state
 PUBLIC pbINX
-	jsr pbInput		; set pin to input
-	lda bitsetMask,x	; transform the index into a bitmask.
-	and VIA_BASE+VIA_PRB	; Get initial the value and set
+	jsr pbInput		; set pin to input, C contains port mask.
+	and VIA_BASE+VIA_PRB	; Get initial the value
 	beq @return
 	lda #$0001
 @return:
@@ -152,13 +170,14 @@ ENDPUBLIC
 ; Inputs:
 ;   A - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ; Outputs:
-;   None
+;   Port mask in C, mask table index in X
+;
+; Notes:
+;   pbLow calls pbOutput, which results in A returning with the required
+;   mask. Hence pbLow doesn't need to reload it.
 PUBLIC pbLow
-	jsr pbOutput
-	lda bitsetMask,x	; transform the index into a bitmask.
-	eor #$ffff		; invert mask to clear bit.
-	and VIA_BASE+VIA_PRB
-	sta VIA_BASE+VIA_PRB
+	jsr pbOutput		; set pin to output and get port mask.
+	trb VIA_BASE+VIA_PRB	; use mask to clear the bit.
 	rts
 ENDPUBLIC
 
@@ -166,26 +185,24 @@ ENDPUBLIC
 ; Inputs:
 ;   A - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ; Outputs:
-;   None
+;   C - pin bitset mask
 PUBLIC pbOutput
-	and #$000f		; constrain input to valid values.
+	and #%1111		; constrain input to valid values...
 	asl			; convert to word index.
 	tax
-	lda bitsetMask,x	; transform the index into a bitmask.
-	ora VIA_BASE+VIA_DDRB	; or with existing pin state.
-	sta VIA_BASE+VIA_DDRB	; set the pin's bit high.
+	lda bitsetMask,x      	; transform the index into a bitmask.
+	tsb VIA_BASE+VIA_DDRB	; set the corresponding pin's bit high...
 	rts
 ENDPUBLIC
 
 ; pbPause - delays execution for the specified number of milliseconds.
 ; Inputs:
-;   A - number of milliseconds to suspend execution.
+;   C - number of milliseconds to suspend execution.
 ; Outputs: None
 PUBLIC pbPause
 	tax
 	OFF16MEM		; enter byte transfer mode.
-@while:	lda #$00
-	sta VIA_BASE+VIA_ACR	; select one shot mode
+@while:	stz VIA_BASE+VIA_ACR	; select one shot mode
 	lda #<ONE_MS		; one ms delay duration
 	sta VIA_BASE+VIA_T2CL	; set lower latch
 	lda #>ONE_MS
@@ -200,38 +217,44 @@ PUBLIC pbPause
 	rts
 ENDPUBLIC
 
-; pbPulsin - measures the width of a pulse on a pin and returns the results.
+; pbPulsin - measures the width of a pulse on a pin and return the results.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to use. Pin is set to input mode.
+;   C - index (0-15) of the I/O pin to use. Pin is set to input mode.
 ;   X - boolean (0-1) that specifies whether the pulse to be measured is
 ; 	low (0) or high (1). A low pulse begins with a 1-to-0 transition and
 ;	a high pulse begins with a 0-to-1 transition.
 ; Outputs:
-;   A - the measured pulse duration in uS.
+;   C - the measured pulse duration in cpu cycles.
 PUBLIC pbPulsin
-	phx
-	jsr pbInput
-	txy
-
-				; wait for pulse leading edge transition.
+	INITIAL_VALUE = 2	; stack offsets for local variables.
+	PORT_MASK = 0
+	pea $0000		; reserve space for the initial value.
+	txy			; retain parameter in x
+	jsr pbInput		; set pin to input and get port mask.
+	pha			; initialize port mask stack local
+	cpy #$0001		; test desired initial value
+	bne @skip
+	sta INITIAL_VALUE,s	; set initial value bit using port mask.
+@skip:
 	OFF16MEM		; start VIA timer
-
-	lda #$00
-	sta VIA_BASE+VIA_ACR	; select one shot mode
+	stz VIA_BASE+VIA_ACR	; select one shot mode
 	lda #$ff		; load timer with maximum value.
 	sta VIA_BASE+VIA_T2CL	; set lower latch
 	sta VIA_BASE+VIA_T2CH	; set upper latch
+@while:
+	lda PORT_MASK,s
+	and VIA_BASE+VIA_PRB	; get the current value.
+	eor INITIAL_VALUE,s	; test for edge transition.
+	bne @edge_transition
+
+	OFF16MEM		; has timer reached zero?
 	lda #T2IF		; start mask
-				; wait for pulse trailing edge transition.
-
-@loop:	bit VIA_BASE+VIA_IFR	; time out?
-	beq @loop
-	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt
-	dex
+	bit VIA_BASE+VIA_IFR	; time out?
 	ON16MEM
-
-
-
+	beq @while
+@edge_transition:
+	lda #$ffff
+	sbc VIA_BASE+VIA_T2CL	; get value and clear timer 2 interrupt
 	rts
 ENDPUBLIC
 
@@ -280,8 +303,9 @@ ENDPUBLIC
 ; Outputs:
 ;   A - time measured in uS
 PUBLIC pbRCTime
-	phx
+	txy
 	jsr pbInput		; set the pin to input
+
 	tay			; save the pin mask
 
 	php
@@ -310,8 +334,7 @@ ENDPUBLIC
 ; Outputs:
 ;   None
 PUBLIC pbToggle
-	jsr pbOutput
-	lda bitsetMask,x	; transform the index into a bitmask.
+	jsr pbOutput		; set pin to output and get port mask.
 	eor VIA_BASE+VIA_PRB
 	sta VIA_BASE+VIA_PRB
 	rts
