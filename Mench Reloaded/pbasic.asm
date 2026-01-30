@@ -222,20 +222,25 @@ ENDPUBLIC
 ;   C - index (0-15) of the I/O pin to use. Pin is set to input mode.
 ;   X - boolean (0-1) that specifies whether the pulse to be measured is
 ; 	low (0) or high (1). A low pulse begins with a 1-to-0 transition and
-;	a high pulse begins with a 0-to-1 transition.
+;	a high pulse begins with a 0-to-1 transition. Both end with the
+;	reverse transition.
 ; Outputs:
 ;   C - the measured pulse duration in cpu cycles.
 PUBLIC pbPulsin
-	INITIAL_VALUE = 2	; stack offsets for local variables.
+	INITIAL_VALUE = 2	; stack offsets for local variables
 	PORT_MASK = 0
-	pea $0000		; reserve space for the initial value.
+	pea $0000		; reserve space for the initial value
 	txy			; retain parameter in x
-	jsr pbInput		; set pin to input and get port mask.
+	jsr pbInput		; set pin to input and get port mask
 	pha			; initialize port mask stack local
 	cpy #$0001		; test desired initial value
-	bne @skip
+	bne @leading_edge
 	sta INITIAL_VALUE,s	; set initial value bit using port mask.
-@skip:
+@leading_edge:
+	lda PORT_MASK,s		; wait for pulse leading edge transition.
+	and VIA_BASE+VIA_PRB	; get the current value.
+	eor INITIAL_VALUE,s	; test for leading edge transition.
+	bne @leading_edge
 	OFF16MEM		; start VIA timer
 	stz VIA_BASE+VIA_ACR	; select one shot mode
 	lda #$ff		; load timer with maximum value.
@@ -245,16 +250,18 @@ PUBLIC pbPulsin
 	lda PORT_MASK,s
 	and VIA_BASE+VIA_PRB	; get the current value.
 	eor INITIAL_VALUE,s	; test for edge transition.
-	bne @edge_transition
+	bne @trailing_edge
 
 	OFF16MEM		; has timer reached zero?
 	lda #T2IF		; start mask
 	bit VIA_BASE+VIA_IFR	; time out?
 	ON16MEM
 	beq @while
-@edge_transition:
+@trailing_edge:
 	lda #$ffff
 	sbc VIA_BASE+VIA_T2CL	; get value and clear timer 2 interrupt
+	plx			; clean up stack
+	plx
 	rts
 ENDPUBLIC
 
@@ -289,6 +296,50 @@ ENDPUBLIC
 ; Outputs:
 ;   None
 PUBLIC pbPWM
+	DUTY = 2
+	PORT_MASK = 0
+	phx			; initialize duty cycle stack local
+	jsr pbOutput
+	pha			; initialize port mask stack local
+
+@while:
+	OFF16MEM		; enter byte transfer mode.
+	stz VIA_BASE+VIA_ACR	; select one shot mode
+	lda #<ONE_MS		; one ms delay duration
+	sta VIA_BASE+VIA_T2CL	; set lower latch
+	lda #>ONE_MS
+	sta VIA_BASE+VIA_T2CH	; set upper latch
+	ON16MEM
+@loop:				; generate waveform here
+	lda PORT_MASK,s
+	tsb VIA_BASE+VIA_PRB	; use mask to set pin high
+
+	lda DUTY,s		; keep high during duty cycle
+	tax
+@duty_wait:
+	dex
+	bne @duty_wait
+
+	lda PORT_MASK,s
+	trb VIA_BASE+VIA_PRB	; use mask to set pin low
+
+	lda #$ff		; compute remainder
+	sbc DUTY,s
+@remainder_wait:		; keep low during remainder
+	dex
+	bne @remainder_wait
+
+	OFF16MEM
+	lda #T2IF		; start mask
+	bit VIA_BASE+VIA_IFR	; time out?
+	ON16MEM
+	beq @loop
+	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt
+	dey
+	bpl @while		; loop until no ms left
+
+	plx			; clean up stack
+	plx
 	rts
 ENDPUBLIC
 
@@ -301,30 +352,39 @@ ENDPUBLIC
 ;   X - Initial state either HIGH or LOW to measure. Once Pin is not in State,
 ;	the command ends and returns that time.
 ; Outputs:
-;   A - time measured in uS
+;   C - time measured in cpu cycles.
 PUBLIC pbRCTime
-	txy
-	jsr pbInput		; set the pin to input
-
-	tay			; save the pin mask
-
-	php
-	OFF16MEM		; Enter byte transfer mode.
-@while:	lda #$00
-	sta VIA_BASE+VIA_ACR	; select one shot mode
-	lda #<ONE_MS		; one ms delay duration
+	INITIAL_VALUE = 2	; stack offsets for local variables.
+	PORT_MASK = 0
+	pea $0000		; reserve space for the initial value.
+	txy			; retain parameter in x
+	jsr pbInput		; set pin to input and get port mask.
+	pha			; initialize port mask stack local
+	cpy #$0001		; test desired initial value
+	bne @skip
+	sta INITIAL_VALUE,s	; set initial value bit using port mask.
+@skip:
+	OFF16MEM		; start VIA timer
+	stz VIA_BASE+VIA_ACR	; select one shot mode
+	lda #$ff		; load timer with maximum value.
 	sta VIA_BASE+VIA_T2CL	; set lower latch
-	lda #>ONE_MS
 	sta VIA_BASE+VIA_T2CH	; set upper latch
+@while:
+	lda PORT_MASK,s
+	and VIA_BASE+VIA_PRB	; get the current value.
+	eor INITIAL_VALUE,s	; test for edge transition.
+	bne @edge_transition
+
+	OFF16MEM		; has timer reached zero?
 	lda #T2IF		; start mask
-@loop:	bit VIA_BASE+VIA_IFR	; time out?
-	beq @loop
-	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt
-
-
+	bit VIA_BASE+VIA_IFR	; time out?
 	ON16MEM
-	plp
-
+	beq @while
+@edge_transition:
+	lda #$ffff
+	sbc VIA_BASE+VIA_T2CL	; get value and clear timer 2 interrupt
+	plx			; clean up stack
+	plx
 	rts
 ENDPUBLIC
 
