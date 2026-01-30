@@ -12,11 +12,13 @@ LOW = 0
 .import pbFreqOut
 .import pbHigh
 .import pbInput
+.import pbINX
 .import pbLow
 .import pbOutput
 .import pbPause
 .import pbPulsin
 .import pbPulsout
+.import pbPWM
 .import pbRCTime
 .import pbToggle
 .endif
