@@ -5,6 +5,7 @@ SOURCES =  \
 	button.asm \
 	echo.asm \
 	helloWorld.asm \
+	servo.asm \
 	via.asm
 
 %.srec : %.bin
@@ -14,13 +15,16 @@ blink.bin: blink.o pbasic.o via.o
 	$(LD65) -C mench.cfg -o blink.bin -m blink.map blink.o pbasic.o via.o
 
 button.bin: button.o pbasic.o via.o
-	$(LD65) -C mench.cfg -o button.bin -m blink.map button.o pbasic.o via.o
+	$(LD65) -C mench.cfg -o button.bin -m button.map button.o pbasic.o via.o
 
 echo.bin: echo.o
 	$(LD65) -C mench.cfg -o echo.bin -m echo.map echo.o
 
 helloWorld.bin: helloWorld.o
 	$(LD65) -C mench.cfg -o helloWorld.bin -m helloWorld.map helloWorld.o
+
+servo.bin: servo.o pbasic.o via.o
+	$(LD65) -C mench.cfg -o servo.bin -m servo.map servo.o pbasic.o via.o
 
 clean:
 	-$(RM) *.bin
