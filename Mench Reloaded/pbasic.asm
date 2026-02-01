@@ -116,10 +116,19 @@ ENDPUBLIC
 ; Inputs:
 ;   A - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ;   X - unsigned quantity (1-65535) specifying the duration in milliseconds.
-;   Y - unsigned quantity (1-65535) specifying the frequnecy in hertz.
+;   Y - unsigned quantity (1-65535) specifying the frequency in hertz.
 ; Outputs:
 ;   None
 PUBLIC pbFreqOut
+	phy			; initialize frequency stack local
+	txy
+	jsr pbOutput		; set pin to output and get port mask
+	pha			; initialize port mask stack local
+
+@duration:
+
+	pla			; clean up stack
+	pla
 	rts
 ENDPUBLIC
 
@@ -246,6 +255,7 @@ PUBLIC pbPulsin
 	lda #$ff		; load timer with maximum value.
 	sta VIA_BASE+VIA_T2CL	; set lower latch
 	sta VIA_BASE+VIA_T2CH	; set upper latch
+	ON16MEM
 @while:
 	lda PORT_MASK,s
 	and VIA_BASE+VIA_PRB	; get the current value.
@@ -369,6 +379,7 @@ PUBLIC pbRCTime
 	lda #$ff		; load timer with maximum value.
 	sta VIA_BASE+VIA_T2CL	; set lower latch
 	sta VIA_BASE+VIA_T2CH	; set upper latch
+	ON16MEM
 @while:
 	lda PORT_MASK,s
 	and VIA_BASE+VIA_PRB	; get the current value.

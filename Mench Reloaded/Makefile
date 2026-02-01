@@ -2,6 +2,7 @@ include ../common.mk
 
 SOURCES =  \
 	blink.asm \
+	button.asm \
 	echo.asm \
 	helloWorld.asm \
 	via.asm
@@ -11,6 +12,9 @@ SOURCES =  \
 
 blink.bin: blink.o pbasic.o via.o
 	$(LD65) -C mench.cfg -o blink.bin -m blink.map blink.o pbasic.o via.o
+
+button.bin: button.o pbasic.o via.o
+	$(LD65) -C mench.cfg -o button.bin -m blink.map button.o pbasic.o via.o
 
 echo.bin: echo.o
 	$(LD65) -C mench.cfg -o echo.bin -m echo.map echo.o
