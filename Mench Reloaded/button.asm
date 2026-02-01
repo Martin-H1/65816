@@ -21,8 +21,9 @@ BUTTON_PIN = $0008		; Port B pin 0
 
 ; Main entry point for the program.
 .proc main
-	jsr viaInit		; one time VIA initialization.
+	ON16X
 	ON16MEM
+	jsr viaInit		; one time VIA initialization.
 	jsr pbOutput		; Set pin 0 (port A pin 0) as output.
 	jsr pbInput		; Set pin 8 (port B pin 0) as input.
 
