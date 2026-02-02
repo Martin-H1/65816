@@ -16,6 +16,10 @@
 
 SERVO_PIN = $0008		; Port B pin 0
 
+SERVO_MIN = 1000 * ONE_US
+SERVO_MAX = 2000 * ONE_US
+SERVO_STEP = (SERVO_MAX - SERVO_MIN)/100
+
 ; Main entry point for the program.
 .proc main
 	ON16MEM
@@ -25,7 +29,7 @@ SERVO_PIN = $0008		; Port B pin 0
 	jsr viaInit		; one time VIA initialization.
 
 @loop:
-	lda #1000		; sweep 0° to 180° (1000 to 2000 µs)
+	lda #SERVO_MIN		; sweep 0° to 180° (1000 to 2000 µs)
 @sweep_up:
 	sta PULSE_WIDTH,s
 	tax
@@ -36,9 +40,9 @@ SERVO_PIN = $0008		; Port B pin 0
 	jsr pbPause		; Wait 20 ms between pulses
 
 	lda PULSE_WIDTH,s	; increment the pulse width
-	adc #10
-	cmp #1000		; loop until 180°
-	bne @sweep_up
+	adc #SERVO_STEP
+	cmp #SERVO_MAX		; loop until 180°
+	bcc @sweep_up
 
 @sweep_down:			; Sweep from 180° back to 0°
 	sta PULSE_WIDTH,s
@@ -51,9 +55,9 @@ SERVO_PIN = $0008		; Port B pin 0
 
 	lda PULSE_WIDTH,s	; increment the pulse width
 	sec
-	sbc #10
-	cmp #500		; loop until 180°
-	bne @sweep_down
+	sbc #SERVO_STEP
+	cmp #SERVO_MIN		; loop until 180°
+	bcc @sweep_down
 
 	bra @loop
 .endproc

@@ -16,9 +16,6 @@ __pbasic_asm__ = 1
 ;
 ; Aliases
 ;
-CLK_FREQ = 3686400		; cycles per second
-ONE_MS = CLK_FREQ / 1000	; cycles per ms
-ONE_US = CLK_FREQ / 1000000	; cycles per us
 T2IF = $20			; Timer 2 interupt flag bit
 
 ;
@@ -51,8 +48,8 @@ bitsetMask:
 ; Functions
 ;
 
-; Debugged: pbHigh, pbInput, pbLow, pbOutput, pbPause, pbToggle
-; Todo: pbCount, pbFreqOut, pbINX, pbPulsin, pbPulsout, pbPWM, pbRCTime
+; Debugged: pbHigh, pbInput, pbINX, pbLow, pbOutput, pbPause, pbToggle
+; Todo: pbCount, pbFreqOut, pbPulsin, pbPulsout, pbPWM, pbRCTime
 
 
 ; pbCount - counts the number of cycles (0-1-0 or 1-0-1) on the specified pin
@@ -63,9 +60,9 @@ bitsetMask:
 ; Outputs:
 ;   C - the number of transitions.
 PUBLIC pbCount
-	COUNT = 4
-	PORT_MASK = 2
-	LAST_VALUE = 0		; stack offsets for local variables.
+	COUNT = 5		; stack offsets for local variables.
+	PORT_MASK = 3
+	LAST_VALUE = 1
 	pea $0000		; initialize count stack local
 	txy			; save time parameter to Y
 	jsr pbInput		; set pin to input, return C as port mask
@@ -114,11 +111,11 @@ ENDPUBLIC
 
 ; pbFreqOut - outputs a square wave for specified duration and frequency.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to use. Pin is set to output mode.
+;   C - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ;   X - unsigned quantity (1-65535) specifying the duration in milliseconds.
 ;   Y - unsigned quantity (1-65535) specifying the frequency in hertz.
 ; Outputs:
-;   None
+;   None, all registers clobbered
 PUBLIC pbFreqOut
 	phy			; initialize frequency stack local
 	txy
@@ -134,7 +131,7 @@ ENDPUBLIC
 
 ; pbHigh - puts the specified pin in output mode and high state.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to use. Pin is set to output mode.
+;   C - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ; Outputs:
 ;   Port mask in C, mask table index in X
 ;
@@ -149,7 +146,7 @@ ENDPUBLIC
 
 ; pbInput - puts the specified pin in input mode.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to use. Pin is set to input mode.
+;   C - index (0-15) of the I/O pin to use. Pin is set to input mode.
 ; Outputs:
 ;   Port mask in C, mask table index in X
 PUBLIC pbInput
@@ -163,9 +160,9 @@ ENDPUBLIC
 
 ; pbINX - sets the pin as input and returns the current state.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to read. Pin is set to input mode.
+;   C - index (0-15) of the I/O pin to read. Pin is set to input mode.
 ; Outputs:
-;   A - boolean pin state
+;   C - boolean pin state
 PUBLIC pbINX
 	jsr pbInput		; set pin to input, C contains port mask.
 	and VIA_BASE+VIA_PRB	; Get initial the value
@@ -177,7 +174,7 @@ ENDPUBLIC
 
 ; pbLow - puts the specified pin in output mode and low state.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to use. Pin is set to output mode.
+;   C - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ; Outputs:
 ;   Port mask in C, mask table index in X
 ;
@@ -192,9 +189,9 @@ ENDPUBLIC
 
 ; pbOutput - puts the specified pin into output mode.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to use. Pin is set to output mode.
+;   C - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ; Outputs:
-;   C - pin bitset mask
+;   Port mask in C, mask table index in X
 PUBLIC pbOutput
 	and #%1111		; constrain input to valid values...
 	asl			; convert to word index.
@@ -207,7 +204,8 @@ ENDPUBLIC
 ; pbPause - delays execution for the specified number of milliseconds.
 ; Inputs:
 ;   C - number of milliseconds to suspend execution.
-; Outputs: None
+; Outputs:
+;   C, X - clobbered
 PUBLIC pbPause
 	tax
 	OFF16MEM		; enter byte transfer mode.
@@ -236,8 +234,8 @@ ENDPUBLIC
 ; Outputs:
 ;   C - the measured pulse duration in cpu cycles.
 PUBLIC pbPulsin
-	INITIAL_VALUE = 2	; stack offsets for local variables
-	PORT_MASK = 0
+	INITIAL_VALUE = 3	; stack offsets for local variables
+	PORT_MASK = 1
 	pea $0000		; reserve space for the initial value
 	txy			; retain parameter in x
 	jsr pbInput		; set pin to input and get port mask
@@ -277,17 +275,28 @@ ENDPUBLIC
 
 ; pbPulsout - generate a pulse on pin with a width of duration in uS.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to use. Pin is set to output mode.
-;   X - specifies the duration (0-65535) of the pulse width in uS.
+;   C - index (0-15) of the I/O pin to use. Pin is set to output mode.
+;   X - specifies the duration (0-65535) of the pulse width in machine cycles.
 ; Outputs:
 ;   None
 PUBLIC pbPulsout
-	pha
+	pha			; retain parameters for later calls.
 	phx
-	jsr pbHigh
-	pla
-	jsr pbPause
-	pla
+	jsr pbHigh		; pulse high
+
+	pla			; wait the required time.
+	OFF16MEM		; enter byte transfer mode.
+@while:	stz VIA_BASE+VIA_ACR	; select one shot mode
+	sta VIA_BASE+VIA_T2CL	; set lower latch
+	xba
+	sta VIA_BASE+VIA_T2CH	; set upper latch
+	lda #T2IF		; start mask
+@loop:	bit VIA_BASE+VIA_IFR	; time out?
+	beq @loop
+	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt
+	ON16MEM
+
+	pla			; set the pin low.
 	jsr pbLow
 	rts
 ENDPUBLIC
@@ -299,15 +308,15 @@ ENDPUBLIC
 ; is generated to allow the analog device to average the voltage over time
 ; to duty/256* 5 volts.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to set. Pin is initially set to output
+;   C - index (0-15) of the I/O pin to set. Pin is initially set to output
 ;	then to input mode when the command finishes.
 ;   X - the duty (0-255) of analog output as the number of 256ths of 5V.
 ;   Y - the duration (0-255) of the PWM output in mS.
 ; Outputs:
 ;   None
 PUBLIC pbPWM
-	DUTY = 2
-	PORT_MASK = 0
+	DUTY = 3
+	PORT_MASK = 1
 	phx			; initialize duty cycle stack local
 	jsr pbOutput
 	pha			; initialize port mask stack local
@@ -358,14 +367,14 @@ ENDPUBLIC
 ; and indirectly an analog value via the RC circuit charge or discharge time.
 ; Commonly used with R or C sensors such as thermistors or potentiometers.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to set. Pin is set to input.
+;   C - index (0-15) of the I/O pin to set. Pin is set to input.
 ;   X - Initial state either HIGH or LOW to measure. Once Pin is not in State,
 ;	the command ends and returns that time.
 ; Outputs:
 ;   C - time measured in cpu cycles.
 PUBLIC pbRCTime
-	INITIAL_VALUE = 2	; stack offsets for local variables.
-	PORT_MASK = 0
+	INITIAL_VALUE = 3	; stack offsets for local variables.
+	PORT_MASK = 1
 	pea $0000		; reserve space for the initial value.
 	txy			; retain parameter in x
 	jsr pbInput		; set pin to input and get port mask.
@@ -401,9 +410,9 @@ ENDPUBLIC
 
 ; pbToggle - inverts the state of an output pin.
 ; Inputs:
-;   A - index (0-15) of the I/O pin to set. Pin is set to output mode.
+;   C - index (0-15) of the I/O pin to set. Pin is set to output mode.
 ; Outputs:
-;   None
+;   None, C and X clobbered
 PUBLIC pbToggle
 	jsr pbOutput		; set pin to output and get port mask.
 	eor VIA_BASE+VIA_PRB

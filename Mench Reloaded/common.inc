@@ -14,10 +14,6 @@
 ; Aliases
 ;
 
-; stack offsets
-ARG1	= $02
-ARG2	= $04
-
 ; masking building symbols
 LOWNIB	= $0F
 HINIB	= $F0
