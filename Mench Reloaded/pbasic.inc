@@ -3,7 +3,7 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
-; Machine dependant constanst that are useful for real time control.
+; Machine dependent constants that are useful for real time control.
 CLK_FREQ = 3686400		; cycles per second
 ONE_MS = CLK_FREQ / 1000	; cycles per ms
 ONE_US = CLK_FREQ / 1000000	; cycles per us
