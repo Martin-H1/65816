@@ -27,8 +27,8 @@ PUBLIC main
 	ON16MEM
 	ON16X
 
-	PULSE_WIDTH = 1		; used to store pulse width in microseconds
-	pea $0000		; reserve stack local for PULSE_WIDTH
+	PULSE_WIDTH = 1		; stack offset for the 
+	pea $0000		; stack local for PULSE_WIDTH
 
 @loop:
 	lda #SERVO_MIN		; sweep 0° to 180° (1000 to 2000 µs)
@@ -37,7 +37,7 @@ PUBLIC main
 
 	tax
 	lda #SERVO_PIN
-	jsr pbPulsout		; send control pulse (units µs)
+	jsr pbPulsout		; send control pulse
 
 	lda #20
 	jsr pbPause		; Wait 20 ms between pulses
@@ -54,7 +54,7 @@ PUBLIC main
 
 	tax
 	lda #SERVO_PIN
-	jsr pbPulsout		; send control pulse (units µs)
+	jsr pbPulsout		; send control pulse
 
 	lda #20
 	jsr pbPause		; Wait 20 ms between pulses
