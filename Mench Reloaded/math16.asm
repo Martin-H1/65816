@@ -3,6 +3,10 @@
 ; From "Programming the 65816" by David Eyes and Ron Lichty
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
+__math16_asm__ = 1
+
+.include "common.inc"
+.include "math16.inc"
 
 ; div16 - 16 bit divison but returns $ffff if you divide by zero
 ; Inputs:
@@ -12,7 +16,7 @@
 ;   C - quotient
 ;   X - remainder
 ;   Y - clobbered
-.proc div16
+PUBLIC div16
 	QUOTIENT = 3
 	DIVISOR = 1
 	pea $0000		; initialize quotient to 0
@@ -45,4 +49,4 @@
 	ply			; clean up stack
 	ply			; clean up stack
 	rts
-.endproc
+ENDPUBLIC

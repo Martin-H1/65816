@@ -8,6 +8,17 @@
 ; Macros
 ;
 
+.macro print MSG
+	php
+	OFF16MEM
+	lda #$00
+	ldx #MSG
+	jsl PUT_STR
+	jsl SEND_CR
+	ON16MEM
+	plp
+.endmacro
+
 .macro println MSG
 	php
 	OFF16MEM
@@ -29,7 +40,6 @@
 	jsl SEND_HEX_OUT
 	pla
 	jsl SEND_HEX_OUT
-	jsl SEND_CR
 
 	ON16MEM
 	plp
