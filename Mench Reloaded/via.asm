@@ -29,6 +29,7 @@ PUBLIC viaInit
 	lda #$7f		; init two upper registers.
 	sta VIA_BASE + VIA_IFR
 	sta VIA_BASE + VIA_IER
+	ON16MEM
 	plp
 	rts
 ENDPUBLIC

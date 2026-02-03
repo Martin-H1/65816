@@ -21,17 +21,20 @@ SERVO_MAX = 2000 * ONE_US
 SERVO_STEP = (SERVO_MAX - SERVO_MIN)/100
 
 ; Main entry point for the program.
-.proc main
+PUBLIC main
+	jsr viaInit		; one time VIA initialization.
+	jsl SEND_CR		; start output on a newline
 	ON16MEM
 	ON16X
-	PULSE_WIDTH = 0		; used to store pulse width in microseconds
+
+	PULSE_WIDTH = 1		; used to store pulse width in microseconds
 	pea $0000		; reserve stack local for PULSE_WIDTH
-	jsr viaInit		; one time VIA initialization.
 
 @loop:
 	lda #SERVO_MIN		; sweep 0° to 180° (1000 to 2000 µs)
 @sweep_up:
 	sta PULSE_WIDTH,s
+
 	tax
 	lda #SERVO_PIN
 	jsr pbPulsout		; send control pulse (units µs)
@@ -39,13 +42,16 @@ SERVO_STEP = (SERVO_MAX - SERVO_MIN)/100
 	lda #20
 	jsr pbPause		; Wait 20 ms between pulses
 
-	lda PULSE_WIDTH,s	; increment the pulse width
-	adc #SERVO_STEP
+	lda #SERVO_STEP		; increment the pulse width
+	clc
+	adc PULSE_WIDTH,s
+
 	cmp #SERVO_MAX		; loop until 180°
 	bcc @sweep_up
 
 @sweep_down:			; Sweep from 180° back to 0°
 	sta PULSE_WIDTH,s
+
 	tax
 	lda #SERVO_PIN
 	jsr pbPulsout		; send control pulse (units µs)
@@ -60,4 +66,4 @@ SERVO_STEP = (SERVO_MAX - SERVO_MIN)/100
 	bcc @sweep_down
 
 	bra @loop
-.endproc
+ENDPUBLIC
