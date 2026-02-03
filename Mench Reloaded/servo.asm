@@ -62,8 +62,9 @@ PUBLIC main
 	lda PULSE_WIDTH,s	; increment the pulse width
 	sec
 	sbc #SERVO_STEP
+
 	cmp #SERVO_MIN		; loop until 180°
-	bcc @sweep_down
+	bcs @sweep_down
 
 	bra @loop
 ENDPUBLIC
