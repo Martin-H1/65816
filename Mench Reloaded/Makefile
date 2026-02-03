@@ -5,7 +5,9 @@ SOURCES =  \
 	button.asm \
 	echo.asm \
 	helloWorld.asm \
+	math16.asm \
 	servo.asm \
+	ping.asm \
 	via.asm
 
 %.srec : %.bin
@@ -25,6 +27,9 @@ helloWorld.bin: helloWorld.o
 
 servo.bin: servo.o pbasic.o via.o
 	$(LD65) -C mench.cfg -o servo.bin -m servo.map servo.o pbasic.o via.o
+
+ping.bin: ping.o pbasic.o via.o math16.o
+	$(LD65) -C mench.cfg -o ping.bin -m ping.map ping.o pbasic.o via.o math16.o
 
 clean:
 	-$(RM) *.bin

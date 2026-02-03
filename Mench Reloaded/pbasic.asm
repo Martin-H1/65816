@@ -48,8 +48,9 @@ bitsetMask:
 ; Functions
 ;
 
-; Debugged: pbHigh, pbInput, pbINX, pbLow, pbOutput, pbPause, pbToggle
-; Todo: pbCount, pbFreqOut, pbPulsin, pbPulsout, pbPWM, pbRCTime
+; Debugged:
+;   pbHigh, pbInput, pbINX, pbLow, pbOutput, pbPause, pbPulsout, pbToggle
+; Todo: pbCount, pbFreqOut, pbPulsin, pbPWM, pbRCTime
 
 
 ; pbCount - counts the number of cycles (0-1-0 or 1-0-1) on the specified pin
