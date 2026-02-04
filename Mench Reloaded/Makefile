@@ -5,6 +5,7 @@ SOURCES =  \
 	button.asm \
 	echo.asm \
 	helloWorld.asm \
+	qti.asm \
 	math16.asm \
 	servo.asm \
 	ping.asm \
@@ -24,6 +25,9 @@ echo.bin: echo.o
 
 helloWorld.bin: helloWorld.o
 	$(LD65) -C mench.cfg -o helloWorld.bin -m helloWorld.map helloWorld.o
+
+qti.bin: qti.o pbasic.o via.o
+	$(LD65) -C mench.cfg -o qti.bin -m qti.map qti.o pbasic.o via.o
 
 servo.bin: servo.o pbasic.o via.o
 	$(LD65) -C mench.cfg -o servo.bin -m servo.map servo.o pbasic.o via.o

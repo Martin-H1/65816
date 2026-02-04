@@ -19,6 +19,14 @@
 	plp
 .endmacro
 
+.macro printcr
+	php
+	OFF16MEM
+	jsl SEND_CR
+	ON16MEM
+	plp
+.endmacro
+
 .macro println MSG
 	php
 	OFF16MEM
