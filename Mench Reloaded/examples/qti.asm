@@ -1,6 +1,6 @@
 ; -----------------------------------------------------------------------------
 ; QTI sensor sample for the Mench Reloaded SBC.
-; Read a Parallax QTI or Pololu QTR line sensor using RCTime.
+; Reads a Parallax QTI or Pololu QTR line sensor using RCTime.
 ; The circuit:
 ; - Line sensor power pin is attached to VIA port B pin 0.
 ; - Line sensor input pin is attached to VIA port B pin 1.
@@ -48,7 +48,7 @@ PUBLIC main
 	printa
 	printcr
 
-	lda #100
+	lda #100		; wait a tenth of a second between readings.
 	jsr pbPause
 
 	bra @loop
