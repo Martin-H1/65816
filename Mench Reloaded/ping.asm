@@ -24,13 +24,13 @@ PING_PIN = 8			; Port B pin 0
 PULSE_WIDTH = 5 * ONE_US	; Ping))) activated by a pulse of 2 or more uS
 
 PUBLIC main
-	DURATION = 5		; stack offsets for the pulse duration
-	INCHES = 3		; and the computed distance in inches
-	CM = 1			; and centimmeters.
-	pea $0000
-	pea $0000
-	pea $0000
 @loop:
+	jsr viaInit		; one time VIA initialization.
+	jsl SEND_CR		; start output on a newline
+
+	ON16MEM
+	ON16X
+
 	lda #PING_PIN		; set the pin to output and low for several
 	jsr pbLow		; machine cycles to ensure a clean HIGH pulse.
 
@@ -38,9 +38,9 @@ PUBLIC main
 	ldx #PULSE_WIDTH
 	jsr pbPulsout
 
-	lda #PING_PIN		; read response pulse from the Ping))) which is
-	ldx #LOW		; a HIGH pulse whose duration is proportional 
-	jsr pbPulsin		; to the echo off an object.
+	lda #PING_PIN		; read response pulse from the Ping))) which
+	ldx #LOW		; is a LOW-HIGH-LOW pulse with duration
+	jsr pbPulsin		; proportional to the echo off an object.
 
 	pha			; convert time to distance units and output.
 	jsr cyclesToInches

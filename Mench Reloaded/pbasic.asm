@@ -248,7 +248,7 @@ PUBLIC pbPulsin
 	lda PORT_MASK,s		; wait for pulse leading edge transition.
 	and VIA_BASE+VIA_PRB	; get the current value.
 	eor INITIAL_VALUE,s	; test for leading edge transition.
-	bne @leading_edge
+	beq @leading_edge
 	OFF16MEM		; start VIA timer
 	stz VIA_BASE+VIA_ACR	; select one shot mode
 	lda #$ff		; load timer with maximum value.
