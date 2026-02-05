@@ -24,7 +24,7 @@ PUBLIC div16
 	ldy #1			; initialize shift count to 1
 
 @div1:	asl			; shift divisor: test leftmost bit
-	bcs @div2		; branch when get leftmost bit
+	bcs @div2		; branch when get leftmost 1 bit
 	iny			; otherwise increment shift count
 	cpy #17			; max count (all zeroes in divisor)
 	bne @div1		; loop until all bits processed
@@ -35,7 +35,7 @@ PUBLIC div16
 @div4:	sta DIVISOR,s		; save divisor
 	txa			; get dividend into the accumulator
 	sec
-	sbc DIVISOR,s		; SBC 1,S subtract divisor from dividend
+	sbc DIVISOR,s		; subtract divisor from dividend
 	bcc @div3		; branch if can't subtract; dividend still in X
 	tax 			; store new dividend; carry=1 for quotient
 

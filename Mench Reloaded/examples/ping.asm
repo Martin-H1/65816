@@ -24,13 +24,12 @@ PING_PIN = 8			; Port B pin 0
 PULSE_WIDTH = 5 * ONE_US	; Ping))) activated by a pulse of 2 or more uS
 
 PUBLIC main
-@loop:
 	jsr viaInit		; one time VIA initialization.
-	jsl SEND_CR		; start output on a newline
-
+	printcr			; start output on a newline
 	ON16MEM
 	ON16X
 
+@loop:
 	lda #PING_PIN		; set the pin to output and low for several
 	jsr pbLow		; machine cycles to ensure a clean HIGH pulse.
 
@@ -59,14 +58,15 @@ PUBLIC main
 ENDPUBLIC
 
 inches:	.asciiz " in, "
-centi:	.asciiz ", cm = "
+centi:	.asciiz " cm"
 
 ; Parallax's Ping))) datasheet says there are 73.746 microseconds per inch
 ; To get the distance divide the pulse width by 2 times a scaling factor.
 ; It's two times because of pulse outbound and return time.
 INCH_SCALE_FACTOR = 2 * 74 * ONE_US
 .proc cyclesToInches
-	ldx #INCH_SCALE_FACTOR
+	tax
+	lda #INCH_SCALE_FACTOR
 	jsr div16
 	rts
 .endproc
@@ -75,7 +75,8 @@ INCH_SCALE_FACTOR = 2 * 74 * ONE_US
 ; travels out and back, so again we divide by two times a scaling factor.
 CM_SCALE_FACTOR = 2 * 29 * ONE_US
 .proc cyclesToCentimeters
-	ldx #CM_SCALE_FACTOR
+	tax
+	lda #CM_SCALE_FACTOR
 	jsr div16
 	rts
 .endproc

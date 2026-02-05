@@ -14,7 +14,6 @@
 	lda #$00
 	ldx #MSG
 	jsl PUT_STR
-	jsl SEND_CR
 	ON16MEM
 	plp
 .endmacro
