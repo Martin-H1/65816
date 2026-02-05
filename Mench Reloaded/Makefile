@@ -1,45 +1,45 @@
 include ../common.mk
 
 EXAMPLES = \
-	blink.srec \
-	button.srec \
-	echo.srec \
-	helloWorld.srec \
-	ping.srec \
-	qti.srec \
-	servo.srec
+	bin/blink.srec \
+	bin/button.srec \
+	bin/echo.srec \
+	bin/helloWorld.srec \
+	bin/ping.srec \
+	bin/qti.srec \
+	bin/servo.srec
 
 all: $(EXAMPLES)
 
 %.srec : %.bin
 	$(SREC_CAT) -address-length=3 -execution_start_address 0x000300 $< -binary -offset 0x0300 -O -Motorola -DISable Header > $@
 
-blink.bin: examples/blink.o src/pbasic.o src/via.o
-	$(LD65) -C mench.cfg -o blink.bin -m blink.map $^
+bin/blink.bin: examples/blink.o src/pbasic.o src/via.o
+	$(LD65) -C mench.cfg -o bin/blink.bin -m bin/blink.map $^
 
-button.bin: examples/button.o src/pbasic.o src/via.o
-	$(LD65) -C mench.cfg -o button.bin -m button.map $^
+bin/button.bin: examples/button.o src/pbasic.o src/via.o
+	$(LD65) -C mench.cfg -o bin/button.bin -m bin/button.map $^
 
-echo.bin: examples/echo.o
-	$(LD65) -C mench.cfg -o echo.bin -m echo.map $^
+bin/echo.bin: examples/echo.o
+	$(LD65) -C mench.cfg -o bin/echo.bin -m bin/echo.map $^
 
-helloWorld.bin: examples/helloWorld.o
-	$(LD65) -C mench.cfg -o helloWorld.bin -m helloWorld.map $^
+bin/helloWorld.bin: examples/helloWorld.o
+	$(LD65) -C mench.cfg -o bin/helloWorld.bin -m bin/helloWorld.map $^
 
-qti.bin: examples/qti.o src/pbasic.o src/via.o
-	$(LD65) -C mench.cfg -o qti.bin -m qti.map $^
+bin/qti.bin: examples/qti.o src/pbasic.o src/via.o
+	$(LD65) -C mench.cfg -o bin/qti.bin -m bin/qti.map $^
 
-servo.bin: examples/servo.o src/pbasic.o src/via.o
-	$(LD65) -C mench.cfg -o servo.bin -m servo.map $^
+bin/servo.bin: examples/servo.o src/pbasic.o src/via.o
+	$(LD65) -C mench.cfg -o bin/servo.bin -m bin/servo.map $^
 
-ping.bin: examples/ping.o src/pbasic.o src/via.o src/math16.o
-	$(LD65) -C mench.cfg -o ping.bin -m ping.map $^
+bin/ping.bin: examples/ping.o src/pbasic.o src/via.o src/math16.o
+	$(LD65) -C mench.cfg -o bin/ping.bin -m bin/ping.map $^
 
 clean:
-	-$(RM) *.bin
-	-$(RM) *.map
-	-$(RM) *.rom
-	-$(RM) *.srec
+	-$(RM) bin\*.bin
+	-$(RM) bin\*.map
+	-$(RM) bin\*.rom
+	-$(RM) bin\*.srec
 	-$(RM) examples\*.lst
 	-$(RM) examples\*.o
 	-$(RM) src\*.lst
