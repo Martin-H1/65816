@@ -24,4 +24,4 @@ endif
 # Global implicit rules
 
 %.o : %.asm
-	$(CA65) --cpu 65816 -I . $< -l $*.lst -o $@
+	$(CA65) --cpu 65816 -I include $< -l $*.lst -o $@
