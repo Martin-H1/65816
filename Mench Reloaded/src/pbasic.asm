@@ -168,7 +168,7 @@ PUBLIC pbINX
 	jsr pbInput		; set pin to input, C contains port mask.
 	and VIA_BASE+VIA_PRB	; Get initial the value
 	beq @return
-	lda #$0001
+	lda #HIGH
 @return:
 	rts
 ENDPUBLIC
@@ -241,7 +241,7 @@ PUBLIC pbPulsin
 	txy			; retain parameter in x
 	jsr pbInput		; set pin to input and get port mask
 	pha			; initialize port mask stack local
-	cpy #$0001		; test desired initial value
+	cpy #HIGH		; test desired initial value
 	bne @leading_edge
 	sta INITIAL_VALUE,s	; set initial value bit using port mask.
 @leading_edge:
@@ -249,6 +249,7 @@ PUBLIC pbPulsin
 	and VIA_BASE+VIA_PRB	; get the current value.
 	eor INITIAL_VALUE,s	; test for leading edge transition.
 	beq @leading_edge
+
 	OFF16MEM		; start VIA timer
 	stz VIA_BASE+VIA_ACR	; select one shot mode
 	lda #$ff		; load timer with maximum value.
@@ -259,13 +260,14 @@ PUBLIC pbPulsin
 	lda PORT_MASK,s
 	and VIA_BASE+VIA_PRB	; get the current value.
 	eor INITIAL_VALUE,s	; test for edge transition.
-	bne @trailing_edge
+	beq @trailing_edge
 
 	OFF16MEM		; has timer reached zero?
 	lda #T2IF		; start mask
 	bit VIA_BASE+VIA_IFR	; time out?
 	ON16MEM
 	beq @while
+
 @trailing_edge:
 	lda #$ffff
 	sbc VIA_BASE+VIA_T2CL	; get value and clear timer 2 interrupt
@@ -380,7 +382,7 @@ PUBLIC pbRCTime
 	txy			; retain parameter in x
 	jsr pbInput		; set pin to input and get port mask.
 	pha			; initialize port mask stack local
-	cpy #$0001		; test desired initial value
+	cpy #HIGH		; test desired initial value
 	bne @skip
 	sta INITIAL_VALUE,s	; set initial value bit using port mask.
 @skip:
