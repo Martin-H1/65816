@@ -5,6 +5,7 @@ EXAMPLES = \
 	bin/button.srec \
 	bin/echo.srec \
 	bin/helloWorld.srec \
+	bin/math.srec \
 	bin/ping.srec \
 	bin/qti.srec \
 	bin/servo.srec
@@ -26,14 +27,17 @@ bin/echo.bin: examples/echo.o
 bin/helloWorld.bin: examples/helloWorld.o
 	$(LD65) -C mench.cfg -o bin/helloWorld.bin -m bin/helloWorld.map $^
 
+bin/math.bin: examples/math.o src/math16.o src/print.o
+	$(LD65) -C mench.cfg -o bin/math.bin -m bin/math.map $^
+
+bin/ping.bin: examples/ping.o src/pbasic.o src/via.o src/math16.o
+	$(LD65) -C mench.cfg -o bin/ping.bin -m bin/ping.map $^
+
 bin/qti.bin: examples/qti.o src/pbasic.o src/via.o
 	$(LD65) -C mench.cfg -o bin/qti.bin -m bin/qti.map $^
 
 bin/servo.bin: examples/servo.o src/pbasic.o src/via.o
 	$(LD65) -C mench.cfg -o bin/servo.bin -m bin/servo.map $^
-
-bin/ping.bin: examples/ping.o src/pbasic.o src/via.o src/math16.o
-	$(LD65) -C mench.cfg -o bin/ping.bin -m bin/ping.map $^
 
 clean:
 	-$(RM) bin\*.bin
