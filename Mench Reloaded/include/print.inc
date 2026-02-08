@@ -37,7 +37,7 @@
 	plp
 .endmacro
 
-.macro printa
+.macro printc
 	pha
 	php
 	OFF16MEM
@@ -52,3 +52,16 @@
 	plp
 	pla
 .endmacro
+
+.macro printcudec
+       jsr f_printcudec
+.endmacro
+
+.macro putch
+	jsl PUT_CHR
+.endmacro
+
+; Conditionally import via functions in consuming modules.
+.ifndef __print_asm__
+.import f_printcudec
+.endif

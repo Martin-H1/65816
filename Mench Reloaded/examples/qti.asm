@@ -45,7 +45,7 @@ PUBLIC main
 
 	print msg
 	pla
-	printa
+	printc
 	printcr
 
 	lda #100		; wait a tenth of a second between readings.
