@@ -53,6 +53,10 @@
 	pla
 .endmacro
 
+.macro printcdec
+       jsr f_printcdec
+.endmacro
+
 .macro printcudec
        jsr f_printcudec
 .endmacro
@@ -63,5 +67,6 @@
 
 ; Conditionally import via functions in consuming modules.
 .ifndef __print_asm__
+.import f_printcdec
 .import f_printcudec
 .endif
