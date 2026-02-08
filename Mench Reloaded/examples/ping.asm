@@ -58,21 +58,21 @@ PUBLIC main
 	jsr pbPulsin		; proportional to the echo off an object.
 	sta CYCLES,s		; save for using multiple times.
 
-	printa			; print cpu cycle count.
+	printcudec		; print cpu cycle count.
 	print cycles
 
 	lda CYCLES,s		; convert time to distance units and output.
 	tax
 	lda #INCH_SCALE_FACTOR
 	jsr div16
-	printa
+	printcudec
 	print inches
 
 	lda CYCLES,s
 	tax
 	lda #CM_SCALE_FACTOR
 	jsr div16
-	printa
+	printcudec
 	println centi
 
 	lda #100

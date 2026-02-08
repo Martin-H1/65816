@@ -30,10 +30,10 @@ bin/helloWorld.bin: examples/helloWorld.o
 bin/math.bin: examples/math.o src/math16.o src/print.o
 	$(LD65) -C mench.cfg -o bin/math.bin -m bin/math.map $^
 
-bin/ping.bin: examples/ping.o src/pbasic.o src/via.o src/math16.o
+bin/ping.bin: examples/ping.o src/pbasic.o src/via.o src/math16.o src/print.o
 	$(LD65) -C mench.cfg -o bin/ping.bin -m bin/ping.map $^
 
-bin/qti.bin: examples/qti.o src/pbasic.o src/via.o
+bin/qti.bin: examples/qti.o src/pbasic.o src/print.o src/via.o
 	$(LD65) -C mench.cfg -o bin/qti.bin -m bin/qti.map $^
 
 bin/servo.bin: examples/servo.o src/pbasic.o src/via.o
