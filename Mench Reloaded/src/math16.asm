@@ -21,10 +21,15 @@ __math16_asm__ = 1
 PUBLIC div16
 	QUOTIENT = 3
 	DIVISOR = 1
+	phd			; save direct page register
 	pea $0000		; initialize quotient to 0
 	pea $0000		; reserve space for divisor
-	ldy #1			; initialize shift count to 1
 
+	tay
+	tsc			; transfer stack pointer to direct page reg
+	tcd			; function local space is now direct page.
+	tya
+	ldy #1			; initialize shift count to 1
 @times2:
 	asl			; 2 * divisor until we get 1 in the carry bit.
 	bcs @maxdivisor
@@ -34,30 +39,29 @@ PUBLIC div16
 	bne @times2
 
 	lda #$ffff		; divide by zero error.
-	sta QUOTIENT,s
+	sta QUOTIENT
 	bra @return
 
 @maxdivisor:
 	ror			; restore shifted-out bit to divisor
 
 @subtract:			; now divide by subtraction
-	sta DIVISOR,s		; save current divisor
+	sta DIVISOR		; save current divisor
 	txa			; get dividend into the accumulator
 	sec
-	sbc DIVISOR,s		; subtract divisor from dividend
+	sbc DIVISOR		; subtract divisor from dividend
 	bcc @skip		; branch if can't subtract; dividend still in X
 	tax 			; store new dividend; carry=1 for quotient
 
-@skip:	lda QUOTIENT,s		; shift carry quotient (1 for divide, 0 for not)
-	rol
-	sta QUOTIENT,s
-	lda DIVISOR,s		; restore divisor
+@skip:	rol QUOTIENT		; shift carry quotient (1 for divide, 0 for not)
+	lda DIVISOR		; restore divisor
 	lsr			; shift divisor right for next subtract
 	dey			; decrement shift count
 	bne @subtract		; branch to repeat unless count is 0
 @return:
 	pla			; drop divisor
 	pla			; get quotient into C
+	pld
 	rts
 ENDPUBLIC
 
@@ -121,7 +125,7 @@ PUBLIC sqrt16
 	bmi @endif		; check this operation
 	lda RESULT		; compute n = n - (result + one)
 	inc
-	eor $ffff		; Add the two's complement to N
+	eor #$ffff		; Add the two's complement to N
 	clc
 	inc			; add one
 	clc
