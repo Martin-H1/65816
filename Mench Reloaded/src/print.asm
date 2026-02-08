@@ -13,14 +13,35 @@ __print_asm__ = 1
 ; Functions
 ;
 
+; printcdec - prints C as a signed 16 bit decimal number to console
+; Inputs:
+;   C - number
+; Outputs:
+;   C - preserved
+PUBLIC f_printcdec
+	and #$ffff
+	bpl f_printcudec	; positive numbers require no processing
+	pha
+	pha
+	lda #'-'		; Print sign
+	putch
+	pla			; undo the two's complement
+	dec
+	eor #$ffff
+	jsr f_printcudec
+	pla
+	rts
+ENDPUBLIC
+
 ; printcudec - prints C as an unsigned 16 bit decimal number to console
 ; Inputs:
 ;   C - number
 ; Outputs:
-;   C - product
+;   C - preserved
 PUBLIC f_printcudec
 	php			; save processor status
 	phd			; save direct page register
+	pha
 
 	NUM_MSB = 4
 	NUM_LSB = 3
@@ -71,8 +92,10 @@ PUBLIC f_printcudec
 
 @return:
 	ON16MEM			; exit byte mode
-	plx			; clean up working area
-	plx
+	pla			; clean up working area
+	pla
+
+	pla			; restore registers and return
 	pld
 	plp
 	rts

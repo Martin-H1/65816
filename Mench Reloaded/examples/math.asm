@@ -46,6 +46,13 @@ PUBLIC main
 	printcudec
 	printcr
 
+	print sub1
+	sec
+	lda #537
+	sbc #1919
+	printcdec
+	printcr
+
 	println exit
 	rtl
 ENDPUBLIC
@@ -54,5 +61,6 @@ enter:	.asciiz "Math test enter."
 div1:	.asciiz "367 / 19 = "
 div2:	.asciiz "48317 / 17 = "
 mul1:	.asciiz "36 * 19 = "
-mul2:	.asciiz "537 * 1919 = "
+mul2:	.asciiz "337 * 171 = "
+sub1:	.asciiz "537 - 1919 = "
 exit:	.asciiz "Math test exit."
