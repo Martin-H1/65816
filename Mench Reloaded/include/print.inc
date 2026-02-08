@@ -52,3 +52,7 @@
 	plp
 	pla
 .endmacro
+
+.macro putch
+	jsl PUT_CHR
+.endmacro
