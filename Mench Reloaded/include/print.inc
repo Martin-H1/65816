@@ -10,11 +10,15 @@
 
 .macro print MSG
 	php
+	phx
+	pha
 	OFF16MEM
 	lda #$00
 	ldx #MSG
 	jsl PUT_STR
 	ON16MEM
+	pla
+	plx
 	plp
 .endmacro
 

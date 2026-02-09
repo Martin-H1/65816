@@ -41,6 +41,8 @@ ENDPUBLIC
 PUBLIC f_printcudec
 	php			; save processor status
 	phd			; save direct page register
+	phx
+	phy
 	pha
 
 	NUM_MSB = 4
@@ -96,6 +98,8 @@ PUBLIC f_printcudec
 	pla
 
 	pla			; restore registers and return
+	ply
+	plx
 	pld
 	plp
 	rts
