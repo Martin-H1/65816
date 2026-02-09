@@ -1,12 +1,27 @@
 ; -----------------------------------------------------------------------------
 ; Sixteen bit math routines for operations beyond addition and subtraction.
-; From "Programming the 65816" by David Eyes and Ron Lichty
+; div16, mult16 are from "Programming the 65816" by David Eyes and Ron Lichty
+; The remainder are original works.
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 __math16_asm__ = 1
 
 .include "common.inc"
 .include "math16.inc"
+
+; abs16 - takes the absolute value of the input.
+; Inputs:
+;   C - number of take absolute value.
+; Outputs
+;   C - result
+PUBLIC abs16
+	and #$ffff
+	bpl @return
+	dec			; undo two's complement
+	eor #$ffff
+@return:
+	rts
+ENDPUBLIC
 
 ; div16 - 16 bit integer divison. It works by multipyling divisor by two
 ; to get its highest 16 bit multiple. It then conditinally subtracts from
@@ -106,53 +121,59 @@ ENDPUBLIC
 ;   X - clobbered
 PUBLIC sqrt16
 	MAX_BIT = $4000		; Number with the highest non sign bit set.
-
-	; Throughout the function we'll juggle these numbers:
-	; n (input), pbit (computed), and result (output, starts at 0).
-	N = 5
-	PBIT = 3
+	N = 5			; input number n to find square root.
+	PBIT = 3		; the highest power of 4 <= N
 	RESULT = 1
-	pha
-	pea MAX_BIT
-	pea $0000
+	phd
+	pha			; push N
+	pea MAX_BIT		; initialize to highest positive power of two.
+	pea $0000		; result (output, starts at 0).
 
-@while:				; while power bit is not zero
-	clc
+	tsc			; transfer stack pointer to direct page reg
+	tcd			; function local space is now direct page.
+
+@starting_bit:
+	lda PBIT		; compute highest power of four <= n
+	cmp N
+	bcc @while		; PBIT < N
+	beq @while		; PBIT = N
+	lsr PBIT
+	lsr PBIT
+	bra @starting_bit
+
+@while:	clc
 	lda RESULT		; RESULT + PBIT
 	adc PBIT
-	tax			; save (RESULT + PBIT) for later
-	cmp N			; N >= (RESULT + PBIT)
-	bmi @endif		; check this operation
+	cmp N			; if N >= (RESULT + PBIT)
+	bcc @endif
 	lda RESULT		; compute n = n - (result + one)
 	inc
 	eor #$ffff		; Add the two's complement to N
-	clc
 	inc			; add one
 	clc
 	adc N
 	sta N
-	lda PBIT			; compute result += 2 * bit;
+	lda PBIT		; compute result += 2 * bit;
 	asl
 	clc
 	adc RESULT
 	sta RESULT
 @endif:
 	lsr RESULT		; divide result by 2
-	lsr PBIT			; divide bit by 4.
+	lsr PBIT		; divide bit by 4.
 	lsr PBIT
-	lda PBIT
-	bne @while
+	bne @while		; while power bit is not zero
 
-	;;; Do arithmetic rounding to nearest integer.
-	;; round up n2 by one if n1 is greater
-	;; : round_up ( n1 n2 - n1 n2 )
-	;;    2dup > if
-	;;        1+
-	;;    then ;
-
+	lda N			; if RESULT > N then
+	cmp RESULT
+	bcs @return
+	lda RESULT		; Round result to nearest integer.
+	inc
+	sta RESULT
 @return:
 	pla			; return result.
 	plx			; bit and n have outlived their usefulness
 	plx
+	pld
 	rts
 ENDPUBLIC
