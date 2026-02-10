@@ -270,6 +270,7 @@ PUBLIC pbPulsin
 
 @trailing_edge:
 	lda #$ffff
+	sec
 	sbc VIA_BASE+VIA_T2CL	; get value and clear timer 2 interrupt
 	plx			; clean up stack
 	plx
@@ -396,15 +397,17 @@ PUBLIC pbRCTime
 	lda PORT_MASK,s
 	and VIA_BASE+VIA_PRB	; get the current value.
 	eor INITIAL_VALUE,s	; test for edge transition.
-	bne @edge_transition
+	bne @trailing_edge
 
 	OFF16MEM		; has timer reached zero?
 	lda #T2IF		; start mask
 	bit VIA_BASE+VIA_IFR	; time out?
 	ON16MEM
 	beq @while
-@edge_transition:
+
+@trailing_edge:
 	lda #$ffff
+	sec
 	sbc VIA_BASE+VIA_T2CL	; get value and clear timer 2 interrupt
 	plx			; clean up stack
 	plx
