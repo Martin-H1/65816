@@ -120,7 +120,7 @@ ENDPUBLIC
 ;   C - unsigned square root.
 ;   X - clobbered
 PUBLIC sqrt16
-	MAX_BIT = $4000		; Number with the highest non sign bit set.
+	MAX_BIT = $4000		; Highest 16 bit power of 4
 	N = 5			; input number n to find square root.
 	PBIT = 3		; the highest power of 4 <= N
 	RESULT = 1
@@ -144,12 +144,13 @@ PUBLIC sqrt16
 @while:	clc
 	lda RESULT		; RESULT + PBIT
 	adc PBIT
+	tax			; save for later
 	cmp N			; if N >= (RESULT + PBIT)
-	bcc @endif
-	lda RESULT		; compute n = n - (result + one)
+	beq @if
+	bcs @endif		; branch if N < (RESULT + PBIT)
+@if:	txa			; compute n = n - (RESULT + PBIT)
+	eor #$ffff		; Calculate the two's complement
 	inc
-	eor #$ffff		; Add the two's complement to N
-	inc			; add one
 	clc
 	adc N
 	sta N
@@ -164,12 +165,14 @@ PUBLIC sqrt16
 	lsr PBIT
 	bne @while		; while power bit is not zero
 
-	lda N			; if RESULT > N then
-	cmp RESULT
+	lda RESULT		; if N > RESULT then
+	cmp N
 	bcs @return
+	beq @return
 	lda RESULT		; Round result to nearest integer.
 	inc
 	sta RESULT
+
 @return:
 	pla			; return result.
 	plx			; bit and n have outlived their usefulness
