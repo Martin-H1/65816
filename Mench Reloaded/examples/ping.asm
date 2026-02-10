@@ -64,14 +64,14 @@ PUBLIC main
 	lda CYCLES,s		; convert time to distance units and output.
 	tax
 	lda #INCH_SCALE_FACTOR
-	jsr div16
+	jsr udiv16
 	printcudec
 	print inches
 
 	lda CYCLES,s
 	tax
 	lda #CM_SCALE_FACTOR
-	jsr div16
+	jsr udiv16
 	printcudec
 	println centi
 
