@@ -29,7 +29,7 @@ PUBLIC main
 	ldx #367
 	jsr div16
 	printcudec
-	print div3
+	print divr
 	txa
 	printcudec
 	printcr
@@ -39,8 +39,32 @@ PUBLIC main
 	ldx #48317
 	jsr div16
 	printcudec
-	print div3
+	print divr
 	txa
+	printcudec
+	printcr
+
+	print div3
+	lda #0
+	ldx #48317
+	jsr div16
+	printcudec
+	print divr
+	txa
+	printcudec
+	printcr
+
+	print max1
+	lda #337
+	ldx #171
+	jsr max16
+	printcudec
+	printcr
+
+	print min1
+	lda #337
+	ldx #171
+	jsr min16
 	printcudec
 	printcr
 
@@ -91,7 +115,10 @@ enter:	.asciiz "Math test enter."
 abs1:	.asciiz "abs(-1385) = "
 div1:	.asciiz "367 / 19 = "
 div2:	.asciiz "48317 / 17 = "
-div3:	.asciiz ", remainder = "
+div3:	.asciiz "48317 / 0 = "
+divr:	.asciiz ", remainder = "
+max1:	.asciiz "max(337, 171) = "
+min1:	.asciiz "min(337, 171) = "
 mul1:	.asciiz "36 * 19 = "
 mul2:	.asciiz "337 * 171 = "
 sqrt1:	.asciiz "sqrt(537) = "

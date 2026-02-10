@@ -23,8 +23,8 @@ PUBLIC abs16
 	rts
 ENDPUBLIC
 
-; div16 - 16 bit integer divison. It works by multipyling divisor by two
-; to get its highest 16 bit multiple. It then conditinally subtracts from
+; div16 - 16 bit unsigned integer divison. It works by multipyling divisor by
+; two to get its highest 16 bit multiple. It then conditinally subtracts from
 ; the dividend iteratively until the shift count reaches zero.
 ; Inputs:
 ;   C - divisor
@@ -80,7 +80,54 @@ PUBLIC div16
 	rts
 ENDPUBLIC
 
-; mult16 - 16 bit integer multiplication via bit shifting and addition.
+; max16 - compares the unsigned numbers in C and X and returns the highest in C.
+; Inputs:
+;   C - number 1
+;   X - number 2
+; Outputs
+;   C - greater of 1 or 2
+;   X - unchanged
+PUBLIC max16
+	N2 = 3
+	N1 = 1
+	phx
+	pha
+	cmp N2,s
+	bcc @else
+	pla
+	plx
+	rts
+@else:
+	pla
+	pla
+	rts
+ENDPUBLIC
+
+; min16 - compares the unsigned numbers in C and X and returns the lowest in C.
+; Inputs:
+;   C - number 1
+;   X - number 2
+; Outputs
+;   C - lessor of 1 or 2
+;   X - unchanged
+PUBLIC min16
+@return:
+	N2 = 3
+	N1 = 1
+	phx
+	pha
+	cmp N2,s
+	bcs @else
+	pla
+	plx
+	rts
+@else:
+	pla
+	pla
+	rts
+ENDPUBLIC
+
+; mult16 - 16 bit unsigned integer multiplication via bit shifting and addition.
 ; Inputs:
 ;   C - multiplier
 ;   X - multiplicand
@@ -135,8 +182,7 @@ PUBLIC sqrt16
 @starting_bit:
 	lda PBIT		; compute highest power of four <= n
 	cmp N
-	bcc @while		; PBIT < N
-	beq @while		; PBIT = N
+	bcs @while		; PBIT <= N
 	lsr PBIT
 	lsr PBIT
 	bra @starting_bit
@@ -165,10 +211,9 @@ PUBLIC sqrt16
 	lsr PBIT
 	bne @while		; while power bit is not zero
 
-	lda RESULT		; if N > RESULT then
-	cmp N
-	bcs @return
-	beq @return
+	lda N			; if N > RESULT then
+	cmp RESULT
+	bcc @return
 	lda RESULT		; Round result to nearest integer.
 	inc
 	sta RESULT
