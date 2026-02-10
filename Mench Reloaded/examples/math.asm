@@ -27,7 +27,7 @@ PUBLIC main
 	print div1
 	lda #19
 	ldx #367
-	jsr div16
+	jsr udiv16
 	printcudec
 	print divr
 	txa
@@ -37,7 +37,7 @@ PUBLIC main
 	print div2
 	lda #17
 	ldx #48317
-	jsr div16
+	jsr udiv16
 	printcudec
 	print divr
 	txa
@@ -47,7 +47,7 @@ PUBLIC main
 	print div3
 	lda #0
 	ldx #48317
-	jsr div16
+	jsr udiv16
 	printcudec
 	print divr
 	txa
@@ -57,46 +57,46 @@ PUBLIC main
 	print max1
 	lda #337
 	ldx #171
-	jsr max16
+	jsr umax16
 	printcudec
 	printcr
 
 	print min1
 	lda #337
 	ldx #171
-	jsr min16
+	jsr umin16
 	printcudec
 	printcr
 
 	print mul1
 	lda #36
 	ldx #19
-	jsr mult16
+	jsr umult16
 	printcudec
 	printcr
 
 	print mul2
 	lda #337
 	ldx #171
-	jsr mult16
+	jsr umult16
 	printcudec
 	printcr
 
 	print sqrt1
 	lda #537
-	jsr sqrt16
+	jsr usqrt16
 	printcudec
 	printcr
 
 	print sqrt2
 	lda #1919
-	jsr sqrt16
+	jsr usqrt16
 	printcudec
 	printcr
 
 	print sqrt3
 	lda #16
-	jsr sqrt16
+	jsr usqrt16
 	printcudec
 	printcr
 

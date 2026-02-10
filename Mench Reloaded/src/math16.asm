@@ -23,7 +23,7 @@ PUBLIC abs16
 	rts
 ENDPUBLIC
 
-; div16 - 16 bit unsigned integer divison. It works by multipyling divisor by
+; udiv16 - 16 bit unsigned integer divison. It works by multipyling divisor by
 ; two to get its highest 16 bit multiple. It then conditinally subtracts from
 ; the dividend iteratively until the shift count reaches zero.
 ; Inputs:
@@ -33,7 +33,7 @@ ENDPUBLIC
 ;   C - quotient ($ffff if you divide by zero)
 ;   X - remainder (dividend if you divide by zero)
 ;   Y - clobbered
-PUBLIC div16
+PUBLIC udiv16
 	QUOTIENT = 3
 	DIVISOR = 1
 	phd			; save direct page register
@@ -80,14 +80,14 @@ PUBLIC div16
 	rts
 ENDPUBLIC
 
-; max16 - compares the unsigned numbers in C and X and returns the highest in C.
+; umax16 - compares unsigned numbers in C and X and returns the highest in C.
 ; Inputs:
 ;   C - number 1
 ;   X - number 2
 ; Outputs
 ;   C - greater of 1 or 2
 ;   X - unchanged
-PUBLIC max16
+PUBLIC umax16
 	N2 = 3
 	N1 = 1
 	phx
@@ -103,14 +103,14 @@ PUBLIC max16
 	rts
 ENDPUBLIC
 
-; min16 - compares the unsigned numbers in C and X and returns the lowest in C.
+; umin16 - compares unsigned numbers in C and X and returns the lowest in C.
 ; Inputs:
 ;   C - number 1
 ;   X - number 2
 ; Outputs
 ;   C - lessor of 1 or 2
 ;   X - unchanged
-PUBLIC min16
+PUBLIC umin16
 @return:
 	N2 = 3
 	N1 = 1
@@ -127,14 +127,14 @@ PUBLIC min16
 	rts
 ENDPUBLIC
 
-; mult16 - 16 bit unsigned integer multiplication via bit shifting and addition.
+; umult16 - 16 bit unsigned integer multiplication by bit shifting and addition.
 ; Inputs:
 ;   C - multiplier
 ;   X - multiplicand
 ; Outputs:
 ;   C - product
 ;   X - clobbered
-PUBLIC mult16
+PUBLIC umult16
 	MULTIPLICAND = 3
 	MULTIPLIER = 1
 	phd			; save direct page register
@@ -158,15 +158,15 @@ PUBLIC mult16
 	rts
 ENDPUBLIC
 
-; sqrt16 - 16 bit fast integer square root algorithm, with rounding the
-; result to the next greater integer if the fractional part is 0.5 or
+; usqrt16 - 16 bit fast unsigned integer square root algorithm, with rounding
+; the result to the next greater integer if the fractional part is 0.5 or
 ; greater. For example 2->1, 3->2, 4->2, 6->2, 7->3, 9->3
 ; Inputs:
 ;   C - unsigned number whose square root to compute.
 ; Outputs:
 ;   C - unsigned square root.
 ;   X - clobbered
-PUBLIC sqrt16
+PUBLIC usqrt16
 	MAX_BIT = $4000		; Highest 16 bit power of 4
 	N = 5			; input number n to find square root.
 	PBIT = 3		; the highest power of 4 <= N

@@ -10,9 +10,9 @@
 ; Conditionally import via functions in consuming modules.
 .ifndef __math16_asm__
 .import abs16
-.import div16
-.import max16
-.import min16
-.import mult16
-.import sqrt16
+.import udiv16
+.import umax16
+.import umin16
+.import umult16
+.import usqrt16
 .endif
