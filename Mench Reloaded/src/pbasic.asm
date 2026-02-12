@@ -322,7 +322,7 @@ ENDPUBLIC
 ; Outputs:
 ;   None
 PUBLIC pbPWM
-	DUTY = 3
+	DUTY_CYCLE = 3
 	PORT_MASK = 1
 	phd			; preserve direct page register
 	phx			; initialize duty cycle stack local
@@ -331,10 +331,10 @@ PUBLIC pbPWM
 	tsc			; point direct page to stack frame
 	tcd
 
-	lda DUTY		; clamp the input to 1 to $ff
+	lda DUTY_CYCLE		; clamp the input to 1 to $ff
 	and #$00ff
 	beq @return
-	sta DUTY
+	sta DUTY_CYCLE
 
 @while:
 	OFF16MEM		; enter byte transfer mode.
@@ -347,7 +347,7 @@ PUBLIC pbPWM
 @loop:				; generate waveform here
 	lda PORT_MASK
 	tsb VIA_BASE+VIA_PRB	; use mask to set pin high
-	ldx DUTY		; keep high during duty cycle
+	ldx DUTY_CYCLE		; keep high during duty cycle
 @duty_wait:
 	dex
 	bne @duty_wait
@@ -357,7 +357,7 @@ PUBLIC pbPWM
 
 	lda #$0100		; compute remainder
 	sec
-	sbc DUTY
+	sbc DUTY_CYCLE
 	tax
 @remainder_wait:		; keep low during remainder
 	dex
