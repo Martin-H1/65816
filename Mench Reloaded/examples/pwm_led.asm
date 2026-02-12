@@ -17,24 +17,40 @@
 LED_PIN = 0			; Port B pin 0
 
 PUBLIC main
-	jsr viaInit		; one time VIA initialization.
-	printcr			; start output on a newline
+	phd
 	ON16MEM
 	ON16X
+	printcr			; start output on a newline
+	jsr viaInit		; one time VIA initialization.
 
-	CYCLES = 1		; stack local for cycle count
-	pea $0000
-@loop:
+	DUTY_CYCLE = 1		; stack local for cycle count
+	pea $0001		; start with a valid value.
+	tsc			; point direct page to stack frame
+	tcd
+
+@loop1:
 	lda #LED_PIN		; set the pin to output and low for several
-	ldx #80
-	ldy #500
+	ldx DUTY_CYCLE		; load the duty cycle
+	ldy #50			; set the duration in ms
 	jsr pbPWM
 
-	tya
-	printc
-	printcr
+	inc DUTY_CYCLE
+	lda DUTY_CYCLE
+	cmp #$00ff
+	bcc @loop1
 
+	dec DUTY_CYCLE		; get duty cycle duration within limits.
+@loop2:
+	lda #LED_PIN		; set the pin to output and low for several
+	ldx DUTY_CYCLE		; load the duty cycle
+	ldy #50			; set the duration in ms
+	jsr pbPWM
+
+	dec DUTY_CYCLE
+	bne @loop2		; exit when zero
+
+@return:
 	pla
+	pld
 	rtl
-	jmp @loop
 ENDPUBLIC
