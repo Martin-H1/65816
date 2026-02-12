@@ -49,8 +49,8 @@ bitsetMask:
 ;
 
 ; Debugged: pbHigh, pbInput, pbINX, pbLow, pbOutput, pbPause, pbPulsin,
-;   pbPulsout, pbToggle
-; Todo: pbCount, pbFreqOut, pbPWM, pbRCTime
+;   pbPulsout, pbRCTime, pbToggle
+; Todo: pbCount, pbFreqOut, pbPWM
 
 
 ; pbCount - counts the number of cycles (0-1-0 or 1-0-1) on the specified pin
@@ -64,12 +64,16 @@ PUBLIC pbCount
 	COUNT = 5		; stack offsets for local variables.
 	PORT_MASK = 3
 	LAST_VALUE = 1
+	phd			; save direct page register
 	pea $0000		; initialize count stack local
 	txy			; save time parameter to Y
 	jsr pbInput		; set pin to input, return C as port mask
 	pha			; initialize port mask stack local
 	and VIA_BASE+VIA_PRB	; Get initial the value and set
 	pha			; initial value stack local
+
+	tsc			; transfer stack pointer to direct page reg
+	tcd			; function local space is now direct page.
 
 @while:	OFF16MEM		; enter byte transfer mode.
 	stz VIA_BASE+VIA_ACR	; select one shot mode
@@ -79,18 +83,16 @@ PUBLIC pbCount
 	sta VIA_BASE+VIA_T2CH	; set upper latch
 	ON16MEM
 
-@loop:	lda PORT_MASK,s
+@loop:	lda PORT_MASK
 	and VIA_BASE+VIA_PRB	; get the current state
-	eor LAST_VALUE,s	; compare with previous state
+	eor LAST_VALUE		; compare with previous state
 	beq @endif
 
-	lda COUNT,s		; increment the count
-	inc
-	sta COUNT,s
+	inc COUNT		; state changed increment the count
 
-	lda PORT_MASK,s
-	and VIA_BASE+VIA_PRB	; get the current state
-	sta LAST_VALUE,s	; update current state.
+	lda PORT_MASK
+	and VIA_BASE+VIA_PRB	; update the last value with current state
+	sta LAST_VALUE
 
 @endif:	OFF16MEM
 	lda #T2IF		; timer 2 mask
@@ -107,6 +109,7 @@ PUBLIC pbCount
 	pla			; drop last value
 	pla			; drop pin mask
 	pla			; return count in A
+	pld			; restore direct page
 	rts
 ENDPUBLIC
 
@@ -315,15 +318,23 @@ ENDPUBLIC
 ;   C - index (0-15) of the I/O pin to set. Pin is initially set to output
 ;	then to input mode when the command finishes.
 ;   X - the duty (0-255) of analog output as the number of 256ths of 5V.
-;   Y - the duration (0-255) of the PWM output in mS.
+;   Y - the duration of the PWM output in mS.
 ; Outputs:
 ;   None
 PUBLIC pbPWM
 	DUTY = 3
 	PORT_MASK = 1
+	phd			; preserve direct page register
 	phx			; initialize duty cycle stack local
 	jsr pbOutput
 	pha			; initialize port mask stack local
+	tsc			; point direct page to stack frame
+	tcd
+
+	lda DUTY		; clamp the input to 1 to $ff
+	and #$00ff
+	beq @return
+	sta DUTY
 
 @while:
 	OFF16MEM		; enter byte transfer mode.
@@ -334,20 +345,20 @@ PUBLIC pbPWM
 	sta VIA_BASE+VIA_T2CH	; set upper latch
 	ON16MEM
 @loop:				; generate waveform here
-	lda PORT_MASK,s
+	lda PORT_MASK
 	tsb VIA_BASE+VIA_PRB	; use mask to set pin high
-
-	lda DUTY,s		; keep high during duty cycle
-	tax
+	ldx DUTY		; keep high during duty cycle
 @duty_wait:
 	dex
 	bne @duty_wait
 
-	lda PORT_MASK,s
+	lda PORT_MASK
 	trb VIA_BASE+VIA_PRB	; use mask to set pin low
 
-	lda #$ff		; compute remainder
-	sbc DUTY,s
+	lda #$0100		; compute remainder
+	sec
+	sbc DUTY
+	tax
 @remainder_wait:		; keep low during remainder
 	dex
 	bne @remainder_wait
@@ -359,10 +370,12 @@ PUBLIC pbPWM
 	beq @loop
 	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt
 	dey
-	bpl @while		; loop until no ms left
+	bne @while		; loop until no ms left
 
-	plx			; clean up stack
+@return:
+	plx			; clean up stack and return
 	plx
+	pld
 	rts
 ENDPUBLIC
 
