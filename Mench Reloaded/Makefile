@@ -6,6 +6,7 @@ EXAMPLES = \
 	bin/echo.srec \
 	bin/helloWorld.srec \
 	bin/math.srec \
+	bin/music.srec \
 	bin/ping.srec \
 	bin/qti.srec \
 	bin/servo.srec
@@ -29,6 +30,9 @@ bin/helloWorld.bin: examples/helloWorld.o
 
 bin/math.bin: examples/math.o src/math16.o src/print.o
 	$(LD65) -C mench.cfg -o bin/math.bin -m bin/math.map $^
+
+bin/music.bin: examples/music.o src/pbasic.o src/via.o src/print.o
+	$(LD65) -C mench.cfg -o bin/music.bin -m bin/music.map $^
 
 bin/ping.bin: examples/ping.o src/pbasic.o src/via.o src/math16.o src/print.o
 	$(LD65) -C mench.cfg -o bin/ping.bin -m bin/ping.map $^

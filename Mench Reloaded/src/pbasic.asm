@@ -49,8 +49,8 @@ bitsetMask:
 ;
 
 ; Debugged: pbHigh, pbInput, pbINX, pbLow, pbOutput, pbPause, pbPulsin,
-;   pbPulsout, pbRCTime, pbToggle
-; Todo: pbCount, pbFreqOut, pbPWM
+;   pbPulsout, pbPWM, pbRCTime, pbToggle
+; Todo: pbCount, pbFreqOut
 
 
 ; pbCount - counts the number of cycles (0-1-0 or 1-0-1) on the specified pin
@@ -113,23 +113,47 @@ PUBLIC pbCount
 	rts
 ENDPUBLIC
 
-; pbFreqOut - outputs a square wave for specified duration and frequency.
+; pbFreqOut - outputs a square wave of specified period for the duration.
+; This API is different from the PBasic command because I wanted to avoid
+; division in this module. The caller can computer the reciprocal of the
+; frequency before the call.
 ; Inputs:
 ;   C - index (0-15) of the I/O pin to use. Pin is set to output mode.
-;   X - unsigned quantity (1-65535) specifying the duration in milliseconds.
-;   Y - unsigned quantity (1-65535) specifying the frequency in hertz.
+;   X - unsigned quantity (1-65535) specifying the period of the wave in MS.
+;   Y - unsigned quantity (1-65535) specifying the duration in wave cycles.
 ; Outputs:
 ;   None, all registers clobbered
 PUBLIC pbFreqOut
-	phy			; initialize frequency stack local
-	txy
-	jsr pbOutput		; set pin to output and get port mask
+	PERIOD = 3
+	PORT_MASK = 1
+	phd			; preserve direct page register
+	phx			; initialize period
+	jsr pbOutput
 	pha			; initialize port mask stack local
+	tsc			; point direct page to stack frame
+	tcd
+	lsr PERIOD
 
-@duration:
+@while:
+	lda PORT_MASK		; set pin high for waveform crest
+	tsb VIA_BASE+VIA_PRB	; use mask to set pin high
 
-	pla			; clean up stack
-	pla
+	lda PERIOD		; high for half wave form duration
+	jsr pbPause
+
+	lda PORT_MASK		; waveform trough
+	trb VIA_BASE+VIA_PRB	; use mask to set pin high
+
+	lda PERIOD		; high for half wave form duration
+	jsr pbPause
+
+	dey
+	bne @while		; loop until no cycles left
+
+@return:
+	plx			; clean up stack and return
+	plx
+	pld
 	rts
 ENDPUBLIC
 
