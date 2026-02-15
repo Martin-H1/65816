@@ -115,12 +115,12 @@ ENDPUBLIC
 
 ; pbFreqOut - outputs a square wave of specified period for the duration.
 ; This API is different from the PBasic command because I wanted to avoid
-; division in this module. The caller can computer the reciprocal of the
+; division in this module. The caller can compute the reciprocal of the
 ; frequency before the call.
 ; Inputs:
 ;   C - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ;   X - unsigned quantity (1-65535) specifying the period of the wave in MS.
-;   Y - unsigned quantity (1-65535) specifying the duration in wave cycles.
+;   Y - unsigned quantity (1-65535) specifying the duration in MS.
 ; Outputs:
 ;   None, all registers clobbered
 PUBLIC pbFreqOut
@@ -128,11 +128,11 @@ PUBLIC pbFreqOut
 	PORT_MASK = 1
 	phd			; preserve direct page register
 	phx			; initialize period
+	lsr PERIOD		; half the period for crest and trough times
 	jsr pbOutput
 	pha			; initialize port mask stack local
 	tsc			; point direct page to stack frame
 	tcd
-	lsr PERIOD
 
 @while:
 	lda PORT_MASK		; set pin high for waveform crest
@@ -147,8 +147,13 @@ PUBLIC pbFreqOut
 	lda PERIOD		; high for half wave form duration
 	jsr pbPause
 
-	dey
-	bne @while		; loop until no cycles left
+	tya			; Reduce duration by the period
+	sec
+	sbc PERIOD		; two delays means subtract it twice
+	sbc PERIOD
+	tay
+	beq @return		; loop until duration reaches zero
+	bpl @while		; or negative
 
 @return:
 	plx			; clean up stack and return
