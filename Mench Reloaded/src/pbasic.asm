@@ -114,9 +114,9 @@ PUBLIC pbCount
 ENDPUBLIC
 
 ; pbFreqOut - outputs a square wave of specified period for the duration.
-; This API is different from the PBasic command because I wanted to avoid
-; division in this module. The caller can compute the reciprocal of the
-; frequency before the call.
+; This API differs from the PBasic command because I wanted to avoid division
+; in this module. The caller compute the reciprocal of the frequency before
+; the call. Also, for portability I didn't use the w65c265's tone generators.
 ; Inputs:
 ;   C - index (0-15) of the I/O pin to use. Pin is set to output mode.
 ;   X - unsigned quantity (1-65535) specifying the period of the wave in MS.
@@ -126,39 +126,48 @@ ENDPUBLIC
 PUBLIC pbFreqOut
 	PERIOD = 3
 	PORT_MASK = 1
-	phd			; preserve direct page register
 	phx			; initialize period
-	lsr PERIOD		; half the period for crest and trough times
 	jsr pbOutput
 	pha			; initialize port mask stack local
-	tsc			; point direct page to stack frame
-	tcd
+	lda PERIOD,s
+	lsr			; half the period for crest and trough times
+	sta PERIOD,s
 
 @while:
-	lda PORT_MASK		; set pin high for waveform crest
+	OFF16MEM		; enter byte transfer mode.
+	stz VIA_BASE+VIA_ACR	; select one shot mode
+	lda #<ONE_MS		; one ms delay duration
+	sta VIA_BASE+VIA_T2CL	; set lower latch
+	lda #>ONE_MS
+	sta VIA_BASE+VIA_T2CH	; set upper latch
+	ON16MEM
+@loop:
+	lda PORT_MASK,s		; set pin high for waveform crest
 	tsb VIA_BASE+VIA_PRB	; use mask to set pin high
+	lda PERIOD,s		; busy wait for half wave form duration
+	tax
+@busyh:	dex
+	bne @busyh
 
-	lda PERIOD		; high for half wave form duration
-	jsr pbPause
-
-	lda PORT_MASK		; waveform trough
+	lda PORT_MASK,s		; waveform trough
 	trb VIA_BASE+VIA_PRB	; use mask to set pin high
+	lda PERIOD,s		; busy wait for half wave form duration
+	tax
+@busyl:	dex
+	bne @busyl
 
-	lda PERIOD		; high for half wave form duration
-	jsr pbPause
-
-	tya			; Reduce duration by the period
-	sec
-	sbc PERIOD		; two delays means subtract it twice
-	sbc PERIOD
-	tay
-	beq @return		; loop until duration reaches zero
-	bpl @while		; or negative
+	OFF16MEM
+	lda #T2IF		; start mask
+	bit VIA_BASE+VIA_IFR	; time out?
+	ON16MEM
+	beq @loop
+	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt
+	dey
+	bpl @while		; loop until no ms left
 
 @return:
 	plx			; clean up stack and return
 	plx
-	pld
 	rts
 ENDPUBLIC
 
