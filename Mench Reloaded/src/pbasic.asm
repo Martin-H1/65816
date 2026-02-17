@@ -12,7 +12,6 @@ __pbasic_asm__ = 1
 .include "common.inc"
 .include "pbasic.inc"
 .include "via.inc"
-.include "w65c265Monitor.inc"
 
 ;
 ; Aliases
@@ -128,6 +127,14 @@ PUBLIC pbFreqOut
 	DURATION = 5
 	FREQUENCY = 3
 	CHANNEL = 1
+	phd			; save direct register
+	phb
+	pea $0000
+	pld			; set direct page to page 0
+	pea $0000		; set data bank = 0 to address control regs
+	plb			; consume both zeros pushed.
+	plb
+
 	phy			; initialize duration
 	phx			; initialize frequency
 	pha			; initialize channel
@@ -135,18 +142,29 @@ PUBLIC pbFreqOut
 	cmp #$00		; channel 0 or 1?
 	bne @channel1
 	lda FREQUENCY,s
-	tay
+
+	tax
 	OFF16MEM		; enter byte transfer mode.
-	lda #Bit1		; Bit 1 sets tone generator 0
-	jsl CONTROL_TONES
+	beq @skip1
+	stx T5CL
+@skip1:	lda #T5FLG		; Enable timer 5
+	tsb TER
+	lda #Bit1		; Enable TG0
+	tsb BCR
 	ON16MEM
 	bra @pause
+
 @channel1:
 	lda FREQUENCY,s
 	tax
 	OFF16MEM		; enter byte transfer mode.
-	lda #Bit2		; Bit 1 sets tone generator 0
-	jsl CONTROL_TONES
+	beq @skip2
+	stx T6CL
+
+@skip2:	lda #T6FLG		; enable timer 6
+	tsb TER
+	lda #Bit2		; enable TG1
+	tsb BCR
 	ON16MEM
 @pause:
 	lda DURATION,s
@@ -154,13 +172,17 @@ PUBLIC pbFreqOut
 	jsr pbPause
 
 	OFF16MEM		; enter byte transfer mode.
-	lda #0			; Turn off tones and timers
-	jsl CONTROL_TONES
+	lda #Bit1 | Bit2	; Disable TG0 and TG1
+	trb BCR
+	lda #T5FLG | T6FLG	; Disable timers 5 and 6.
+	trb TER
 	ON16MEM
 @return:
 	pla			; clean up stack and return
 	pla
 	pla
+	plb
+	pld
 	rts
 ENDPUBLIC
 
