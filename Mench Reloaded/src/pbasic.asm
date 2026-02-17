@@ -12,6 +12,7 @@ __pbasic_asm__ = 1
 .include "common.inc"
 .include "pbasic.inc"
 .include "via.inc"
+.include "w65c265Monitor.inc"
 
 ;
 ; Aliases
@@ -113,61 +114,53 @@ PUBLIC pbCount
 	rts
 ENDPUBLIC
 
-; pbFreqOut - outputs a square wave of specified period for the duration.
-; This API differs from the PBasic command because I wanted to avoid division
-; in this module. The caller compute the reciprocal of the frequency before
-; the call. Also, for portability I didn't use the w65c265's tone generators.
+; pbFreqOut - outputs a sound of the specified frequency for the duration.
+; This API differs from the PBasic command because I use values compatible
+; with the w65c265 tone generator. The caller computes this value using the
+; formula from the datasheet formula.
 ; Inputs:
-;   C - index (0-15) of the I/O pin to use. Pin is set to output mode.
-;   X - unsigned quantity (1-65535) specifying the period of the wave in MS.
+;   C - tone generator channel (0 or 1) to use.
+;   X - unsigned quantity (1-65535) specifying the frequency of the wave.
 ;   Y - unsigned quantity (1-65535) specifying the duration in MS.
 ; Outputs:
 ;   None, all registers clobbered
 PUBLIC pbFreqOut
-	PERIOD = 3
-	PORT_MASK = 1
-	phx			; initialize period
-	jsr pbOutput
-	pha			; initialize port mask stack local
-	lda PERIOD,s
-	lsr			; half the period for crest and trough times
-	sta PERIOD,s
+	DURATION = 5
+	FREQUENCY = 3
+	CHANNEL = 1
+	phy			; initialize duration
+	phx			; initialize frequency
+	pha			; initialize channel
 
-@while:
+	cmp #$00		; channel 0 or 1?
+	bne @channel1
+	lda FREQUENCY,s
+	tay
 	OFF16MEM		; enter byte transfer mode.
-	stz VIA_BASE+VIA_ACR	; select one shot mode
-	lda #<ONE_MS		; one ms delay duration
-	sta VIA_BASE+VIA_T2CL	; set lower latch
-	lda #>ONE_MS
-	sta VIA_BASE+VIA_T2CH	; set upper latch
+	lda #Bit1		; Bit 1 sets tone generator 0
+	jsl CONTROL_TONES
 	ON16MEM
-@loop:
-	lda PORT_MASK,s		; set pin high for waveform crest
-	tsb VIA_BASE+VIA_PRB	; use mask to set pin high
-	lda PERIOD,s		; busy wait for half wave form duration
+	bra @pause
+@channel1:
+	lda FREQUENCY,s
 	tax
-@busyh:	dex
-	bne @busyh
-
-	lda PORT_MASK,s		; waveform trough
-	trb VIA_BASE+VIA_PRB	; use mask to set pin high
-	lda PERIOD,s		; busy wait for half wave form duration
-	tax
-@busyl:	dex
-	bne @busyl
-
-	OFF16MEM
-	lda #T2IF		; start mask
-	bit VIA_BASE+VIA_IFR	; time out?
+	OFF16MEM		; enter byte transfer mode.
+	lda #Bit2		; Bit 1 sets tone generator 0
+	jsl CONTROL_TONES
 	ON16MEM
-	beq @loop
-	lda VIA_BASE+VIA_T2CL	; clear timer 2 interrupt
-	dey
-	bpl @while		; loop until no ms left
+@pause:
+	lda DURATION,s
+	beq @return		; A zero duration means indefinate
+	jsr pbPause
 
+	OFF16MEM		; enter byte transfer mode.
+	lda #0			; Turn off tones and timers
+	jsl CONTROL_TONES
+	ON16MEM
 @return:
-	plx			; clean up stack and return
-	plx
+	pla			; clean up stack and return
+	pla
+	pla
 	rts
 ENDPUBLIC
 

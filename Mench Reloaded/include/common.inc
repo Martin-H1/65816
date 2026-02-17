@@ -27,6 +27,17 @@ Bit5	= $20
 Bit6	= $40
 Bit7	= $80
 
+; Processor Register Locations
+BCR = $DF40			; BUS CONTROL REGISTER
+				; BIT 0-EXTERNAL MEM BUS ENABLE
+				; BIT 1-TONE GEN 0 ENABLE
+				; BIT 2-TONE GEN 1 ENABLE
+				; BIT 3-ICE ENABLE=1
+				; BIT 4-MONITOR "WATCH DOG" ENABLE
+				; BIT 5-ABORT ENABLE = 1 ON P40
+				; BIT 6-NMI ENABLE = 1 ON P40
+				; BIT 7-EXTERNAL $E000-$FFFF = 1
+
 ; control bits for REP and SEP
 MEM16	= $20
 IND16	= $10

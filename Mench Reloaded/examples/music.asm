@@ -14,103 +14,108 @@
 .include "via.inc"
 .include "w65c265Monitor.inc"
 
-; Period values for musical notes in CPU cycles
-NOTE_B0  = CLK_FREQ / 31
-NOTE_C1  = CLK_FREQ / 33
-NOTE_CS1 = CLK_FREQ / 35
-NOTE_D1  = CLK_FREQ / 37
-NOTE_DS1 = CLK_FREQ / 39
-NOTE_E1  = CLK_FREQ / 41
-NOTE_F1  = CLK_FREQ / 44
-NOTE_FS1 = CLK_FREQ / 46
-NOTE_G1  = CLK_FREQ / 49
-NOTE_GS1 = CLK_FREQ / 52
-NOTE_A1  = CLK_FREQ / 55
-NOTE_AS1 = CLK_FREQ / 58
-NOTE_B1  = CLK_FREQ / 62
-NOTE_C2  = CLK_FREQ / 65
-NOTE_CS2 = CLK_FREQ / 69
-NOTE_D2  = CLK_FREQ / 73
-NOTE_DS2 = CLK_FREQ / 78
-NOTE_E2  = CLK_FREQ / 82
-NOTE_F2  = CLK_FREQ / 87
-NOTE_FS2 = CLK_FREQ / 93
-NOTE_G2  = CLK_FREQ / 98
-NOTE_GS2 = CLK_FREQ / 104
-NOTE_A2  = CLK_FREQ / 110
-NOTE_AS2 = CLK_FREQ / 117
-NOTE_B2  = CLK_FREQ / 123
-NOTE_C3  = CLK_FREQ / 131
-NOTE_CS3 = CLK_FREQ / 139
-NOTE_D3  = CLK_FREQ / 147
-NOTE_DS3 = CLK_FREQ / 156
-NOTE_E3  = CLK_FREQ / 165
-NOTE_F3  = CLK_FREQ / 175
-NOTE_FS3 = CLK_FREQ / 185
-NOTE_G3  = CLK_FREQ / 196
-NOTE_GS3 = CLK_FREQ / 208
-NOTE_A3  = CLK_FREQ / 220
-NOTE_AS3 = CLK_FREQ / 233
-NOTE_B3  = CLK_FREQ / 247
-NOTE_C4  = CLK_FREQ / 262
-NOTE_CS4 = CLK_FREQ / 277
-NOTE_D4  = CLK_FREQ / 294
-NOTE_DS4 = CLK_FREQ / 311
-NOTE_E4  = CLK_FREQ / 330
-NOTE_F4  = CLK_FREQ / 349
-NOTE_FS4 = CLK_FREQ / 370
-NOTE_G4  = CLK_FREQ / 392
-NOTE_GS4 = CLK_FREQ / 415
-NOTE_A4  = CLK_FREQ / 440
-NOTE_AS4 = CLK_FREQ / 466
-NOTE_B4  = CLK_FREQ / 494
-NOTE_C5  = CLK_FREQ / 523
-NOTE_CS5 = CLK_FREQ / 554
-NOTE_D5  = CLK_FREQ / 587
-NOTE_DS5 = CLK_FREQ / 622
-NOTE_E5  = CLK_FREQ / 659
-NOTE_F5  = CLK_FREQ / 698
-NOTE_FS5 = CLK_FREQ / 740
-NOTE_G5  = CLK_FREQ / 784
-NOTE_GS5 = CLK_FREQ / 831
-NOTE_A5  = CLK_FREQ / 880
-NOTE_AS5 = CLK_FREQ / 932
-NOTE_B5  = CLK_FREQ / 988
-NOTE_C6  = CLK_FREQ / 1047
-NOTE_CS6 = CLK_FREQ / 1109
-NOTE_D6  = CLK_FREQ / 1175
-NOTE_DS6 = CLK_FREQ / 1245
-NOTE_E6  = CLK_FREQ / 1319
-NOTE_F6  = CLK_FREQ / 1397
-NOTE_FS6 = CLK_FREQ / 1480
-NOTE_G6  = CLK_FREQ / 1568
-NOTE_GS6 = CLK_FREQ / 1661
-NOTE_A6  = CLK_FREQ / 1760
-NOTE_AS6 = CLK_FREQ / 1865
-NOTE_B6  = CLK_FREQ / 1976
-NOTE_C7  = CLK_FREQ / 2093
-NOTE_CS7 = CLK_FREQ / 2217
-NOTE_D7  = CLK_FREQ / 2349
-NOTE_DS7 = CLK_FREQ / 2489
-NOTE_E7  = CLK_FREQ / 2637
-NOTE_F7  = CLK_FREQ / 2794
-NOTE_FS7 = CLK_FREQ / 2960
-NOTE_G7  = CLK_FREQ / 3136
-NOTE_GS7 = CLK_FREQ / 3322
-NOTE_A7  = CLK_FREQ / 3520
-NOTE_AS7 = CLK_FREQ / 3729
-NOTE_B7  = CLK_FREQ / 3951
-NOTE_C8  = CLK_FREQ / 4186
-NOTE_CS8 = CLK_FREQ / 4435
-NOTE_D8  = CLK_FREQ / 4699
-NOTE_DS8 = CLK_FREQ / 4978
+; Tone generator register value
+; N = (FCLK / (16 x F)) - 1
+; F = desired frequency
+; FCLK = FCLK input clock
+; Hz values for musical notes scaled for CPU cycles.
+NOTE_B0  = (FCLK / (16 * 31)) - 1
+NOTE_C1  = (FCLK / (16 * 33)) - 1
+NOTE_CS1 = (FCLK / (16 * 35)) - 1
+NOTE_D1  = (FCLK / (16 * 37)) - 1
+NOTE_DS1 = (FCLK / (16 * 39)) - 1
+NOTE_E1  = (FCLK / (16 * 41)) - 1
+NOTE_F1  = (FCLK / (16 * 44)) - 1
+NOTE_FS1 = (FCLK / (16 * 46)) - 1
+NOTE_G1  = (FCLK / (16 * 49)) - 1
+NOTE_GS1 = (FCLK / (16 * 52)) - 1
+NOTE_A1  = (FCLK / (16 * 55)) - 1
+NOTE_AS1 = (FCLK / (16 * 58)) - 1
+NOTE_B1  = (FCLK / (16 * 62)) - 1
+NOTE_C2  = (FCLK / (16 * 65)) - 1
+NOTE_CS2 = (FCLK / (16 * 69)) - 1
+NOTE_D2  = (FCLK / (16 * 73)) - 1
+NOTE_DS2 = (FCLK / (16 * 78)) - 1
+NOTE_E2  = (FCLK / (16 * 82)) - 1
+NOTE_F2  = (FCLK / (16 * 87)) - 1
+NOTE_FS2 = (FCLK / (16 * 93)) - 1
+NOTE_G2  = (FCLK / (16 * 98)) - 1
+NOTE_GS2 = (FCLK / (16 * 104)) - 1
+NOTE_A2  = (FCLK / (16 * 110)) - 1
+NOTE_AS2 = (FCLK / (16 * 117)) - 1
+NOTE_B2  = (FCLK / (16 * 123)) - 1
+NOTE_C3  = (FCLK / (16 * 131)) - 1
+NOTE_CS3 = (FCLK / (16 * 139)) - 1
+NOTE_D3  = (FCLK / (16 * 147)) - 1
+NOTE_DS3 = (FCLK / (16 * 156)) - 1
+NOTE_E3  = (FCLK / (16 * 165)) - 1
+NOTE_F3  = (FCLK / (16 * 175)) - 1
+NOTE_FS3 = (FCLK / (16 * 185)) - 1
+NOTE_G3  = (FCLK / (16 * 196)) - 1
+NOTE_GS3 = (FCLK / (16 * 208)) - 1
+NOTE_A3  = (FCLK / (16 * 220)) - 1
+NOTE_AS3 = (FCLK / (16 * 233)) - 1
+NOTE_B3  = (FCLK / (16 * 247)) - 1
+NOTE_C4  = (FCLK / (16 * 262)) - 1
+NOTE_CS4 = (FCLK / (16 * 277)) - 1
+NOTE_D4  = (FCLK / (16 * 294)) - 1
+NOTE_DS4 = (FCLK / (16 * 311)) - 1
+NOTE_E4  = (FCLK / (16 * 330)) - 1
+NOTE_F4  = (FCLK / (16 * 349)) - 1
+NOTE_FS4 = (FCLK / (16 * 370)) - 1
+NOTE_G4  = (FCLK / (16 * 392)) - 1
+NOTE_GS4 = (FCLK / (16 * 415)) - 1
+NOTE_A4  = (FCLK / (16 * 440)) - 1
+NOTE_AS4 = (FCLK / (16 * 466)) - 1
+NOTE_B4  = (FCLK / (16 * 494)) - 1
+NOTE_C5  = (FCLK / (16 * 523)) - 1
+NOTE_CS5 = (FCLK / (16 * 554)) - 1
+NOTE_D5  = (FCLK / (16 * 587)) - 1
+NOTE_DS5 = (FCLK / (16 * 622)) - 1
+NOTE_E5  = (FCLK / (16 * 659)) - 1
+NOTE_F5  = (FCLK / (16 * 698)) - 1
+NOTE_FS5 = (FCLK / (16 * 740)) - 1
+NOTE_G5  = (FCLK / (16 * 784)) - 1
+NOTE_GS5 = (FCLK / (16 * 831)) - 1
+NOTE_A5  = (FCLK / (16 * 880)) - 1
+NOTE_AS5 = (FCLK / (16 * 932)) - 1
+NOTE_B5  = (FCLK / (16 * 988)) - 1
+NOTE_C6  = (FCLK / (16 * 1047)) - 1
+NOTE_CS6 = (FCLK / (16 * 1109)) - 1
+NOTE_D6  = (FCLK / (16 * 1175)) - 1
+NOTE_DS6 = (FCLK / (16 * 1245)) - 1
+NOTE_E6  = (FCLK / (16 * 1319)) - 1
+NOTE_F6  = (FCLK / (16 * 1397)) - 1
+NOTE_FS6 = (FCLK / (16 * 1480)) - 1
+NOTE_G6  = (FCLK / (16 * 1568)) - 1
+NOTE_GS6 = (FCLK / (16 * 1661)) - 1
+NOTE_A6  = (FCLK / (16 * 1760)) - 1
+NOTE_AS6 = (FCLK / (16 * 1865)) - 1
+NOTE_B6  = (FCLK / (16 * 1976)) - 1
+NOTE_C7  = (FCLK / (16 * 2093)) - 1
+NOTE_CS7 = (FCLK / (16 * 2217)) - 1
+NOTE_D7  = (FCLK / (16 * 2349)) - 1
+NOTE_DS7 = (FCLK / (16 * 2489)) - 1
+NOTE_E7  = (FCLK / (16 * 2637)) - 1
+NOTE_F7  = (FCLK / (16 * 2794)) - 1
+NOTE_FS7 = (FCLK / (16 * 2960)) - 1
+NOTE_G7  = (FCLK / (16 * 3136)) - 1
+NOTE_GS7 = (FCLK / (16 * 3322)) - 1
+NOTE_A7  = (FCLK / (16 * 3520)) - 1
+NOTE_AS7 = (FCLK / (16 * 3729)) - 1
+NOTE_B7  = (FCLK / (16 * 3951)) - 1
+NOTE_C8  = (FCLK / (16 * 4186)) - 1
+NOTE_CS8 = (FCLK / (16 * 4435)) - 1
+NOTE_D8  = (FCLK / (16 * 4699)) - 1
+NOTE_DS8 = (FCLK / (16 * 4978)) - 1
 
 NOTE_WHOLE = 4000
 NOTE_HALF = NOTE_WHOLE / 2
 NOTE_QUARTER = NOTE_WHOLE / 4
 NOTE_EIGTH = NOTE_WHOLE / 8
 
-BUZZER_PIN = 0			; Port B pin 0
+TG0 = 0				; Tone generator 0
+TG1 = 1				; Tone generator 1
 
 PUBLIC main
 	ON16MEM
@@ -120,8 +125,9 @@ PUBLIC main
 
 	pea $0000		; start with first note.
 @while:	ply
-	beq @return		; zero marks the end of the song.
 	lda melody,y
+	beq @return		; zero marks the end of the song.
+
 	tax
 	iny
 	iny
@@ -130,11 +136,10 @@ PUBLIC main
 	iny
 	phy
 	tay
-	lda BUZZER_PIN
+	lda TG1
 	jsr pbFreqOut
 	bra @while
 @return:
-	pla
 	rtl
 ENDPUBLIC
 

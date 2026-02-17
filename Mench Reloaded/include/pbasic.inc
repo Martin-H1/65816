@@ -4,9 +4,9 @@
 ; -----------------------------------------------------------------------------
 
 ; Machine dependent constants that are useful for real time control.
-CLK_FREQ = 3686400		; cycles per second
-ONE_MS = CLK_FREQ / 1000	; cycles per ms
-ONE_US = CLK_FREQ / 1000000	; cycles per us
+FCLK = 3686400			; fast clock in cycles per second
+ONE_MS = FCLK / 1000		; cycles per ms
+ONE_US = FCLK / 1000000		; cycles per us
 
 ; Booleans used for pin state.
 HIGH = 1
