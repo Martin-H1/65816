@@ -3,7 +3,7 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
-.include "w65c265Monitor.inc"
+.include "print.inc"
 
 .A8
 .I16

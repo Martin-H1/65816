@@ -11,8 +11,8 @@
 .include "ascii.inc"
 .include "common.inc"
 .include "pbasic.inc"
+.include "print.inc"
 .include "via.inc"
-.include "w65c265Monitor.inc"
 
 SERVO_PIN = $0008		; Port B pin 0
 
@@ -23,7 +23,7 @@ SERVO_STEP = (SERVO_MAX - SERVO_MIN)/100
 ; Main entry point for the program.
 PUBLIC main
 	jsr viaInit		; one time VIA initialization.
-	jsl SEND_CR		; start output on a newline
+	printcr			; start output on a newline
 	ON16MEM
 	ON16X
 

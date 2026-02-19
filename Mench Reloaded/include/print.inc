@@ -4,6 +4,8 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+.include "w65c265Monitor.inc"
+
 ;
 ; Macros
 ;

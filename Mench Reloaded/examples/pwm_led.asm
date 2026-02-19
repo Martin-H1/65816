@@ -12,7 +12,6 @@
 .include "pbasic.inc"
 .include "print.inc"
 .include "via.inc"
-.include "w65c265Monitor.inc"
 
 LED_PIN = 0			; Port B pin 0
 
