@@ -13,7 +13,6 @@
 .include "pbasic.inc"
 .include "print.inc"
 .include "via.inc"
-.include "w65c265Monitor.inc"
 
 LINE_SENSOR_PWR = $0008		; Optional as you can connect sensor to +5v
 LINE_SENSOR_IN  = $0009		; Data pin from line sensor.

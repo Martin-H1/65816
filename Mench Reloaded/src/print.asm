@@ -7,7 +7,6 @@ __print_asm__ = 1
 
 .include "common.inc"
 .include "print.inc"
-.include "w65c265Monitor.inc"
 
 ;
 ; Functions

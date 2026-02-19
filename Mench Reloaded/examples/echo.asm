@@ -5,7 +5,7 @@
 
 .include "ascii.inc"
 .include "common.inc"
-.include "w65c265Monitor.inc"
+.include "print.inc"
 
 ; Main entry point for the interpreter test
 .proc main

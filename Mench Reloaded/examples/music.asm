@@ -10,9 +10,7 @@
 .include "ascii.inc"
 .include "common.inc"
 .include "pbasic.inc"
-.include "print.inc"
 .include "via.inc"
-.include "w65c265Monitor.inc"
 
 ; Tone generator register value
 ; N = (FCLK / (16 x F)) - 1
@@ -125,7 +123,6 @@ TG1 = 1				; Tone generator 1
 PUBLIC main
 	ON16MEM
 	ON16X
-	printcr			; start output on a newline
 	jsr viaInit		; one time VIA initialization.
 	lda #pachelbel
 	jsr playsong

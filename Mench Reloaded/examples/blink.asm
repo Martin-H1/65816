@@ -8,7 +8,6 @@
 .include "common.inc"
 .include "pbasic.inc"
 .include "via.inc"
-.include "w65c265Monitor.inc"
 
 LED_PIN = $0000			; Port A pin 0
 

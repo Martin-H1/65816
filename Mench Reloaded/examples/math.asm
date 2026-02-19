@@ -9,11 +9,10 @@
 .include "common.inc"
 .include "math16.inc"
 .include "print.inc"
-.include "w65c265Monitor.inc"
 
 ; Main entry point for the program.
 PUBLIC main
-	jsl SEND_CR		; start output on a newline
+	printcr			; start output on a newline
 	println enter
 	ON16MEM
 	ON16X

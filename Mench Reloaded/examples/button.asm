@@ -14,7 +14,6 @@
 .include "common.inc"
 .include "pbasic.inc"
 .include "via.inc"
-.include "w65c265Monitor.inc"
 
 LED_PIN = $0000			; Port A pin 0
 BUTTON_PIN = $0008		; Port B pin 0

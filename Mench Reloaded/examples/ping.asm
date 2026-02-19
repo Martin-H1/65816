@@ -23,7 +23,6 @@
 .include "pbasic.inc"
 .include "print.inc"
 .include "via.inc"
-.include "w65c265Monitor.inc"
 
 PING_PIN = 8			; Port B pin 0
 PULSE_WIDTH = 5 * ONE_US	; Ping))) activated by a pulse of 2 or more uS
