@@ -4,20 +4,23 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
-.include "w65c265Monitor.inc"
-
 ;
 ; Macros
 ;
+
+.macro getputch
+       jsr f_get_putch
+.endmacro
 
 .macro print MSG
 	php
 	phx
 	pha
 	OFF16MEM
-	lda #$00
+	phb
+	pla
 	ldx #MSG
-	jsl PUT_STR
+	jsr f_print
 	ON16MEM
 	pla
 	plx
@@ -25,38 +28,23 @@
 .endmacro
 
 .macro printcr
-	php
-	OFF16MEM
-	jsl SEND_CR
-	ON16MEM
-	plp
+	pha
+	lda #C_RETURN
+	putch
+	pla
 .endmacro
 
 .macro println MSG
-	php
-	OFF16MEM
-	lda #$00
-	ldx #MSG
-	jsl PUT_STR
-	jsl SEND_CR
-	ON16MEM
-	plp
+       print MSG
+       printcr
+.endmacro
+
+.macro printa
+       jsr f_printa
 .endmacro
 
 .macro printc
-	pha
-	php
-	OFF16MEM
-
-	pha
-	xba
-	jsl SEND_HEX_OUT
-	pla
-	jsl SEND_HEX_OUT
-
-	ON16MEM
-	plp
-	pla
+       jsr f_printc
 .endmacro
 
 .macro printcdec
@@ -68,11 +56,16 @@
 .endmacro
 
 .macro putch
-	jsl PUT_CHR
+	jsr f_putch
 .endmacro
 
 ; Conditionally import via functions in consuming modules.
 .ifndef __print_asm__
+.import f_get_putch
+.import f_print
+.import f_printa
+.import f_printc
 .import f_printcdec
 .import f_printcudec
+.import f_putch
 .endif

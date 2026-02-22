@@ -11,7 +11,7 @@
 .proc main
 	OFF16MEM		; ensure accumulator is in 8 bit mode.
 @while:
-	jsl GET_PUT_CHR		; call monitor get char with echo.
+	getputch		; call get char with echo.
 	cmp #ETX
 	bne @while		; iterate while not end of transmission.
 	rtl			; return to monitor.
