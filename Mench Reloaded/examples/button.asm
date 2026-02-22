@@ -16,7 +16,7 @@
 .include "via.inc"
 
 LED_PIN = $0000			; Port A pin 0
-BUTTON_PIN = $0008		; Port B pin 0
+BUTTON_PIN = $0001		; Port A pin 1
 
 ; Main entry point for the program.
 .proc main
