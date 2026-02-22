@@ -23,10 +23,10 @@ bin/blink.bin: examples/blink.o src/pbasic.o src/via.o
 bin/button.bin: examples/button.o src/pbasic.o src/via.o
 	$(LD65) -C mench.cfg -o bin/button.bin -m bin/button.map $^
 
-bin/echo.bin: examples/echo.o
+bin/echo.bin: examples/echo.o src/print.o
 	$(LD65) -C mench.cfg -o bin/echo.bin -m bin/echo.map $^
 
-bin/helloWorld.bin: examples/helloWorld.o
+bin/helloWorld.bin: examples/helloWorld.o src/print.o
 	$(LD65) -C mench.cfg -o bin/helloWorld.bin -m bin/helloWorld.map $^
 
 bin/math.bin: examples/math.o src/math16.o src/print.o
@@ -35,16 +35,16 @@ bin/math.bin: examples/math.o src/math16.o src/print.o
 bin/music.bin: examples/music.o src/pbasic.o src/via.o
 	$(LD65) -C mench.cfg -o bin/music.bin -m bin/music.map $^
 
-bin/ping.bin: examples/ping.o src/pbasic.o src/via.o src/math16.o src/print.o
+bin/ping.bin: examples/ping.o src/math16.o src/pbasic.o src/print.o src/via.o
 	$(LD65) -C mench.cfg -o bin/ping.bin -m bin/ping.map $^
 
-bin/pwm_led.bin: examples/pwm_led.o src/pbasic.o src/via.o src/print.o
+bin/pwm_led.bin: examples/pwm_led.o src/pbasic.o src/print.o src/via.o
 	$(LD65) -C mench.cfg -o bin/pwm_led.bin -m bin/pwm_led.map $^
 
 bin/qti.bin: examples/qti.o src/pbasic.o src/print.o src/via.o
 	$(LD65) -C mench.cfg -o bin/qti.bin -m bin/qti.map $^
 
-bin/servo.bin: examples/servo.o src/pbasic.o src/via.o
+bin/servo.bin: examples/servo.o src/pbasic.o src/print.o src/via.o
 	$(LD65) -C mench.cfg -o bin/servo.bin -m bin/servo.map $^
 
 clean:

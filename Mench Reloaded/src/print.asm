@@ -7,12 +7,82 @@ __print_asm__ = 1
 
 .include "common.inc"
 .include "print.inc"
+.include "w65c265Monitor.inc"
 
 ;
 ; Functions
 ;
 
-; printcdec - prints C as a signed 16 bit decimal number to console
+; f_get_putch - gets a character from host with echo to host.
+; Inputs:
+;   C - don't care
+; Outputs:
+;   C - character returned
+PUBLIC f_get_putch
+@loop1:	jsl GET_BYTE_FROM_PC
+	bcs @loop1
+@loop2:	jsl SEND_BYTE_TO_PC
+        bcs @loop2
+	rts
+ENDPUBLIC
+
+; f_print - prints a null terminated string to the console
+; Inputs:
+;   A - data bank of the string
+;   X - address of the string in the bank
+; Outputs:
+;   A - preserved
+;   X - preserved
+PUBLIC f_print
+	jsl PUT_STR
+	rts
+ENDPUBLIC
+
+; f_printa - prints lower eight bits of the accumulator in hex to the console.
+; Inputs:
+;   A - byte to print
+; Outputs:
+;   A - retained
+PUBLIC f_printa
+	pha
+	pha
+	lsr
+	lsr
+	lsr
+	lsr
+	jsr @print_nybble
+	pla
+	jsr @print_nybble
+	pla
+	rts
+
+@print_nybble:
+	and #LOWNIB
+	sed
+	clc
+	adc #$9990	        	; Produce $90-$99 or $00-$05
+	adc #$9940			; Produce $30-$39 or $41-$46
+	cld
+	jmp f_putch
+ENDPUBLIC
+
+; f_printc - prints C as a 16 bit hex number to the console.
+; Inputs:
+;   C - number
+; Outputs:
+;   C - preserved
+PUBLIC f_printc
+	pha
+	pha
+	xba
+	jsr f_printa
+	pla
+	jsr f_printa
+	pla
+	rts
+ENDPUBLIC
+
+; f_printcdec - prints C as a signed 16 bit decimal number to console
 ; Inputs:
 ;   C - number
 ; Outputs:
@@ -32,7 +102,7 @@ PUBLIC f_printcdec
 	rts
 ENDPUBLIC
 
-; printcudec - prints C as an unsigned 16 bit decimal number to console
+; f_printcudec - prints C as an unsigned 16 bit decimal number to console
 ; Inputs:
 ;   C - number
 ; Outputs:
@@ -101,5 +171,16 @@ PUBLIC f_printcudec
 	plx
 	pld
 	plp
+	rts
+ENDPUBLIC
+
+; f_putch - prints A as a character to console
+; Inputs:
+;   A - character
+; Outputs:
+;   A - preserved
+PUBLIC f_putch
+@loop:	jsl SEND_BYTE_TO_PC	; retry until buffer is ready
+	bcs @loop
 	rts
 ENDPUBLIC
