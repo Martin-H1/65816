@@ -13,24 +13,16 @@
 .endmacro
 
 .macro print MSG
-	php
-	phx
 	pha
-	OFF16MEM
-	phb
-	pla
-	ldx #MSG
+	lda #MSG
 	jsr f_print
-	ON16MEM
 	pla
-	plx
-	plp
 .endmacro
 
 .macro printcr
 	pha
 	lda #C_RETURN
-	putch
+	jsr f_putch
 	pla
 .endmacro
 
@@ -55,7 +47,7 @@
        jsr f_printcudec
 .endmacro
 
-.macro putch
+.macro printch
 	jsr f_putch
 .endmacro
 

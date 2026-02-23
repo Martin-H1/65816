@@ -28,13 +28,30 @@ ENDPUBLIC
 
 ; f_print - prints a null terminated string to the console
 ; Inputs:
-;   A - data bank of the string
-;   X - address of the string in the bank
+;   A - address of the string within the current bank
 ; Outputs:
 ;   A - preserved
-;   X - preserved
 PUBLIC f_print
-	jsl PUT_STR
+	STRPTR = 1
+	php
+	phd
+	phy
+	pha
+	tsc
+	tcd
+	ldy #$0000
+	OFF16MEM
+@while:	lda (STRPTR),y
+	beq @return
+	jsr f_putch
+	iny
+	bra @while
+@return:
+	ON16MEM
+	pla
+	ply
+	pld
+	plp
 	rts
 ENDPUBLIC
 
@@ -93,7 +110,7 @@ PUBLIC f_printcdec
 	pha
 	pha
 	lda #'-'		; Print sign
-	putch
+	jsr f_putch
 	pla			; undo the two's complement
 	dec
 	eor #$ffff
@@ -157,7 +174,7 @@ PUBLIC f_printcudec
 @print:
 	pla
 @loop:
-	putch			; print digits in descending order
+	jsr f_putch		; print digits in descending order
 	pla			; until null delimiter is encountered
 	bne @loop
 
