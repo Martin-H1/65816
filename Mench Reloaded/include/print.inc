@@ -30,7 +30,7 @@
 .macro printcr
 	pha
 	lda #C_RETURN
-	putch
+	jsr f_putch
 	pla
 .endmacro
 
@@ -55,7 +55,7 @@
        jsr f_printcudec
 .endmacro
 
-.macro putch
+.macro printch
 	jsr f_putch
 .endmacro
 

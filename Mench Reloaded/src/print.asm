@@ -93,7 +93,7 @@ PUBLIC f_printcdec
 	pha
 	pha
 	lda #'-'		; Print sign
-	putch
+	jsr f_putch
 	pla			; undo the two's complement
 	dec
 	eor #$ffff
@@ -157,7 +157,7 @@ PUBLIC f_printcudec
 @print:
 	pla
 @loop:
-	putch			; print digits in descending order
+	jsr f_putch		; print digits in descending order
 	pla			; until null delimiter is encountered
 	bne @loop
 
