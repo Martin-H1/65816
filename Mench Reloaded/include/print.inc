@@ -13,18 +13,10 @@
 .endmacro
 
 .macro print MSG
-	php
-	phx
 	pha
-	OFF16MEM
-	phb
-	pla
-	ldx #MSG
+	lda #MSG
 	jsr f_print
-	ON16MEM
 	pla
-	plx
-	plp
 .endmacro
 
 .macro printcr
