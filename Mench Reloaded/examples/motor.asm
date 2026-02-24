@@ -35,7 +35,7 @@ PUBLIC main
 	jsr viaInit		; one time VIA initialization.
 
 	DUTY_CYCLE = 1		; stack local for cycle count
-	pea $0001		; start with a valid value.
+	pea $007f		; start with a valid value.
 	tsc			; point direct page to stack frame
 	tcd
 
@@ -57,12 +57,12 @@ PUBLIC main
 @loop1:
 	lda #M1_PWM		; Ramp motor 1 with increasing PWM duty cycles.
 	ldx DUTY_CYCLE		; load the duty cycle
-	ldy #15			; set the duration in ms
+	ldy #30			; set the duration in ms
 	jsr pbPWM
 
 	lda #M2_PWM		; Ramp motor 2 with increasing PWM duty cycles.
 	ldx DUTY_CYCLE		; load the duty cycle
-	ldy #15			; set the duration in ms
+	ldy #30			; set the duration in ms
 	jsr pbPWM
 
 	inc DUTY_CYCLE		; ramp duty cycle
@@ -70,16 +70,24 @@ PUBLIC main
 	cmp #$00ff
 	bcc @loop1
 
+	lda #M1_PWM
+	jsr pbHigh		; Turn motor 1 on full
+	lda #M2_PWM
+	jsr pbHigh		; Turn motor 2 on full
+
+	lda #1000
+	jsr pbPause
+
 	dec DUTY_CYCLE		; get duty cycle duration within limits.
 @loop2:
 	lda #M1_PWM		; Ramp motor 1 with increasing PWM duty cycles.
 	ldx DUTY_CYCLE		; load the duty cycle
-	ldy #15			; set the duration in ms
+	ldy #30			; set the duration in ms
 	jsr pbPWM
 
 	lda #M2_PWM		; Ramp motor 2 with increasing PWM duty cycles.
 	ldx DUTY_CYCLE		; load the duty cycle
-	ldy #15			; set the duration in ms
+	ldy #30			; set the duration in ms
 	jsr pbPWM
 
 	dec DUTY_CYCLE
