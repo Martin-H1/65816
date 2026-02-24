@@ -6,6 +6,7 @@ EXAMPLES = \
 	bin/echo.srec \
 	bin/helloWorld.srec \
 	bin/math.srec \
+	bin/motor.srec \
 	bin/music.srec \
 	bin/ping.srec \
 	bin/pwm_led.srec \
@@ -31,6 +32,9 @@ bin/helloWorld.bin: examples/helloWorld.o src/print.o
 
 bin/math.bin: examples/math.o src/math16.o src/print.o
 	$(LD65) -C mench.cfg -o bin/math.bin -m bin/math.map $^
+
+bin/motor.bin: examples/motor.o src/pbasic.o src/print.o src/via.o
+	$(LD65) -C mench.cfg -o bin/motor.bin -m bin/motor.map $^
 
 bin/music.bin: examples/music.o src/pbasic.o src/via.o
 	$(LD65) -C mench.cfg -o bin/music.bin -m bin/music.map $^
