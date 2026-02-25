@@ -34,15 +34,21 @@ PUBLIC main
 	printcr			; start output on a newline
 	jsr viaInit		; one time VIA initialization.
 
+	PORT_MASK = 3		; stack local for port mask
 	DUTY_CYCLE = 1		; stack local for cycle count
-	pea $007f		; start with a valid value.
-	tsc			; point direct page to stack frame
-	tcd
 
 	lda #M1_PWM
 	jsr pbLow		; Turn motor 1 off
+	pha			; save the port mask to stack local
+	pea $007f		; initialize the duty cycle stack local.
+
+	tsc			; point direct page to stack frame
+	tcd
+
 	lda #M2_PWM
 	jsr pbLow		; Turn motor 2 off
+	ora PORT_MASK		; or the two port masks together.
+	sta PORT_MASK		; save for later.
 
 	lda #M1_1A		; Set motor 1 to forward
 	jsr pbHigh
@@ -55,15 +61,10 @@ PUBLIC main
 	jsr pbLow
 
 @loop1:
-	lda #M1_PWM		; Ramp motor 1 with increasing PWM duty cycles.
+	lda PORT_MASK		; Ramp motorss with increasing PWM duty cycles.
 	ldx DUTY_CYCLE		; load the duty cycle
-	ldy #30			; set the duration in ms
-	jsr pbPWM
-
-	lda #M2_PWM		; Ramp motor 2 with increasing PWM duty cycles.
-	ldx DUTY_CYCLE		; load the duty cycle
-	ldy #30			; set the duration in ms
-	jsr pbPWM
+	ldy #50			; set the duration in ms
+	jsr pbPWMmask
 
 	inc DUTY_CYCLE		; ramp duty cycle
 	lda DUTY_CYCLE
@@ -80,20 +81,16 @@ PUBLIC main
 
 	dec DUTY_CYCLE		; get duty cycle duration within limits.
 @loop2:
-	lda #M1_PWM		; Ramp motor 1 with increasing PWM duty cycles.
+	lda PORT_MASK		; Ramp motors with decreasing PWM duty cycles.
 	ldx DUTY_CYCLE		; load the duty cycle
 	ldy #30			; set the duration in ms
-	jsr pbPWM
-
-	lda #M2_PWM		; Ramp motor 2 with increasing PWM duty cycles.
-	ldx DUTY_CYCLE		; load the duty cycle
-	ldy #30			; set the duration in ms
-	jsr pbPWM
+	jsr pbPWMmask
 
 	dec DUTY_CYCLE
 	bne @loop2		; exit when zero
 
 @return:
+	pla
 	pla
 	pld
 	rtl
