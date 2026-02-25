@@ -25,6 +25,7 @@ LOW = 0
 .import pbPulsin
 .import pbPulsout
 .import pbPWM
+.import pbPWMmask
 .import pbRCTime
 .import pbToggle
 .endif
