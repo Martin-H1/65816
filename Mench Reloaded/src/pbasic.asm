@@ -375,11 +375,26 @@ ENDPUBLIC
 ; Outputs:
 ;   None
 PUBLIC pbPWM
+	phx
+	jsr pbOutput		; fall through to pbPWMmask implementation
+	plx
+ENDPUBLIC
+
+; pbPWMmask - implementation of PWM, but uses port mask instead of index.
+; This allows a PWM signal to multipe pins concurrently. Useful for multi
+; axis motor control. Caller is required to put all pins to output mode and 
+; synthesize the port mask.
+; Inputs:
+;   C - port mask
+;   X - the duty (0-255) of analog output as the number of 256ths of 5V.
+;   Y - the duration of the PWM output in mS.
+; Outputs:
+;   None
+PUBLIC pbPWMmask
 	DUTY_CYCLE = 3
 	PORT_MASK = 1
 	phd			; preserve direct page register
 	phx			; initialize duty cycle stack local
-	jsr pbOutput
 	pha			; initialize port mask stack local
 	tsc			; point direct page to stack frame
 	tcd
@@ -425,9 +440,9 @@ PUBLIC pbPWM
 	dey
 	bne @while		; loop until no ms left
 
-@return:
-	plx			; clean up stack and return
-	plx
+@return:		        ; clean up stack and return
+	pla			; get port mask
+	plx			; get the duty cycle
 	pld
 	rts
 ENDPUBLIC
