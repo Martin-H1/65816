@@ -10,6 +10,7 @@ EXAMPLES = \
 	bin/music.srec \
 	bin/ping.srec \
 	bin/pwm_led.srec \
+	bin/pi.srec \
 	bin/qti.srec \
 	bin/servo.srec
 
@@ -44,6 +45,9 @@ bin/ping.bin: examples/ping.o src/math16.o src/pbasic.o src/print.o src/via.o
 
 bin/pwm_led.bin: examples/pwm_led.o src/pbasic.o src/print.o src/via.o
 	$(LD65) -C mench.cfg -o bin/pwm_led.bin -m bin/pwm_led.map $^
+
+bin/pi.bin: examples/pi.o src/math16.o src/print.o
+	$(LD65) -C mench.cfg -o bin/pi.bin -m bin/pi.map $^
 
 bin/qti.bin: examples/qti.o src/pbasic.o src/print.o src/via.o
 	$(LD65) -C mench.cfg -o bin/qti.bin -m bin/qti.map $^
