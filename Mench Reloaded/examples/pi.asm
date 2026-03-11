@@ -22,7 +22,7 @@
 .include "print.inc"
 
 ; Normally this requires floating point arithmetic, but we're using fixed point
-; unsigned arithmetic with 3 integer bits, and 13 fractional bits. 
+; unsigned arithmetic with 3 integer bits, and 29 fractional bits.
 
 ;
 ; Aliases
