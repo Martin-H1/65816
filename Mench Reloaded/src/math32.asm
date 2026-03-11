@@ -21,6 +21,27 @@ __math32_asm__ = 1
           rts
 .endproc
 
+.proc     _stackincr
+          inx
+          inx
+          inx
+          inx
+          rts
+.endproc
+
+PUBLIC _popay
+	lda   STACKBASE+2,x
+	ldy   STACKBASE+0,x
+	bra   _stackincr
+ENDPUBLIC
+
+PUBLIC _pushay
+	jsr   _stackdecr
+	sta   STACKBASE+2,x
+	sty   STACKBASE,x
+	rts
+ENDPUBLIC
+
 ; no stack depth check
 .proc     _peekwr
           lda   STACKBASE+0,x
@@ -30,12 +51,12 @@ __math32_asm__ = 1
           rts
 .endproc
 
-.proc     _swap
+PUBLIC _swap
           txa
           clc
           adc   #$04
           ; fall-through
-.endproc
+ENDPUBLIC
 
 ; when we know there are 2 parms on stack...
 .proc     _swap1
@@ -50,9 +71,39 @@ __math32_asm__ = 1
           rts
 .endproc
 
+; adds two 32 bit quantities on the argument stack and puts the result
+; on the stack.
+PUBLIC _add32
+	clc
+	lda STACKBASE+0,x	  ; LSB of lower long
+	adc STACKBASE+4,x
+	sta STACKBASE+4,x
+
+	lda STACKBASE+2,x	  ; MSB of lower long
+	adc STACKBASE+6,x
+	sta STACKBASE+6,x
+	jsr _stackincr
+	rts
+ENDPUBLIC
+
+; subtract two 16 bit quantities on the argument stack and puts the result
+; on the stack.
+PUBLIC _sub32
+	sec
+	lda STACKBASE+4,x	; LSB of lower long
+	sbc STACKBASE+0,x
+	sta STACKBASE+4,x
+
+	lda STACKBASE+6,x	; MSB of lower long
+	sbc STACKBASE+2,x
+	sta STACKBASE+6,x
+	jsr _stackincr
+	rts
+ENDPUBLIC
+
 ; 32-bit signed comparison
 ; C and Z reflect same comparision results as CMP instruction
-.proc     _stest32
+PUBLIC _stest32
           lda   STACKBASE+6,x
           eor   STACKBASE+2,x
           bpl   samesign
@@ -67,7 +118,7 @@ samesign: lda   STACKBASE+6,x
           lda   STACKBASE+4,x
           cmp   STACKBASE+0,x
 :         rts
-.endproc
+ENDPUBLIC
 
 .proc     _invertay
           pha
@@ -166,7 +217,7 @@ done:     sty   STACKBASE+0,x
 ; 32-bit unsigned multiplication with 64-bit result
 ; right-shifting version by dclxvi
 ; scratch in YR, YR+2 (preserved)
-.proc     _umult
+PUBLIC     _umult32
 N         = YR
           lda   N+2
           pha
@@ -199,14 +250,14 @@ l2:       ror
           pla
           sta   N+2
           rts
-.endproc
+ENDPUBLIC
 
 ; 64-bit divided by 32-bit with 32-bit quotient and remainder
 ; Adapted from Garth's routine, just like everyone else :-)
 ; carry set if divison by zero or overflow
 ; ( d n -- r q )
 ; d.hi = stack(4,6), d.low = stack(8,10), n=stack(0,2)
-.proc     _umdivmod
+.proc _umdivmod
 CARRY     = YR
 SCRATCH   = YR+2
 .if 1 ; shortcut 32-bit by 32-bit division
@@ -268,7 +319,7 @@ done1:    pla
 ; assumes that the second stack entry is zero
 ; ( d n -- r q ) where d.hi is zero e.g. ( n1 0 n2 -- r q )
 ; d.hi = stack(4,6) = 0, d.low = n1 = stack(8,10), n2 = stack(0,2)
-.proc     _udivmod32
+PUBLIC _udivmod32
           lda   #32
           sta   XR
 l1:       asl   STACKBASE+8,x       ; shift high bit of n1 into r
@@ -293,7 +344,7 @@ l2:       dec   XR                  ; next bit
           inx
           clc                       ; this *never* overflows
           jmp   _swap1
-.endproc
+ENDPUBLIC
 
 ; ( d n -- ud u )
 .proc     _dnabs

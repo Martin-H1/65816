@@ -36,6 +36,7 @@ PUBLIC f_print
 	php
 	phd
 	phy
+	phx
 	pha
 	tsc
 	tcd
@@ -49,6 +50,7 @@ PUBLIC f_print
 @return:
 	ON16MEM
 	pla
+	plx
 	ply
 	pld
 	plp

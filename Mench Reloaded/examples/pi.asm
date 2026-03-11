@@ -18,7 +18,7 @@
 
 .include "ascii.inc"
 .include "common.inc"
-.include "math16.inc"
+.include "math32.inc"
 .include "print.inc"
 
 ; Normally this requires floating point arithmetic, but we're using fixed point
@@ -30,81 +30,133 @@
 THREE	= %0110000000000000
 FOUR	= %1000000000000000
 RESCALE	= %0010000000000000
+CELL = 4
+DS_SIZE = CELL * 10
 
 .proc pi
 	ON16MEM
 	ON16X
 	printcr			; start output on a newline
 
-	lda #2			; Computes pi as a ratio of integers
-	sta N
-	lda #THREE
-	sta SUM
+	phd			; save direct page register
+
+	tsc			; get current stack pointer.
+	sec
+	sbc #DS_SIZE		; reserve data stack workspace
+	tcs
+	tcd			; direct page now points to stack
+	ldx #DS_SIZE		; point X to data stack top
+
+	lda #THREE		; initialize the sum on the data stack
+	ldy #0000
+	jsr _pushay
+
 @while:	jsr calc_term
-	cmp #0
+	lda #00
+	ldy #00
+	jsr _pushay
+	jsr _stest32
 	beq @done
-	clc
-	adc SUM
-	sta SUM
+	jsr _popay		; pop unused zero
+	jsr _add32		; add term to the sum
 	bra @while
-@done:	lda SUM
+
+@done:	jsr _popay		; remove the two unneeded zeros
+	jsr _popay
+
 	print msg1
-	printcudec
+	jsr _popay		; pop the results
+
+	printc
+	tya
+	printc
+
 	print msg2
 	lda #RESCALE
-	printcudec
+	printc
+	lda #0000
+	printc
 	printcr
+
+	print msg3
+	lda N+2
+	printc
+	lda N
+	printc
+	printcr
+
+@cleanup:
+	tsc			; clean up stack locals
+	clc
+	adc #DS_SIZE
+	tcs
+	pld			; restore direct page pointer
 	rtl
+
 .endproc
-msg1:	.asciiz "Pi = "
-msg2:	.asciiz " / "
-N:	.word 0
-SUM:	.word 0
+msg1:	.asciiz "Pi = 0x"
+msg2:	.asciiz " / 0x"
+msg3:	.asciiz "N = 0x"
+N:	.word 2, 0
 
 ; calc_term: calculates Qn - Qn+1
 ; Inputs:
-;   memory N
+;   X - data stack index
 ; Outputs:
-;   C - the difference of two terms.
-;   X - clobbered
+;   C - clobbered
+;   X - data stack index updated with Qn - Qn+1 on data stack
+;   Y - clobbered
 .proc calc_term
 	jsr quotient
-	pha
 	jsr quotient
-	tax
-	pla
-	phx
-	sec
-	sbc 1,s
-	plx
+	jsr _sub32
 	rts
 .endproc
 
 ; quotient: calculates a single scaled quotient term
 ; Inputs:
-;   memory N
+;   X - data stack index
 ; Outputs:
-;   C - the quotient
+;   C - clobbered
+;   X - data stack index updated with quotient on data stack
+;   Y - clobbered
 .proc quotient
-	jsr denominator
-	ldx #FOUR
-	jsr udiv16
+	ldy #00			; numerator of fixed point four
+	lda #FOUR
+	jsr _pushay
+	ldy #00			; scratch space for routine.
+	lda #00			; ditto
+	jsr _pushay
+	jsr denominator		; calculate N*++N*++N
+	jsr _udivmod32
+	jsr _swap
+	jsr _popay		; discard remainder
 	rts
 .endproc
 
 ; denominator: calculates (n)*(++n)*(++n)
 ; Inputs:
 ;   memory N
+;   X - data stack index
 ; Outputs:
-;   C - the product
+;   C - clobbered
+;   X - data stack index updated with product on data stack
+;   Y - clobbered
 .proc denominator
-	ldx N
-	inc N
-	lda N
-	jsr umult16		; ++n * n
-	tax			; save first product
-	inc N
-	lda N
-	jsr umult16		; ++n * first product
+	ldy N
+	lda N+2
+	jsr _pushay		; push N
+	inclong N
+	ldy N
+	lda N+2
+	jsr _pushay		; push ++N
+	jsr _umult32		; ++n * n
+	jsr _popay		; discard unused 32 bits of 64 bit result
+	inclong N
+	ldy N
+	lda N+2			; push ++N
+	jsr _pushay
+	jsr _umult32		; ++n * first product
+	jsr _popay		; discard unused 32 bits of 64 bit result
 	rts
 .endproc
