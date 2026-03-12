@@ -25,3 +25,6 @@ endif
 
 %.o : %.asm
 	$(CA65) --cpu 65816 -I include $< -l $*.lst -o $@
+
+%.o : %.s
+	$(CA65) --cpu 65816 -I include $< -l $*.lst -o $@
