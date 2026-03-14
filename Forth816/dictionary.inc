@@ -8,9 +8,12 @@
 ;------------------------------------------------------------------------------
 ; Flag constants (also defined in forth.s but repeated here for includes)
 ;------------------------------------------------------------------------------
+
+.ifndef __forth_s__
 F_IMMEDIATE     = $80
 F_HIDDEN        = $40
 F_LENMASK       = $1F
+.endif
 
 ;------------------------------------------------------------------------------
 ; Forward declarations for all CFA labels

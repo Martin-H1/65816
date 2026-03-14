@@ -1,6 +1,9 @@
 include ../common.mk
 
-all: forth.o
+SOURCE = forth.s \
+	primitives.s
+
+all: $(SOURCE)
 
 clean:
 	-$(RM) *.bin

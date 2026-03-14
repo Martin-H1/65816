@@ -16,8 +16,8 @@
 ; Cycle cost: ~14 cycles (inlined)
 ;------------------------------------------------------------------------------
 .macro  NEXT
-        LDA     0,Y             ; A = *IP (fetch CFA of next word)
         .a16
+        LDA     0,Y             ; A = *IP (fetch CFA of next word)
         INY                     ; IP += 1
         INY                     ; IP += 2  (advance past this cell)
         STA     W               ; W = CFA
@@ -39,9 +39,9 @@
 ; POP - Pop top of parameter stack into A
 ;------------------------------------------------------------------------------
 .macro  POP
-        LDA     0,X
-        INX
-        INX
+	lda 0,X			; load value off stack
+	inx			; advance pointer, but this
+	inx			; resets processor flags
 .endmacro
 
 ;------------------------------------------------------------------------------
