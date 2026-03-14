@@ -39,9 +39,9 @@
 ; POP - Pop top of parameter stack into A
 ;------------------------------------------------------------------------------
 .macro  POP
-	inx			; advance pointer first
-	inx			; this preserves processor flags
-	lda -2,X		; after load value off stack
+	lda 0,X			; load value off stack
+	inx			; advance pointer, but this
+	inx			; resets processor flags
 .endmacro
 
 ;------------------------------------------------------------------------------
