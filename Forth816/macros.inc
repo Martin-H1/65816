@@ -2,6 +2,13 @@
 ; macros.inc - ca65 Macros for 65816 Forth Kernel
 ;==============================================================================
 
+;
+; Put assembler in 16 bit mode, as 8 bit mode is the exception
+; selected at module level.
+;
+.A16
+.I16
+
 ;------------------------------------------------------------------------------
 ; NEXT - Inner interpreter dispatch
 ;
@@ -119,3 +126,51 @@ lbl:
 
 ; (No combined macro for PRIM+body since ca65 can't open a .proc in a macro)
 ; Use HEADER + CODEPTR + .proc separately - see primitives.s for pattern.
+
+; These are from the WDC 65c265 monitor ROM listing. Reusing them allows
+; using code from the monitor with minimal changes.
+
+; control bits for REP and SEP
+MEM16	= $20
+IND16	= $10
+
+.macro ON16MEM
+       .A16		; tell the assembler about mode
+       rep #MEM16	; set 8-bit accumulator mode
+.endmacro
+
+.macro OFF16MEM
+       .A8
+       sep #MEM16
+.endmacro
+
+.macro ON16X
+       .I16
+       rep #IND16
+.endmacro
+
+.macro OFF16X
+       .I8
+       sep #IND16
+.endmacro
+
+.macro ON16
+       .A16
+       .I16
+       rep #(MEM16 | IND16)
+.endmacro
+
+.macro OFF16
+       .A8
+       .I8
+       sep #(MEM16 | IND16)
+.endmacro
+
+.macro PUBLIC function_name
+.export function_name
+.proc function_name
+.endmacro
+
+.macro ENDPUBLIC
+.endproc
+.endmacro

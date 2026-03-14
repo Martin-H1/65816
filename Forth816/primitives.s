@@ -24,6 +24,7 @@
 
 .include "macros.inc"
 .include "dictionary.inc"
+.include "print.inc"
 
 .segment "CODE"
 
@@ -1124,20 +1125,16 @@
 	.i16
 	lda 0,X			; pop addr to scratch pointer
 	sta SCRATCH0
-	inx
-	inx
-	lda 0,X			; pop low → addr
-	sta (SCRATCH0)
-	inx
-	inx
-	lda SCRATCH0		; increment pointer by a cell
 	clc
-	adc #2
-	sta SCRATCH0
-	lda 0,X			; pop high → addr+2
+	adc #2			; We rely on this to leave Carry clear
+	sta SCRATCH1
+	lda 2,X			; move 1st half of the d
 	sta (SCRATCH0)
-	inx
-	inx
+	lda 4,X			; move 2nd half of the d
+	sta (SCRATCH1)
+	txa
+	adc #6			; no need to CLC
+	tax
 	NEXT
 .endproc
 
@@ -1653,17 +1650,17 @@
 .proc HERE_CODE
 	.a16
 	.i16
-	lda UP
+	lda UP			; UP in page zero
 	clc
-	adc #U_DP
+	adc #U_DP		; Add the dictionary pointer offset
 	sta SCRATCH0
-	lda (SCRATCH0)		; Fetch DP
+	lda (SCRATCH0)		; Fetch DP indirect.
 	dex
 	dex
-	sta 0,X
+	sta 0,X			; Push to parameter stack.
 	NEXT
 .endproc
-	;; TODO - continue reviewing from here.
+
 ;------------------------------------------------------------------------------
 ; ALLOT ( n -- ) advance dictionary pointer by n bytes
 ;------------------------------------------------------------------------------
@@ -1672,15 +1669,15 @@
 .proc ALLOT_CODE
 	.a16
 	.i16
-	lda UP
+	lda UP			; Get UP and add DP offset
 	clc
 	adc #U_DP
 	sta SCRATCH0
-	lda (SCRATCH0)      ; DP
+	lda (SCRATCH0)		; Fetch DP indirect
 	clc
-	adc 0,X             ; DP + n
-	sta (SCRATCH0)      ; Store new DP
-	inx
+	adc 0,X			; Advance to DP + n
+	sta (SCRATCH0)		; Store new DP
+	inx			; drop n
 	inx
 	NEXT
 .endproc
@@ -1690,33 +1687,23 @@
 ;------------------------------------------------------------------------------
 	HEADER ",", COMMA_CFA, 0, ALLOT_CFA
 	CODEPTR COMMA_CODE
-.proc   COMMA_CODE
-.a16
-.i16
-	; Get DP
-	lda UP
+.proc COMMA_CODE
+	.a16
+	.i16
+	lda UP			; Get UP, add DP offset, and load DP
 	clc
 	adc #U_DP
 	sta SCRATCH0
-	lda (SCRATCH0)      ; DP → SCRATCH1
+	lda (SCRATCH0)		; Save DP → SCRATCH1
 	sta SCRATCH1
-	; Store val at DP
-	lda 0,X
+	lda 0,X			; Pop val off parameter stack
 	inx
 	inx
-	sta (SCRATCH1)
-	; DP += 2
-	lda SCRATCH1
+	sta (SCRATCH1)		; Store indirect through DP
+	lda SCRATCH1		; DP += 2
 	clc
 	adc #2
-	lda UP
-	clc
-	adc #U_DP
-	sta SCRATCH0
-	lda SCRATCH1
-	clc
-	adc #2
-	sta (SCRATCH0)
+	sta (SCRATCH0)		; Update pointer for next time.
 	NEXT
 .endproc
 
@@ -1725,30 +1712,26 @@
 ;------------------------------------------------------------------------------
 	HEADER "C,", CCOMMA_CFA, 0, COMMA_CFA
 	CODEPTR CCOMMA_CODE
-.proc   CCOMMA_CODE
-.a16
-.i16
-	lda UP
+.proc CCOMMA_CODE
+	.a16
+	.i16
+	lda UP			; Get UP, add DP offset, and load DP
 	clc
 	adc #U_DP
 	sta SCRATCH0
 	lda (SCRATCH0)
-	sta SCRATCH1
-	lda 0,X
+	sta SCRATCH1		; Store DP to allow indirect store.
+	lda 0,X			; Pop data
 	inx
 	inx
-	sep    #$20
+	sep #$20		; Enter byte transfer mode
         .a8
-	sta (SCRATCH1)
-	rep    #$20
+	sta (SCRATCH1)		; store A indirect.
+	rep #$20
         .a16
 	lda SCRATCH1
 	inc
-	lda UP
-	clc
-	adc #U_DP
-	sta SCRATCH0
-	lda SCRATCH1
+	lda SCRATCH1		; Update the pointer by a byte.
 	inc
 	sta (SCRATCH0)
 	NEXT
@@ -1759,15 +1742,15 @@
 ;------------------------------------------------------------------------------
 	HEADER "LATEST", LATEST_CFA, 0, CCOMMA_CFA
 	CODEPTR LATEST_CODE
-.proc   LATEST_CODE
-.a16
-.i16
-	lda UP
+.proc LATEST_CODE
+	.a16
+	.i16
+	lda UP			; Get UP and add offset to LATEST
 	clc
 	adc #U_LATEST
 	dex
 	dex
-	sta 0,X
+	sta 0,X			; Push onto parameter stack
 	NEXT
 .endproc
 
@@ -1780,10 +1763,10 @@
 ;------------------------------------------------------------------------------
 	HEADER "BASE", BASE_CFA, 0, LATEST_CFA
 	CODEPTR BASE_CODE
-.proc   BASE_CODE
-.a16
-.i16
-	lda UP
+.proc BASE_CODE
+	.a16
+	.i16
+	lda UP			; Get UP and add BASE offset and push
 	clc
 	adc #U_BASE
 	dex
@@ -1797,10 +1780,10 @@
 ;------------------------------------------------------------------------------
 	HEADER "STATE", STATE_CFA, 0, BASE_CFA
 	CODEPTR STATE_CODE
-.proc   STATE_CODE
-.a16
-.i16
-	lda UP
+.proc STATE_CODE
+	.a16
+	.i16
+	lda UP			; Get UP and add STATE offset and push
 	clc
 	adc #U_STATE
 	dex
@@ -1814,10 +1797,10 @@
 ;------------------------------------------------------------------------------
 	HEADER ">IN", TOIN_CFA, 0, STATE_CFA
 	CODEPTR TOIN_CODE
-.proc   TOIN_CODE
-.a16
-.i16
-	lda UP
+.proc TOIN_CODE
+	.a16
+	.i16
+	lda UP			; Get UP and add TOIN offset and push
 	clc
 	adc #U_TOIN
 	dex
@@ -1831,11 +1814,10 @@
 ;------------------------------------------------------------------------------
 	HEADER "SOURCE", SOURCE_CFA, 0, TOIN_CFA
 	CODEPTR SOURCE_CODE
-.proc   SOURCE_CODE
-.a16
-.i16
-	; Push TIB address
-	lda UP
+.proc SOURCE_CODE
+	.a16
+	.i16
+	lda UP			; Push TIB address
 	clc
 	adc #U_TIB
 	sta SCRATCH0
@@ -1843,8 +1825,7 @@
 	dex
 	dex
 	sta 0,X
-	; Push source length
-	lda UP
+	lda UP			; Push source length
 	clc
 	adc #U_SOURCELEN
 	sta SCRATCH0
@@ -1864,25 +1845,21 @@
 ;------------------------------------------------------------------------------
 	HEADER "COUNT", COUNT_CFA, 0, SOURCE_CFA
 	CODEPTR COUNT_CODE
-.proc   COUNT_CODE
-.a16
-.i16
-	lda 0,X             ; addr
+.proc COUNT_CODE
+	.a16
+	.i16
+	lda 0,X			; copy addr to scratch pointer.
 	sta SCRATCH0
-	sep    #$20
+	sep #$20		; enter byte transfer mode
         .a8
-	lda (SCRATCH0)      ; length byte
-	rep    #$20
+	lda (SCRATCH0)		; length byte is at start of string
+	rep #$20
         .a16
-	and    #$00FF
-	sta SCRATCH1        ; Save length
-	lda 0,X
-	inc               ; addr+1
-	sta 0,X             ; Replace addr with addr+1
+	and #$00FF		; mask off B part of accumulator
+	inc 0,X			; addr+1 on TOS
 	dex
 	dex
-	lda SCRATCH1
-	sta 0,X             ; Push length
+	sta 0,X			; Push length
 	NEXT
 .endproc
 
@@ -1892,56 +1869,47 @@
 ;------------------------------------------------------------------------------
 	HEADER "WORD", WORD_CFA, 0, COUNT_CFA
 	CODEPTR WORD_CODE
-.proc   WORD_CODE
-.a16
-.i16
-	lda 0,X             ; delimiter char
+.proc WORD_CODE
+	.a16
+	.i16
+	lda 0,X			; delimiter char
 	inx
 	inx
-	sta SCRATCH1        ; Save delimiter
-
-	; Get >IN and SOURCE
-	lda UP
-	clc
-	adc #U_TOIN
+	sta SCRATCH1		; Save delimiter
+	phy
+	lda UP			; Get >IN and SOURCE
 	sta SCRATCH0
-	lda (SCRATCH0)      ; >IN offset
+	ldy #U_TOIN
+	lda (SCRATCH0),Y	; >IN offset
 	sta TMPA
-	lda UP
-	clc
-	adc #U_TIB
-	sta SCRATCH0
-	lda (SCRATCH0)      ; TIB base
+	ldy #U_TIB
+	lda (SCRATCH0),Y	; TIB base
 	sta TMPB
-
-	; Get HERE as destination
-	lda UP
-	clc
-	adc #U_DP
-	sta SCRATCH0
-	lda (SCRATCH0)
-	sta SCRATCH0        ; HERE
-
-	; Skip leading delimiters
-	lda UP
-	clc
-	adc #U_SOURCELEN
+	ldy #U_DP		; Get HERE as destination
+	lda (SCRATCH0),Y
+	sta SCRATCH0		; Set scratch pointer to HERE
+	lda UP			; Skip leading delimiters
 	sta W
-	lda (W)             ; source length
-	sta W              ; reuse W as end counter
+	ldy #U_SOURCELEN
+	lda (W),Y		; source length
+	sta W			; reuse W as end counter
+	ply
 
 @skip_delim:
-	lda TMPA            ; >IN
-	cmp    W              ; >= source length?
-                BGE     @empty
+	lda TMPA		; >IN
+	cmp W			; >= source length?
+	bcs @empty
+
+	;; TODO - continue reviewing from here.
+
+
 	; Fetch char at TIB+>IN
 	pha
 	lda TMPB
 	clc
 	adc TMPA
 	sta SCRATCH1
-	; Actually fetch byte:
-	sep    #$20
+	sep    #$20		; Actually fetch byte:
         .a8
 	lda (SCRATCH1)
 	rep    #$20
@@ -1960,11 +1928,11 @@
 	dex
 	dex
 	sta 0,X
-	sep    #$20
+	sep #$20
         .a8
 	lda #0
 	sta (SCRATCH0)
-	rep    #$20
+	rep #$20
         .a16
 	NEXT
 
@@ -2169,11 +2137,12 @@ word_helper:
 ;------------------------------------------------------------------------------
 	HEADER "BYE", BYE_CFA, 0, WORD_CFA
 	CODEPTR BYE_CODE
-.proc   BYE_CODE
-.a16
-.i16
-                SEI     	; Disable interrupts
-@halt:          BRA     @halt           ; Spin forever
+.proc BYE_CODE
+	.a16
+	.i16
+	sei			; Disable interrupts
+@halt:
+	bra @halt		; Spin forever
 .endproc
 
 ;------------------------------------------------------------------------------
@@ -2200,38 +2169,38 @@ ABORT_BODY:
 	CODEPTR DOCOL
 
 QUIT_BODY:
-        ; Reset return stack (set S to RSP_INIT)
-        ; This is done by the machine-code entry in FORTH_INIT
-        ; From inside Forth we compile a call to RSP-RESET primitive
-	.word   RSP_RESET_CFA           ; Reset return stack
-	.word   STATE_CFA               ; Push STATE addr
-	.word   LIT_CFA
-	.word   0       	; 0 = interpret
-	.word   STORE_CFA              ; STATE = 0
+	; Reset return stack (set S to RSP_INIT)
+	; This is done by the machine-code entry in FORTH_INIT
+	; From inside Forth we compile a call to RSP-RESET primitive
+	.word RSP_RESET_CFA	; Reset return stack
+	.word STATE_CFA		; Push STATE addr
+	.word LIT_CFA
+	.word 0			; 0 = interpret
+	.word STORE_CFA		; STATE = 0
 
-        ; Main REPL loop
+	; Main REPL loop
 QUIT_LOOP:
-	.word   TIB_CFA 	; Push TIB address
-	.word   LIT_CFA
-	.word   TIB_SIZE	; Max input length
-	.word   ACCEPT_CFA              ; Read line → ( len )
-	.word   LIT_CFA
-	.word   UP_BASE + U_SOURCELEN
-	.word   STORE_CFA               ; Store length in user area
-	.word   LIT_CFA
-	.word   0
-	.word   LIT_CFA
-	.word   UP_BASE + U_TOIN
-	.word   STORE_CFA               ; >IN = 0
-	.word   INTERPRET_CFA           ; Interpret the input line
-	.word   STATE_CFA
-	.word   FETCH_CFA
-	.word   ZEROEQ_CFA              ; STATE = 0 (interpret mode)?
-	.word   ZBRANCH_CFA
-	.word   QUIT_LOOP               ; Loop back (compiling: no prompt)
-	.word   DOT_PROMPT_CFA          ; Print " ok"
-	.word   BRANCH_CFA
-	.word   QUIT_LOOP
+	.word TIB_CFA		; Push TIB address
+	.word LIT_CFA
+	.word TIB_SIZE		; Max input length
+	.word ACCEPT_CFA	; Read line → ( len )
+	.word LIT_CFA
+	.word UP_BASE + U_SOURCELEN
+	.word STORE_CFA		; Store length in user area
+	.word LIT_CFA
+	.word 0
+	.word LIT_CFA
+	.word UP_BASE + U_TOIN
+	.word STORE_CFA		; >IN = 0
+	.word INTERPRET_CFA	; Interpret the input line
+	.word STATE_CFA
+	.word FETCH_CFA
+	.word ZEROEQ_CFA	; STATE = 0 (interpret mode)?
+	.word ZBRANCH_CFA
+	.word QUIT_LOOP		; Loop back (compiling: no prompt)
+	.word DOT_PROMPT_CFA	; Print " ok"
+	.word BRANCH_CFA
+	.word QUIT_LOOP
 
 ;------------------------------------------------------------------------------
 ; Helper primitives needed by QUIT
@@ -2240,20 +2209,20 @@ QUIT_LOOP:
 ; RSP-RESET - reset the hardware (return) stack pointer
 	HEADER "RSP-RESET", RSP_RESET_CFA, F_HIDDEN, QUIT_CFA
 	CODEPTR RSP_RESET_CODE
-.proc   RSP_RESET_CODE
-.a16
-.i16
-	lda #$01FF          ; RSP_INIT
-                TAS     	; S = RSP_INIT
+.proc RSP_RESET_CODE
+	.a16
+	.i16
+	lda #$01FF		; RSP_INIT
+        tas			; S = RSP_INIT
 	NEXT
 .endproc
 
 ; TIB - push TIB base address
 	HEADER "TIB", TIB_CFA, 0, RSP_RESET_CFA
 	CODEPTR TIB_PRIM_CODE
-.proc   TIB_PRIM_CODE
-.a16
-.i16
+.proc TIB_PRIM_CODE
+	.a16
+	.i16
 	lda UP
 	clc
 	adc #U_TIB
@@ -2270,60 +2239,55 @@ QUIT_LOOP:
 ;------------------------------------------------------------------------------
 	HEADER "ACCEPT", ACCEPT_CFA, 0, TIB_CFA
 	CODEPTR ACCEPT_CODE
-.proc   ACCEPT_CODE
-.a16
-.i16
-	lda 0,X             ; max len
+.proc ACCEPT_CODE
+	.a16
+	.i16
+	lda 0,X			; max len
 	sta TMPA
 	inx
 	inx
-	lda 0,X             ; addr
+	lda 0,X			; addr
 	inx
 	inx
-	sta SCRATCH0        ; Buffer pointer
-	stz   SCRATCH1        ; Char count = 0
+	sta SCRATCH0		; Buffer pointer
+	stz SCRATCH1		; Char count = 0
 
 @getchar:
 	; Wait for character
 @rxwait:
-	sep    #$20
+	sep #$20
         .a8
 	lda UART_STATUS
-	and    #UART_RXRDY
-	beq    @rxwait
+	and #UART_RXRDY
+	beq @rxwait
 	lda UART_DATA
-	rep    #$20
+	rep #$20
         .a16
-	and    #$00FF
+	and #$00FF
 
 	; Handle CR → end of line
-	cmp    #$0D
-	beq    @done
+	cmp #$0D
+	beq @done
 
 	; Handle backspace
-	cmp    #$08
-	beq    @backspace
-	cmp    #$7F
-	beq    @backspace
+	cmp #$08
+	beq @backspace
+	cmp #$7F
+	beq @backspace
 
 	; Check buffer full
 	lda SCRATCH1
-	cmp    TMPA
-                BGE     @getchar        ; Ignore if full
+	cmp TMPA
+	bcs @getchar		; Ignore if full
 
-	; Echo and store
-	lda SCRATCH1        ; Count
-	inc
-	sta SCRATCH1
-	; Need char again - it was consumed above
-	; Re-fetch: char was in A before compare
-	; Use TMPB to save char
-	; This needs restructure - save char in TMPB
+	inc SCRATCH1
+				; TODO Echo and store
+
 	bra    @getchar        ; Simplified - rebuild with char save
 
 @backspace:
 	lda SCRATCH1
-	beq    @getchar        ; Nothing to delete
+	beq @getchar        ; Nothing to delete
 	dec    SCRATCH1
 	; Echo backspace-space-backspace
 	sep    #$20
@@ -2376,26 +2340,27 @@ QUIT_LOOP:
 ;------------------------------------------------------------------------------
 	HEADER "INTERPRET", INTERPRET_CFA, 0, ACCEPT_CFA
 	CODEPTR INTERPRET_CODE
-.proc   INTERPRET_CODE
-.a16
-.i16
+.proc INTERPRET_CODE
+	.a16
+	.i16
 @next_word:
 	; Parse next space-delimited word
 	lda UP
 	clc
 	adc #U_TOIN
 	sta SCRATCH0
-	lda (SCRATCH0)      ; >IN
+	lda (SCRATCH0)		; >IN
 	sta TMPA
 
 	lda UP
 	clc
 	adc #U_SOURCELEN
 	sta SCRATCH0
-	lda (SCRATCH0)      ; source length
+	lda (SCRATCH0)		; source length
 
-	cmp    TMPA
-                BLE     @done           ; >IN >= source length → done
+	cmp TMPA		; >IN >= source length → done
+	bcc @done
+	beq @done
 
 	; Push space delimiter and call WORD
 	dex
@@ -2404,7 +2369,7 @@ QUIT_LOOP:
 	sta 0,X
 	; Manually inline simplified WORD:
 	; scan past spaces, copy word to HERE
-	jsr    do_parse_word   ; Returns addr on stack via SCRATCH0
+	jsr do_parse_word   ; Returns addr on stack via SCRATCH0
 	lda SCRATCH0
 	dex
 	dex
@@ -2490,7 +2455,7 @@ QUIT_LOOP:
 	; ... compile steps here
 	bra    @next_word
 
-@done:          NEXT
+@done:	NEXT
 
 ; Subroutines used by INTERPRET
 do_parse_word:
@@ -2885,8 +2850,7 @@ print_error:
 	inc
 	sta SCRATCH0
 @positive:
-	; Print unsigned value in SCRATCH0
-	jsr    print_udec
+	jsr print_cudec
 	; Print trailing space
 	sep    #$20
         .a8
@@ -2898,71 +2862,6 @@ print_error:
 	rep    #$20
         .a16
 	NEXT
-
-print_udec:
-.a16
-.i16
-	; Print SCRATCH0 as unsigned decimal
-	; Uses repeated division by BASE
-	lda #UP_BASE + U_BASE
-	sta SCRATCH1
-	lda (SCRATCH1)      ; BASE
-	sta SCRATCH1
-	ldy   #0              ; Digit count on hardware stack
-@div_loop:
-	; Divide SCRATCH0 by BASE
-	lda SCRATCH0
-	beq    @print_digits
-	; Simple 16-bit divide by SCRATCH1
-	stz   TMPA            ; remainder
-	lda #16
-	sta TMPB
-	lda SCRATCH0
-@div16:
-	asl
-	rol    TMPA
-	lda TMPA
-	cmp    SCRATCH1
-                BLT     @div16_no
-	sec
-	sbc  SCRATCH1
-	sta TMPA
-	inc    SCRATCH0       ; set quotient bit - wrong approach
-	; Real division is complex - use subtraction loop for simplicity
-@div16_no:
-	dec    TMPB
-	bne    @div16
-	; TMPA = remainder (digit), update SCRATCH0 = quotient
-	; Push digit char onto HW stack
-	lda TMPA
-	cmp    #10
-                BLT     @dec_digit
-	clc
-	adc #'A'-10
-	bra    @push_digit
-@dec_digit:
-	clc
-	adc #'0'
-@push_digit:
-	pha
-	iny
-	bra    @div_loop
-@print_digits:
-	; Print digits from stack (they're in reverse order)
-                CPY     #0
-	beq    @pd_done
-	pla
-	dey
-	sep    #$20
-        .a8
-@pwait:         LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @pwait
-	sta UART_DATA
-	rep    #$20
-        .a16
-	bra    @print_digits
-@pd_done:       RTS
 .endproc
 
 ;------------------------------------------------------------------------------
@@ -2971,20 +2870,20 @@ print_udec:
 	HEADER ".S", DOTS_CFA, 0, DOT_CFA
 	CODEPTR DOTS_CODE
 .proc   DOTS_CODE
-.a16
-.i16
+	.a16
+	.i16
 	; Print <depth> then each element
 	; Save PSP in SCRATCH0
-	stx    SCRATCH0
+	stx SCRATCH0
 @print_loop:
-                CPX     #$03FF          ; PSP_INIT
-                BGE     @ds_done
+        cpx #$03FF		; PSP_INIT
+        BGE @ds_done
 	lda 0,X
 	sta SCRATCH1
 	; Print value
 	lda SCRATCH1
 	sta SCRATCH0
-	jsr    DOT_CODE::print_udec
+	jsr print_cudec
 	; Space
 	sep    #$20
         .a8
@@ -3199,7 +3098,7 @@ LAST_WORD = DOT_PROMPT_CFA
 	inx
 	inx
 	sta SCRATCH0
-	jsr    DOT_CODE::print_udec
+	jsr print_cudec
 	NEXT
 .endproc
 
@@ -3273,18 +3172,18 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "NUMBER", NUMBER_CFA, 0, SQUOTE_CFA
 	CODEPTR NUMBER_CODE
 .proc   NUMBER_CODE
-.a16
-.i16
+	.a16
+	.i16
 	; ( addr -- n flag ) Convert counted string to number
 	; flag: TRUE if successful
-	jsr    INTERPRET_CODE::do_number
-	bcc    @ok
+	jsr INTERPRET_CODE::do_number
+	bcc @ok
 	; Error
 	lda #$FFFF
-	eor    #$FFFF          ; = 0 = FALSE
+	eor #$FFFF          ; = 0 = FALSE
 	dex
 	dex
-	stz   0,X
+	stz 0,X
 	NEXT
 @ok:            DEX
 	dex
@@ -3296,8 +3195,8 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "ABORT\"", ABORTQ_CFA, F_IMMEDIATE, NUMBER_CFA
 	CODEPTR ABORTQ_CODE
 .proc   ABORTQ_CODE
-.a16
-.i16
+	.a16
+	.i16
 	; Stub
 	NEXT
 .endproc
