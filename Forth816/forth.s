@@ -31,9 +31,7 @@
 
 __forth_s__ = 1
 
-.p816				; Enable 65816 instruction set
-.smart off			; Manual size tracking (safer for Forth)
-
+.include "forth.inc"
 .include "macros.inc"
 .include "dictionary.inc"
 
@@ -50,47 +48,6 @@ SCRATCH0:	.res 2		; General purpose scratch
 SCRATCH1:	.res 2		; General purpose scratch
 TMPA:		.res 2		; Temp for multiply/divide
 TMPB:		.res 2		; Temp for multiply/divide
-
-;------------------------------------------------------------------------------
-; CONSTANTS
-;------------------------------------------------------------------------------
-
-; Stack addresses
-PSP_INIT	= $03FF		; Parameter stack initial pointer
-RSP_INIT	= $01FF		; Return stack initial pointer (hardware)
-
-; User area base and offsets
-UP_BASE		= $0400
-U_BASE		= $00		; Numeric base		(cell)
-U_STATE		= $02		; Compile state		(cell, 0=interp)
-U_DP		= $04		; Dictionary pointer	(cell)
-U_LATEST	= $06		; Latest definition	(cell)
-U_TIB		= $08		; TIB address		(cell)
-U_TOIN		= $0A		; >IN parse offset	(cell)
-U_SOURCELEN	= $0C		; Source string length	(cell)
-U_HANDLER	= $0E		; Exception handler	(cell)
-
-; Terminal Input Buffer
-TIB_BASE	= $0500
-TIB_SIZE	= $0100
-
-; RAM dictionary
-DICT_BASE	= $0600
-
-; UART registers - adjust for your hardware
-UART_STATUS	= $7F00
-UART_DATA	= $7F01
-UART_TXRDY	= $02		; TX ready bit mask
-UART_RXRDY	= $01		; RX ready bit mask
-
-; ANS Forth boolean values
-FORTH_TRUE	= $FFFF
-FORTH_FALSE	= $0000
-
-; Dictionary header flag bits
-F_IMMEDIATE	= $80		; Immediate word flag
-F_HIDDEN	= $40		; Hidden word flag (during compilation)
-F_LENMASK	= $1F		; Name length mask
 
 ;==============================================================================
 ; CODE SEGMENT - ROM kernel
@@ -196,7 +153,7 @@ F_LENMASK	= $1F		; Name length mask
 ;==============================================================================
 ; SYSTEM INITIALIZATION
 ;==============================================================================
-.proc FORTH_INIT
+PUBLIC FORTH_INIT
 	; --- Switch to 65816 native mode ---
 	clc
 	xce			; Clear emulation bit → native mode
@@ -256,30 +213,4 @@ F_LENMASK	= $1F		; Name length mask
 	lda (W)			; Fetch code pointer
 	sta SCRATCH0
 	jmp (SCRATCH0)
-.endproc
-
-;==============================================================================
-; HARDWARE VECTORS
-;==============================================================================
-.segment "VECTORS"
-
-; Emulation mode vectors ($FFE0-$FFEF are unused/reserved)
-
-.word $0000			; $FFE0 - unused
-.word $0000			; $FFE2 - unused
-.word $0000			; $FFE4 - COP (emulation)
-.word $0000			; $FFE6 - unused
-.word $0000			; $FFE8 - ABORT (emulation)
-.word $0000			; $FFEA - unused
-.word $0000			; $FFEC - NMI (emulation)
-.word FORTH_INIT		; $FFEE - RESET (emulation) → init
-
-; Native mode vectors ($FFF0-$FFFF)
-.word $0000			; $FFF0 - COP (native)
-.word $0000			; $FFF2 - BRK (native)
-.word $0000			; $FFF4 - ABORT (native)
-.word $0000			; $FFF6 - unused
-.word $0000			; $FFF8 - NMI (native)
-.word FORTH_INIT		; $FFFA - unused
-.word FORTH_INIT		; $FFFC - RESET (native)
-.word $0000			; $FFFE - IRQ/BRK (native)
+ENDPUBLIC

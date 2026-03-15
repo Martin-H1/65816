@@ -6,16 +6,6 @@
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; Flag constants (also defined in forth.s but repeated here for includes)
-;------------------------------------------------------------------------------
-
-.ifndef __forth_s__
-F_IMMEDIATE     = $80
-F_HIDDEN        = $40
-F_LENMASK       = $1F
-.endif
-
-;------------------------------------------------------------------------------
 ; Forward declarations for all CFA labels
 ; (Defined in primitives.s / dictionary.s)
 ;------------------------------------------------------------------------------
@@ -133,7 +123,8 @@ F_LENMASK       = $1F
         .global UDOT_CFA
         .global DOTHEX_CFA
         .global DOTS_CFA
-        .global WORDS_CFA
+        .global DOT_PROMPT_CFA
+	.global WORDS_CFA
 
 ; Defining words
         .global COLON_CFA
