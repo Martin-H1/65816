@@ -123,7 +123,8 @@
         .global UDOT_CFA
         .global DOTHEX_CFA
         .global DOTS_CFA
-        .global WORDS_CFA
+        .global DOT_PROMPT_CFA
+	.global WORDS_CFA
 
 ; Defining words
         .global COLON_CFA
