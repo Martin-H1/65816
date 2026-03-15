@@ -2742,35 +2742,7 @@ LAST_WORD = DOT_PROMPT_CFA
 	lda 0,X
 	inx
 	inx
-	; Print 4 hex digits
-	ldy   #4
-@hloop:
-	; Rotate top nibble into position
-	asl
-	asl
-	asl
-	asl
-	pha
-	lsr
-	lsr
-	lsr
-	lsr
-	and    #$000F
-	cmp    #10
-                BLT     @hdigit
-	clc
-	adc #'A'-10
-	bra    @hemit
-@hdigit:        CLC
-	adc #'0'
-@hemit:
-	pha
-	lda 1,S
-	jsr hal_putch
-	pla     	; char
-	pla     	; original value rotated
-	dey
-	bne    @hloop
+	jsr print_chex			; Print 4 hex digits
 	NEXT
 .endproc
 

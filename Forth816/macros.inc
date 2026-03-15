@@ -132,6 +132,10 @@ lbl:
 ; These are from the WDC 65c265 monitor ROM listing. Reusing them allows
 ; using code from the monitor with minimal changes.
 
+; masking building symbols
+LOWNIB	= $0F
+HINIB	= $F0
+
 ; control bits for REP and SEP
 MEM16	= $20
 IND16	= $10

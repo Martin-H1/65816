@@ -105,3 +105,47 @@ PUBLIC print_cudec
 	plp
 	rts
 ENDPUBLIC
+
+; print_ahex - prints lower eight bits of the accumulator in hex to the console.
+; Inputs:
+;   A - byte to print
+; Outputs:
+;   A - retained
+PUBLIC print_ahex
+	pha
+	pha
+	lsr
+	lsr
+	lsr
+	lsr
+	jsr @print_nybble
+	pla
+	jsr @print_nybble
+	pla
+	rts
+
+@print_nybble:
+	and #LOWNIB
+	sed
+	clc
+	adc #$9990	        	; Produce $90-$99 or $00-$05
+	adc #$9940			; Produce $30-$39 or $41-$46
+	cld
+	jmp hal_putch
+ENDPUBLIC
+
+; print_chex - prints C as a 16 bit hex number to the console.
+; Inputs:
+;   C - number
+; Outputs:
+;   C - preserved
+PUBLIC f_print_chex
+	pha
+	pha
+	xba
+	jsr print_ahex
+	pla
+	jsr print_ahex
+	pla
+	rts
+ENDPUBLIC

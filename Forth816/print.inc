@@ -11,4 +11,6 @@
 .ifndef __print_s__
 .import print_cdec
 .import print_cudec
+.import print_ahex
+.import print_chex
 .endif
