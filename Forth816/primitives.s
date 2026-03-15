@@ -19,9 +19,7 @@
 ;   unless explicitly switched with SEP/REP + .a8/.a16 hints
 ;==============================================================================
 
-.p816
-.smart off
-
+.include "forth.inc"
 .include "macros.inc"
 .include "dictionary.inc"
 .include "print.inc"

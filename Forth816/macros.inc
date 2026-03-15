@@ -4,10 +4,12 @@
 
 ;
 ; Put assembler in 16 bit mode, as 8 bit mode is the exception
-; selected at module level.
+; selected at module level. Set processor, and turn off smart mode.
 ;
 .A16
 .I16
+.p816				; Enable 65816 instruction set
+.smart off			; Manual size tracking (safer for Forth)
 
 ;------------------------------------------------------------------------------
 ; NEXT - Inner interpreter dispatch

@@ -5,16 +5,11 @@
 
 __print_s__ = 1
 
-.p816
-.smart off
-
 .include "macros.inc"
+.include "hal.inc"
 .include "print.inc"
 
 .segment "CODE"
-
-f_putch:
-	rts
 
 ;
 ; Functions
@@ -30,7 +25,7 @@ PUBLIC print_cdec
 	pha
 	pha
 	lda #'-'		; Print sign
-	jsr f_putch
+	jsr hal_putch
 	pla			; undo the two's complement
 	dec
 	eor #$ffff
@@ -94,7 +89,7 @@ PUBLIC print_cudec
 @print:
 	pla
 @loop:
-	jsr f_putch		; print digits in descending order
+	jsr hal_putch		; print digits in descending order
 	pla			; until null delimiter is encountered
 	bne @loop
 
