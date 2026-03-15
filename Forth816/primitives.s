@@ -36,8 +36,6 @@
 	HEADER "DUP", DUP_CFA, 0, 0
 	CODEPTR DUP_CODE
 .proc DUP_CODE
-	.a16
-	.i16
 	lda 0,X			; Load TOS
 	dex
 	dex
@@ -51,8 +49,6 @@
 	HEADER "DROP", DROP_CFA, 0, DUP_CFA
 	CODEPTR DROP_CODE
 .proc DROP_CODE
-	.a16
-	.i16
 	inx
 	inx
 	NEXT
@@ -64,8 +60,6 @@
 	HEADER "SWAP", SWAP_CFA, 0, DROP_CFA
 	CODEPTR SWAP_CODE
 .proc SWAP_CODE
-	.a16
-	.i16
 	lda 0,X			; b (TOS)
 	sta SCRATCH0
 	lda 2,X			; a (NOS)
@@ -81,8 +75,6 @@
 	HEADER "OVER", OVER_CFA, 0, SWAP_CFA
 	CODEPTR OVER_CODE
 .proc OVER_CODE
-	.a16
-	.i16
 	lda 2,X			; a (NOS)
 	dex
 	dex
@@ -96,8 +88,6 @@
 	HEADER "ROT", ROT_CFA, 0, OVER_CFA
 	CODEPTR ROT_CODE
 .proc ROT_CODE
-	.a16
-	.i16
 	lda 4,X			; a (bottom)
 	sta SCRATCH0
 	lda 2,X			; b
@@ -115,8 +105,6 @@
 	HEADER "NIP", NIP_CFA, 0, ROT_CFA
 	CODEPTR NIP_CODE
 .proc NIP_CODE
-	.a16
-	.i16
 	lda 0,X			; b (TOS)
 	inx
 	inx
@@ -130,8 +118,6 @@
 	HEADER "TUCK", TUCK_CFA, 0, NIP_CFA
 	CODEPTR TUCK_CODE
 .proc TUCK_CODE
-	.a16
-	.i16
 	lda 0,X			; b
 	sta SCRATCH0
 	lda 2,X			; a
@@ -151,8 +137,6 @@
 	HEADER "2DROP", TWODROP_CFA, 0, TUCK_CFA
 	CODEPTR TWODROP_CODE
 .proc TWODROP_CODE
-	.a16
-	.i16
 	inx
 	inx
 	inx
@@ -166,8 +150,6 @@
 	HEADER "2DUP", TWODUP_CFA, 0, TWODROP_CFA
 	CODEPTR TWODUP_CODE
 .proc   TWODUP_CODE
-	.a16
-	.i16
 	lda 2,X			; a
 	sta SCRATCH0
 	lda 0,X			; b
@@ -187,8 +169,6 @@
 	HEADER "2SWAP", TWOSWAP_CFA, 0, TWODUP_CFA
 	CODEPTR TWOSWAP_CODE
 .proc TWOSWAP_CODE
-	.a16
-	.i16
 	lda 0,X			; d
 	sta SCRATCH0
 	lda 2,X			; c
@@ -210,8 +190,6 @@
 	HEADER "2OVER", TWOOVER_CFA, 0, TWOSWAP_CFA
 	CODEPTR TWOOVER_CODE
 .proc TWOOVER_CODE
-	.a16
-	.i16
 	lda 6,X			; a
 	sta SCRATCH0
 	lda 4,X			; b
@@ -231,8 +209,6 @@
 	HEADER "DEPTH", DEPTH_CFA, 0, TWOOVER_CFA
 	CODEPTR DEPTH_CODE
 .proc DEPTH_CODE
-	.a16
-	.i16
 	stx SCRATCH0		; compute (PSP_INIT - x) / 2
 	lda #$03FF
 	sec
@@ -250,8 +226,6 @@
 	HEADER "PICK", PICK_CFA, 0, DEPTH_CFA
 	CODEPTR PICK_CODE
 .proc PICK_CODE
-	.a16
-	.i16
 	stx SCRATCH0
 	lda 0,X			; u
 	inc			; u+1 (skip u itself)
@@ -274,8 +248,6 @@
 	HEADER ">R", TOR_CFA, 0, PICK_CFA
 	CODEPTR TOR_CODE
 .proc TOR_CODE
-	.a16
-	.i16
 	lda 0,X			; Pop from parameter stack
 	inx
 	inx
@@ -289,8 +261,6 @@
 	HEADER "R>", RFROM_CFA, 0, TOR_CFA
 	CODEPTR RFROM_CODE
 .proc RFROM_CODE
-	.a16
-	.i16
 	pla			; Pop from return stack
 	dex
 	dex
@@ -304,8 +274,6 @@
 	HEADER "R@", RFETCH_CFA, 0, RFROM_CFA
 	CODEPTR RFETCH_CODE
 .proc RFETCH_CODE
-	.a16
-	.i16
 	; Officially this function peeks at return stack without popping.
 	; Unofficially it's easier to pop and push back.
 	pla			; Pop R@ value
@@ -326,8 +294,6 @@
 	HEADER "+", PLUS_CFA, 0, RFETCH_CFA
 	CODEPTR PLUS_CODE
 .proc PLUS_CODE
-	.a16
-	.i16
 	lda 0,X			; b
 	clc
 	adc 2,X			; a + b
@@ -343,8 +309,6 @@
 	HEADER "-", MINUS_CFA, 0, PLUS_CFA
 	CODEPTR MINUS_CODE
 .proc MINUS_CODE
-	.a16
-	.i16
 	lda 2,X			; a
 	sec
 	sbc  0,X		; a - b
@@ -360,8 +324,6 @@
 	HEADER "*", STAR_CFA, 0, MINUS_CFA
 	CODEPTR STAR_CODE
 .proc STAR_CODE
-	.a16
-	.i16
 	lda 0,X			; b (multiplier)
 	sta TMPA
 	lda 2,X			; a (multiplicand)
@@ -392,8 +354,6 @@
 	HEADER "UM*", UMSTAR_CFA, 0, STAR_CFA
 	CODEPTR UMSTAR_CODE
 .proc UMSTAR_CODE
-	.a16
-	.i16
 	lda 0,X			; u2 (multiplier)
 	sta TMPA
 	lda 2,X			; u1 (multiplicand)
@@ -435,8 +395,6 @@
 	HEADER "UM/MOD", UMSLASHMOD_CFA, 0, UMSTAR_CFA
 	CODEPTR UMSLASHMOD_CODE
 .proc   UMSLASHMOD_CODE
-	.a16
-	.i16
 	; Stack: NOS_HI=ud_high NOS=ud_low TOS=u (divisor)
 	; This is a standard 32/16 non-restoring division
 	lda 0,X			; divisor
@@ -473,8 +431,6 @@
 	HEADER "/MOD", SLASHMOD_CFA, 0, UMSLASHMOD_CFA
 	CODEPTR SLASHMOD_CODE
 .proc SLASHMOD_CODE
-	.a16
-	.i16
 	; Sign extend n1 (NOS) to 32 bits for UM/MOD
 	; Use: sign of n2 and n1 for result sign adjustment
 	lda 2,X			; n1
@@ -566,8 +522,6 @@
 	HEADER "/", SLASH_CFA, 0, SLASHMOD_CFA
 	CODEPTR SLASH_CODE
 .proc SLASH_CODE
-	.a16
-	.i16
 	jsr SLASHMOD_CODE	; Call /MOD then drop remainder
 	lda 0,X			; Stack: NOS=rem TOS=quot → NIP
 	inx			; Inline: NIP
@@ -582,8 +536,6 @@
 	HEADER "MOD", MOD_CFA, 0, SLASH_CFA
 	CODEPTR MOD_CODE
 .proc MOD_CODE
-	.a16
-	.i16
 	jsr SLASHMOD_CODE
 	inx			; Stack: NOS=rem TOS=quot → DROP
 	inx
@@ -596,8 +548,6 @@
 	HEADER "NEGATE", NEGATE_CFA, 0, MOD_CFA
 	CODEPTR NEGATE_CODE
 .proc NEGATE_CODE
-	.a16
-	.i16
 	lda 0,X
 	eor #$FFFF
 	inc
@@ -611,8 +561,6 @@
 	HEADER "ABS", ABS_CFA, 0, NEGATE_CFA
 	CODEPTR ABS_CODE
 .proc ABS_CODE
-	.a16
-	.i16
 	lda 0,X
 	bpl @done
 	eor #$FFFF
@@ -627,8 +575,6 @@
 	HEADER "MAX", MAX_CFA, 0, ABS_CFA
 	CODEPTR MAX_CODE
 .proc MAX_CODE
-	.a16
-	.i16
 	lda 2,X			; a
 	cmp 0,X			; a - b (signed)
 	bpl @endif		; a >= b
@@ -645,8 +591,6 @@
 	HEADER "MIN", MIN_CFA, 0, MAX_CFA
 	CODEPTR MIN_CODE
 .proc MIN_CODE
-	.a16
-	.i16
 	lda 2,X			; a
 	cmp 0,X			; a - b (signed)
 	bmi @endif		; a < b
@@ -663,8 +607,6 @@
 	HEADER "1+", ONEPLUS_CFA, 0, MIN_CFA
 	CODEPTR ONEPLUS_CODE
 .proc ONEPLUS_CODE
-	.a16
-	.i16
 	inc 0,X
 	NEXT
 .endproc
@@ -675,8 +617,6 @@
 	HEADER "1-", ONEMINUS_CFA, 0, ONEPLUS_CFA
 	CODEPTR ONEMINUS_CODE
 .proc ONEMINUS_CODE
-	.a16
-	.i16
 	dec 0,X
 	NEXT
 .endproc
@@ -687,8 +627,6 @@
 	HEADER "2*", TWOSTAR_CFA, 0, ONEMINUS_CFA
 	CODEPTR TWOSTAR_CODE
 .proc TWOSTAR_CODE
-	.a16
-	.i16
 	asl 0,X
 	NEXT
 .endproc
@@ -699,8 +637,6 @@
 	HEADER "2/", TWOSLASH_CFA, 0, TWOSTAR_CFA
 	CODEPTR TWOSLASH_CODE
 .proc   TWOSLASH_CODE
-	.a16
-	.i16
 	lda 0,X			; Arithmetic shift right: preserve sign bit
 	cmp #$8000		; Set carry if negative
 	ror			; Shift right, sign bit from carry
@@ -719,8 +655,6 @@
 	HEADER "=", EQUAL_CFA, 0, TWOSLASH_CFA
 	CODEPTR EQUAL_CODE
 .proc EQUAL_CODE
-	.a16
-	.i16
 	lda 0,X			; b
 	inx			; drop b
 	inx
@@ -739,8 +673,6 @@
 	HEADER "<>", NOTEQUAL_CFA, 0, EQUAL_CFA
 	CODEPTR NOTEQUAL_CODE
 .proc NOTEQUAL_CODE
-	.a16
-	.i16
 	lda 0,X			; b
 	inx			; drop b
 	inx
@@ -759,8 +691,6 @@
 	HEADER "<", LESS_CFA, 0, NOTEQUAL_CFA
 	CODEPTR LESS_CODE
 .proc LESS_CODE
-	.a16
-	.i16
 	lda 2,X			; a
 	sec
 	sbc 0,X			; a - b
@@ -784,8 +714,6 @@
 	HEADER ">", GREATER_CFA, 0, LESS_CFA
 	CODEPTR GREATER_CODE
 .proc GREATER_CODE
-	.a16
-	.i16
 	lda 0,X			; b
 	sec
 	sbc  2,X		; b - a (reversed for >)
@@ -809,8 +737,6 @@
 	HEADER "U<", ULESS_CFA, 0, GREATER_CFA
 	CODEPTR ULESS_CODE
 .proc ULESS_CODE
-	.a16
-	.i16
 	lda 2,X			; u1
 	cmp 0,X			; u1 - u2 (unsigned)
 	inx			; drop u2
@@ -829,8 +755,6 @@
 	HEADER "U>", UGREATER_CFA, 0, ULESS_CFA
 	CODEPTR UGREATER_CODE
 .proc UGREATER_CODE
-.a16
-.i16
 	lda 0,X			; u2
 	cmp 2,X			; u2 - u1 (reversed)
 	inx			; drop u2
@@ -849,8 +773,6 @@
 	HEADER "0=", ZEROEQ_CFA, 0, UGREATER_CFA
 	CODEPTR ZEROEQ_CODE
 .proc ZEROEQ_CODE
-	.a16
-	.i16
 	lda 0,X			; load and test TOS
 	bne @false
 	lda #$FFFF		; if it's zero, set TOS to TRUE
@@ -866,8 +788,6 @@
 	HEADER "0<", ZEROLESS_CFA, 0, ZEROEQ_CFA
 	CODEPTR ZEROLESS_CODE
 .proc ZEROLESS_CODE
-	.a16
-	.i16
 	lda 0,X			; load and test TOS
 	bpl @false
 	lda #$FFFF		; on negative, set TOS to TRUE
@@ -883,8 +803,6 @@
 	HEADER "0>", ZEROGT_CFA, 0, ZEROLESS_CFA
 	CODEPTR ZEROGT_CODE
 .proc ZEROGT_CODE
-	.a16
-	.i16
 	lda 0,X			; load and test TOS
 	beq @false		; handle zero, as it is a positive
 	bpl @true
@@ -905,8 +823,6 @@
 	HEADER "AND", AND_CFA, 0, ZEROGT_CFA
 	CODEPTR AND_CODE
 .proc AND_CODE
-	.a16
-	.i16
 	lda 0,X			; b
 	inx			; drop b
 	inx
@@ -921,8 +837,6 @@
 	HEADER "OR", OR_CFA, 0, AND_CFA
 	CODEPTR OR_CODE
 .proc OR_CODE
-	.a16
-	.i16
 	lda 0,X			; b
 	inx			; drop b
 	inx
@@ -937,8 +851,6 @@
 	HEADER "XOR", XOR_CFA, 0, OR_CFA
 	CODEPTR XOR_CODE
 .proc XOR_CODE
-	.a16
-	.i16
 	lda 0,X			; b
 	inx			; drop b
 	inx
@@ -953,8 +865,6 @@
 	HEADER "INVERT", INVERT_CFA, 0, XOR_CFA
 	CODEPTR INVERT_CODE
 .proc INVERT_CODE
-	.a16
-	.i16
 	lda 0,X
 	eor #$FFFF
 	sta 0,X
@@ -967,8 +877,6 @@
 	HEADER "LSHIFT", LSHIFT_CFA, 0, INVERT_CFA
 	CODEPTR LSHIFT_CODE
 .proc LSHIFT_CODE
-	.a16
-	.i16
 	lda 0,X			; shift count
 	inx			; drop u
 	inx
@@ -990,8 +898,6 @@
 	HEADER "RSHIFT", RSHIFT_CFA, 0, LSHIFT_CFA
 	CODEPTR RSHIFT_CODE
 .proc RSHIFT_CODE
-	.a16
-	.i16
 	lda 0,X			; shift count
 	inx			; drop u
 	inx
@@ -1017,8 +923,6 @@
 	HEADER "@", FETCH_CFA, 0, RSHIFT_CFA
 	CODEPTR FETCH_CODE
 .proc FETCH_CODE
-	.a16
-	.i16
 	lda 0,X			; move addr to scratch pointer
 	sta SCRATCH0
 	lda (SCRATCH0)		; fetch and store value to TOS
@@ -1032,8 +936,6 @@
 	HEADER "!", STORE_CFA, 0, FETCH_CFA
 	CODEPTR STORE_CODE
 .proc STORE_CODE
-	.a16
-	.i16
 	lda 0,X			; pop addr to scratch pointer
 	sta SCRATCH0
 	inx
@@ -1051,8 +953,6 @@
 	HEADER "C@", CFETCH_CFA, 0, STORE_CFA
 	CODEPTR CFETCH_CODE
 .proc CFETCH_CODE
-	.a16
-	.i16
 	lda 0,X			; copy addr to scratch pointer
 	sta SCRATCH0
 	sep #$20		; enter byte transfer mode
@@ -1071,8 +971,6 @@
 	HEADER "C!", CSTORE_CFA, 0, CFETCH_CFA
 	CODEPTR CSTORE_CODE
 .proc CSTORE_CODE
-	.a16
-	.i16
 	lda 0,X			; pop addr to scratch pointer
 	sta SCRATCH0
 	inx
@@ -1094,8 +992,6 @@
 	HEADER "2@", TWOFETCH_CFA, 0, CSTORE_CFA
 	CODEPTR TWOFETCH_CODE
 .proc TWOFETCH_CODE
-	.a16
-	.i16
 	lda 0,X			; copy addr to scratch pointer
 	sta SCRATCH0
 	lda (SCRATCH0)		; load low indirect and save to temp
@@ -1119,8 +1015,6 @@
 	HEADER "2!", TWOSTORE_CFA, 0, TWOFETCH_CFA
 	CODEPTR TWOSTORE_CODE
 .proc TWOSTORE_CODE
-	.a16
-	.i16
 	lda 0,X			; pop addr to scratch pointer
 	sta SCRATCH0
 	clc
@@ -1142,8 +1036,6 @@
 	HEADER "MOVE", MOVE_CFA, 0, TWOSTORE_CFA
 	CODEPTR MOVE_CODE
 .proc MOVE_CODE
-	.a16
-	.i16
 	lda 0,X			; pop u (byte count) to TMPA
 	sta TMPA
 	inx
@@ -1179,8 +1071,6 @@
 	HEADER "FILL", FILL_CFA, 0, MOVE_CFA
 	CODEPTR FILL_CODE
 .proc FILL_CODE
-	.a16
-	.i16
 	lda 0,X			; pop fill byte to SCRATCH1
 	sta SCRATCH1
 	inx
@@ -1220,22 +1110,10 @@
 	HEADER "EMIT", EMIT_CFA, 0, FILL_CFA
 	CODEPTR EMIT_CODE
 .proc EMIT_CODE
-	.a16
-	.i16
-	lda 0,X			; pop char to SCRATCH0
-	sta SCRATCH0
+	lda 0,X			; pop char and call HAL
 	inx
 	inx
-	sep #$20		; enter byte mode
-	.a8
-@wait:
-	lda UART_STATUS		; TODO: Move UART implementation to HAL
-	and #UART_TXRDY
-	beq @wait		; Spin until TX ready
-	lda SCRATCH0		; Char (low byte)
-	sta UART_DATA
-	rep #$20		; restore word mode
-	.a16
+	jsr hal_putch
 	NEXT
 .endproc
 
@@ -1245,17 +1123,7 @@
 	HEADER "KEY", KEY_CFA, 0, EMIT_CFA
 	CODEPTR KEY_CODE
 .proc KEY_CODE
-	.a16
-	.i16
-	sep #$20
-	.a8
-@wait:
-	lda UART_STATUS
-	and #UART_RXRDY
-	beq @wait           ; Spin until RX ready
-	lda UART_DATA
-	rep #$20
-	.a16
+	jsr hal_getch
 	and #$00FF          ; Zero extend to 16-bit
 	dex		    ; push to TOS
 	dex
@@ -1269,16 +1137,9 @@
 	HEADER "KEY?", KEYQ_CFA, 0, KEY_CFA
 	CODEPTR KEYQ_CODE
 .proc KEYQ_CODE
-	.a16
-	.i16
 	dex
 	dex
-	sep #$20
-	.a8
-	lda UART_STATUS
-	and #UART_RXRDY
-	rep #$20
-	.a16
+	jsr hal_cready
 	beq @false
 	lda #$FFFF
 	sta 0,X
@@ -1293,8 +1154,6 @@
 	HEADER "TYPE", TYPE_CFA, 0, KEYQ_CFA
 	CODEPTR TYPE_CODE
 .proc TYPE_CODE
-	.a16
-	.i16
 	lda 0,X			; pop u to TMPA
 	sta TMPA
 	inx
@@ -1308,17 +1167,10 @@
 	lda TMPA		; Zero count = no-op
 	beq @done
 @loop:
-	; Emit byte at SCRATCH0+Y
-	sep    #$20
-        .a8
-@txwait:
-	lda UART_STATUS		; TODO: move UART details to HAL
-	and #UART_TXRDY
-	beq @txwait
+	OFF16MEM
 	lda (SCRATCH0),Y
-	sta UART_DATA
-	rep #$20
-        .a16
+	ON16MEM
+	jsr hal_putch
         INY
 	dec TMPA
 	bne @loop
@@ -1332,28 +1184,10 @@
 	HEADER "CR", CR_CFA, 0, TYPE_CFA
 	CODEPTR CR_CODE
 .proc CR_CODE
-	.a16
-	.i16
-@txwait1:
-	sep #$20
-	.a8
-	lda UART_STATUS		; TODO: move to HAL
-	and #UART_TXRDY
-	beq @txwait1
-	lda #$0D		; CR
-	sta UART_DATA
-	rep #$20
-	.a16
-@txwait2:
-	sep #$20
-	.a8
-	lda UART_STATUS		; TODO: move to HAL
-	and #UART_TXRDY
-	beq @txwait2
-	lda #$0A		; LF
-	sta UART_DATA
-	rep #$20
-	.a16
+	lda #$000D		; CR
+	jsr hal_putch
+	lda #$000A		; LF
+	jsr hal_putch
 	NEXT
 .endproc
 
@@ -1363,18 +1197,8 @@
 	HEADER "SPACE", SPACE_CFA, 0, CR_CFA
 	CODEPTR SPACE_CODE
 .proc SPACE_CODE
-	.a16
-	.i16
-@txwait:
-	sep #$20
-	.a8
-	lda UART_STATUS		; TODO Move to HAL
-	and #UART_TXRDY
-	beq @txwait
-	lda #$20		; TODO get rid of magic number
-	sta UART_DATA
-	rep #$20
-	.a16
+	lda #$0020		; TODO get rid of magic number
+	jsr hal_putch
 	NEXT
 .endproc
 
@@ -1384,22 +1208,12 @@
 	HEADER "SPACES", SPACES_CFA, 0, SPACE_CFA
 	CODEPTR SPACES_CODE
 .proc SPACES_CODE
-	.a16
-	.i16
 	lda 0,X
 	beq @done
 	sta TMPA		; peek count n to TMPA
 @loop:
-@txwait:
-	sep #$20		; TODO Move to HAL
-	.a8
-	lda UART_STATUS
-	and #UART_TXRDY
-	beq @txwait
-	lda #$20
-	sta UART_DATA
-	rep #$20
-	.a16
+	lda #$0020
+	jsr hal_putch
 	dec TMPA
 	bne @loop
 @done:	inx			; drop n
@@ -1417,8 +1231,6 @@
 	HEADER "EXIT", EXIT_CFA, 0, SPACES_CFA
 	CODEPTR EXIT_CODE
 .proc EXIT_CODE
-	.a16
-	.i16
 	pla			; Pop saved IP from return stack
 	tay			; Restore IP into Y
 	NEXT
@@ -1430,8 +1242,6 @@
 	HEADER "EXECUTE", EXECUTE_CFA, 0, EXIT_CFA
 	CODEPTR EXECUTE_CODE
 .proc EXECUTE_CODE
-	.a16
-	.i16
 	lda 0,X			; xt = CFA
 	inx
 	inx
@@ -1447,8 +1257,6 @@
 	HEADER "LIT", LIT_CFA, F_HIDDEN, EXECUTE_CFA
 	CODEPTR LIT_CODE
 .proc LIT_CODE
-	.a16
-	.i16
 	lda 0,Y			; Fetch literal value at IP
 	iny			; Advance IP past literal
 	iny
@@ -1465,8 +1273,6 @@
 	HEADER "BRANCH", BRANCH_CFA, F_HIDDEN, LIT_CFA
 	CODEPTR BRANCH_CODE
 .proc BRANCH_CODE
-	.a16
-	.i16
 	lda 0,Y			; Fetch branch target at IP
 	; Branch target is stored as absolute address for simplicity:
 	tay			; IP = branch target (absolute)
@@ -1479,8 +1285,6 @@
 	HEADER "0BRANCH", ZBRANCH_CFA, F_HIDDEN, BRANCH_CFA
 	CODEPTR ZBRANCH_CODE
 .proc ZBRANCH_CODE
-	.a16
-	.i16
 	lda 0,X
 	inx			; pop and evaluate flag
 	inx
@@ -1501,8 +1305,6 @@
 	HEADER "(DO)", DODO_CFA, F_HIDDEN, ZBRANCH_CFA
 	CODEPTR DODO_CODE
 .proc DODO_CODE
-	.a16
-	.i16
 	lda 2,X			; limit
 	pha			; Push limit onto return stack
 	lda 0,X			; index
@@ -1521,8 +1323,6 @@
 	HEADER "(LOOP)", DOLOOP_CFA, F_HIDDEN, DODO_CFA
 	CODEPTR DOLOOP_CODE
 .proc DOLOOP_CODE
-	.a16
-	.i16
 	pla			; index
 	inc			; index+1
 	sta SCRATCH0
@@ -1547,8 +1347,6 @@
 	HEADER "(+LOOP)", DOPLUSLOOP_CFA, F_HIDDEN, DOLOOP_CFA
 	CODEPTR DOPLUSLOOP_CODE
 .proc DOPLUSLOOP_CODE
-	.a16
-	.i16
 	lda 0,X			; step
 	inx
 	inx
@@ -1578,8 +1376,6 @@
 	HEADER "UNLOOP", UNLOOP_CFA, 0, DOPLUSLOOP_CFA
 	CODEPTR UNLOOP_CODE
 .proc UNLOOP_CODE
-	.a16
-	.i16
 	pla			; Discard index
 	pla			; Discard limit
 	NEXT
@@ -1591,8 +1387,6 @@
 	HEADER "I", I_CFA, 0, UNLOOP_CFA
 	CODEPTR I_CODE
 .proc I_CODE
-	.a16
-	.i16
 	; Return stack: TOS=index NOS=limit NOS2=saved_IP
 	pla			; Pop index
 	pha			; Push back
@@ -1608,8 +1402,6 @@
 	HEADER "J", J_CFA, 0, I_CFA
 	CODEPTR J_CODE
 .proc J_CODE
-	.a16
-	.i16
 	; Return stack (top to bottom):
 	;   inner_index, inner_limit, saved_IP, outer_index, outer_limit
 	; Pop 4 cells to get to outer index
@@ -1646,8 +1438,6 @@
 	HEADER "HERE", HERE_CFA, 0, J_CFA
 	CODEPTR HERE_CODE
 .proc HERE_CODE
-	.a16
-	.i16
 	lda UP			; UP in page zero
 	clc
 	adc #U_DP		; Add the dictionary pointer offset
@@ -1665,8 +1455,6 @@
 	HEADER "ALLOT", ALLOT_CFA, 0, HERE_CFA
 	CODEPTR ALLOT_CODE
 .proc ALLOT_CODE
-	.a16
-	.i16
 	lda UP			; Get UP and add DP offset
 	clc
 	adc #U_DP
@@ -1686,8 +1474,6 @@
 	HEADER ",", COMMA_CFA, 0, ALLOT_CFA
 	CODEPTR COMMA_CODE
 .proc COMMA_CODE
-	.a16
-	.i16
 	lda UP			; Get UP, add DP offset, and load DP
 	clc
 	adc #U_DP
@@ -1711,8 +1497,6 @@
 	HEADER "C,", CCOMMA_CFA, 0, COMMA_CFA
 	CODEPTR CCOMMA_CODE
 .proc CCOMMA_CODE
-	.a16
-	.i16
 	lda UP			; Get UP, add DP offset, and load DP
 	clc
 	adc #U_DP
@@ -1741,8 +1525,6 @@
 	HEADER "LATEST", LATEST_CFA, 0, CCOMMA_CFA
 	CODEPTR LATEST_CODE
 .proc LATEST_CODE
-	.a16
-	.i16
 	lda UP			; Get UP and add offset to LATEST
 	clc
 	adc #U_LATEST
@@ -1762,8 +1544,6 @@
 	HEADER "BASE", BASE_CFA, 0, LATEST_CFA
 	CODEPTR BASE_CODE
 .proc BASE_CODE
-	.a16
-	.i16
 	lda UP			; Get UP and add BASE offset and push
 	clc
 	adc #U_BASE
@@ -1779,8 +1559,6 @@
 	HEADER "STATE", STATE_CFA, 0, BASE_CFA
 	CODEPTR STATE_CODE
 .proc STATE_CODE
-	.a16
-	.i16
 	lda UP			; Get UP and add STATE offset and push
 	clc
 	adc #U_STATE
@@ -1796,8 +1574,6 @@
 	HEADER ">IN", TOIN_CFA, 0, STATE_CFA
 	CODEPTR TOIN_CODE
 .proc TOIN_CODE
-	.a16
-	.i16
 	lda UP			; Get UP and add TOIN offset and push
 	clc
 	adc #U_TOIN
@@ -1813,8 +1589,6 @@
 	HEADER "SOURCE", SOURCE_CFA, 0, TOIN_CFA
 	CODEPTR SOURCE_CODE
 .proc SOURCE_CODE
-	.a16
-	.i16
 	lda UP			; Push TIB address
 	clc
 	adc #U_TIB
@@ -1844,8 +1618,6 @@
 	HEADER "COUNT", COUNT_CFA, 0, SOURCE_CFA
 	CODEPTR COUNT_CODE
 .proc COUNT_CODE
-	.a16
-	.i16
 	lda 0,X			; copy addr to scratch pointer.
 	sta SCRATCH0
 	sep #$20		; enter byte transfer mode
@@ -1868,8 +1640,6 @@
 	HEADER "WORD", WORD_CFA, 0, COUNT_CFA
 	CODEPTR WORD_CODE
 .proc WORD_CODE
-	.a16
-	.i16
 	lda 0,X			; delimiter char
 	inx
 	inx
@@ -2007,8 +1777,6 @@
 
         ; Out-of-line helper for WORD to keep NEXT reachable
 word_helper:
-.a16
-.i16
 	; On entry:
 	;   Y    = >IN (current parse position)
 	;   TMPB = TIB base address
@@ -2136,8 +1904,6 @@ word_helper:
 	HEADER "BYE", BYE_CFA, 0, WORD_CFA
 	CODEPTR BYE_CODE
 .proc BYE_CODE
-	.a16
-	.i16
 	sei			; Disable interrupts
 @halt:
 	bra @halt		; Spin forever
@@ -2208,8 +1974,6 @@ QUIT_LOOP:
 	HEADER "RSP-RESET", RSP_RESET_CFA, F_HIDDEN, QUIT_CFA
 	CODEPTR RSP_RESET_CODE
 .proc RSP_RESET_CODE
-	.a16
-	.i16
 	lda #$01FF		; RSP_INIT
         tas			; S = RSP_INIT
 	NEXT
@@ -2219,8 +1983,6 @@ QUIT_LOOP:
 	HEADER "TIB", TIB_CFA, 0, RSP_RESET_CFA
 	CODEPTR TIB_PRIM_CODE
 .proc TIB_PRIM_CODE
-	.a16
-	.i16
 	lda UP
 	clc
 	adc #U_TIB
@@ -2238,8 +2000,6 @@ QUIT_LOOP:
 	HEADER "ACCEPT", ACCEPT_CFA, 0, TIB_CFA
 	CODEPTR ACCEPT_CODE
 .proc ACCEPT_CODE
-	.a16
-	.i16
 	lda 0,X			; max len
 	sta TMPA
 	inx
@@ -2251,17 +2011,7 @@ QUIT_LOOP:
 	stz SCRATCH1		; Char count = 0
 
 @getchar:
-	; Wait for character
-@rxwait:
-	sep #$20
-        .a8
-	lda UART_STATUS
-	and #UART_RXRDY
-	beq @rxwait
-	lda UART_DATA
-	rep #$20
-        .a16
-	and #$00FF
+	jsr hal_getch
 
 	; Handle CR → end of line
 	cmp #$0D
@@ -2288,25 +2038,12 @@ QUIT_LOOP:
 	beq @getchar        ; Nothing to delete
 	dec    SCRATCH1
 	; Echo backspace-space-backspace
-	sep    #$20
-        .a8
-@bsp_txw1:      LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @bsp_txw1
 	lda #$08
-	sta UART_DATA
-@bsp_txw2:      LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @bsp_txw2
+	jsr hal_putch
 	lda #$20
-	sta UART_DATA
-@bsp_txw3:      LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @bsp_txw3
+	jsr hal_putch
 	lda #$08
-	sta UART_DATA
-	rep    #$20
-        .a16
+	jsr hal_putch
 	bra    @getchar
 
 @done:
@@ -2316,20 +2053,10 @@ QUIT_LOOP:
 	dex
 	sta 0,X
 	; Echo CR+LF
-	sep    #$20
-        .a8
-@cr_txw:        LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @cr_txw
 	lda #$0D
-	sta UART_DATA
-@lf_txw:        LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @lf_txw
+	jsr hal_putch
 	lda #$0A
-	sta UART_DATA
-	rep    #$20
-        .a16
+	jsr hal_putch
 	NEXT
 .endproc
 
@@ -2339,8 +2066,6 @@ QUIT_LOOP:
 	HEADER "INTERPRET", INTERPRET_CFA, 0, ACCEPT_CFA
 	CODEPTR INTERPRET_CODE
 .proc INTERPRET_CODE
-	.a16
-	.i16
 @next_word:
 	; Parse next space-delimited word
 	lda UP
@@ -2792,31 +2517,15 @@ do_number:
 
 print_error:
 	; Print " ?" error indicator
-	sep    #$20
-        .a8
-@e1:            LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @e1
 	lda #$20
-	sta UART_DATA
-@e2:            LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @e2
+	jsr hal_putch
 	lda #'?'
-	sta UART_DATA
-@e3:            LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @e3
+	jsr hal_putch
 	lda #$0D
-	sta UART_DATA
-@e4:            LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @e4
+	jsr hal_putch
 	lda #$0A
-	sta UART_DATA
-	rep    #$20
-        .a16
-                RTS
+	jsr hal_putch
+        rts
 .endproc
 
 ;------------------------------------------------------------------------------
@@ -2825,8 +2534,6 @@ print_error:
 	HEADER ".", DOT_CFA, 0, INTERPRET_CFA
 	CODEPTR DOT_CODE
 .proc   DOT_CODE
-.a16
-.i16
 	lda 0,X
 	inx
 	inx
@@ -2834,15 +2541,8 @@ print_error:
 	sta SCRATCH0
 	bpl    @positive
 	; Negative: print minus, negate
-	sep    #$20
-        .a8
-@mwait:         LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @mwait
 	lda #'-'
-	sta UART_DATA
-	rep    #$20
-        .a16
+	jsr hal_putch
 	lda SCRATCH0
 	eor    #$FFFF
 	inc
@@ -2850,15 +2550,8 @@ print_error:
 @positive:
 	jsr print_cudec
 	; Print trailing space
-	sep    #$20
-        .a8
-@swait:         LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @swait
 	lda #$20
-	sta UART_DATA
-	rep    #$20
-        .a16
+	jsr hal_putch
 	NEXT
 .endproc
 
@@ -2868,8 +2561,6 @@ print_error:
 	HEADER ".S", DOTS_CFA, 0, DOT_CFA
 	CODEPTR DOTS_CODE
 .proc   DOTS_CODE
-	.a16
-	.i16
 	; Print <depth> then each element
 	; Save PSP in SCRATCH0
 	stx SCRATCH0
@@ -2883,15 +2574,8 @@ print_error:
 	sta SCRATCH0
 	jsr print_cudec
 	; Space
-	sep    #$20
-        .a8
-@swait:         LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @swait
 	lda #$20
-	sta UART_DATA
-	rep    #$20
-        .a16
+	jsr hal_putch
 	inx
 	inx
 	bra    @print_loop
@@ -2908,37 +2592,16 @@ print_error:
 	HEADER "DOT-PROMPT", DOT_PROMPT_CFA, F_HIDDEN, DOTS_CFA
 	CODEPTR DOT_PROMPT_CODE
 .proc   DOT_PROMPT_CODE
-.a16
-.i16
-	sep    #$20
-        .a8
-@w1:            LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @w1
 	lda #' '
-	sta UART_DATA
-@w2:            LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @w2
+	jsr hal_putch
 	lda #'o'
-	sta UART_DATA
-@w3:            LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @w3
+	jsr hal_putch
 	lda #'k'
-	sta UART_DATA
-@w4:            LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @w4
+	jsr hal_putch
 	lda #$0D
-	sta UART_DATA
-@w5:            LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @w5
+	jsr hal_putch
 	lda #$0A
-	sta UART_DATA
-	rep    #$20
-        .a16
+	jsr hal_putch
 	NEXT
 .endproc
 
@@ -2957,8 +2620,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "WORDS", WORDS_CFA, 0, DOT_PROMPT_CFA
 	CODEPTR WORDS_CODE
 .proc   WORDS_CODE
-.a16
-.i16
 	; Walk dictionary and print names
 	lda UP
 	clc
@@ -2989,28 +2650,16 @@ LAST_WORD = DOT_PROMPT_CFA
 	sta SCRATCH1
 	ldy   #0
 @wtype:
-	sep    #$20
-        .a8
-@wtxw:          LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @wtxw
+	OFF16MEM
 	lda (SCRATCH1),Y
-	sta UART_DATA
-	rep    #$20
-        .a16
+	ON16MEM
+	jsr hal_putch
 	iny
 	dec    TMPA
 	bne    @wtype
 	; Space after name
-	sep    #$20
-        .a8
-@wspw:          LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @wspw
 	lda #$20
-	sta UART_DATA
-	rep    #$20
-        .a16
+	jsr hal_putch
 @wnext:
 	lda (SCRATCH0)      ; Follow link
 	sta SCRATCH0
@@ -3023,8 +2672,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER ":", COLON_CFA, 0, WORDS_CFA
 	CODEPTR COLON_CODE
 .proc   COLON_CODE
-.a16
-.i16
 	; Full implementation: parse name, create header, set STATE=1
 	; Stub: just set STATE to compile mode
 	lda UP
@@ -3039,8 +2686,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER ";", SEMICOLON_CFA, F_IMMEDIATE, COLON_CFA
 	CODEPTR SEMICOLON_CODE
 .proc   SEMICOLON_CODE
-.a16
-.i16
 	; Full implementation: compile EXIT, set STATE=0, smudge
 	lda UP
 	clc
@@ -3053,8 +2698,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "CONSTANT", CONSTANT_CFA, 0, SEMICOLON_CFA
 	CODEPTR CONSTANT_CODE
 .proc   CONSTANT_CODE
-.a16
-.i16
 	; Stub: full impl parses name, creates entry with DOCON, stores value
 	NEXT
 .endproc
@@ -3062,8 +2705,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "VARIABLE", VARIABLE_CFA, 0, CONSTANT_CFA
 	CODEPTR VARIABLE_CODE
 .proc   VARIABLE_CODE
-.a16
-.i16
 	; Stub: full impl parses name, creates entry with DOVAR, allots cell
 	NEXT
 .endproc
@@ -3071,8 +2712,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "CREATE", CREATE_CFA, 0, VARIABLE_CFA
 	CODEPTR CREATE_CODE
 .proc   CREATE_CODE
-.a16
-.i16
 	; Stub
 	NEXT
 .endproc
@@ -3080,8 +2719,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "DOES>", DOES_CFA, F_IMMEDIATE, CREATE_CFA
 	CODEPTR DOES_CODE
 .proc   DOES_CODE
-.a16
-.i16
 	; Stub
 	NEXT
 .endproc
@@ -3090,8 +2727,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "U.", UDOT_CFA, 0, DOES_CFA
 	CODEPTR UDOT_CODE
 .proc   UDOT_CODE
-.a16
-.i16
 	lda 0,X
 	inx
 	inx
@@ -3103,8 +2738,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER ".HEX", DOTHEX_CFA, 0, UDOT_CFA
 	CODEPTR DOTHEX_CODE
 .proc   DOTHEX_CODE
-.a16
-.i16
 	; Print TOS as 4-digit hex
 	lda 0,X
 	inx
@@ -3132,15 +2765,8 @@ LAST_WORD = DOT_PROMPT_CFA
 	adc #'0'
 @hemit:
 	pha
-	sep    #$20
-        .a8
-@hwtx:          LDA     UART_STATUS
-	and    #UART_TXRDY
-	beq    @hwtx
 	lda 1,S
-	sta UART_DATA
-	rep    #$20
-        .a16
+	jsr hal_putch
 	pla     	; char
 	pla     	; original value rotated
 	dey
@@ -3152,8 +2778,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER '.""', DOTQUOTE_CFA, F_IMMEDIATE, DOTHEX_CFA
 	CODEPTR DOTQUOTE_CODE
 .proc   DOTQUOTE_CODE
-.a16
-.i16
 	; Full impl: if interpreting emit string, if compiling compile it
 	NEXT
 .endproc
@@ -3161,8 +2785,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER 'S""', SQUOTE_CFA, F_IMMEDIATE, DOTQUOTE_CFA
 	CODEPTR SQUOTE_CODE
 .proc   SQUOTE_CODE
-.a16
-.i16
 	; Stub
 	NEXT
 .endproc
@@ -3170,8 +2792,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "NUMBER", NUMBER_CFA, 0, SQUOTE_CFA
 	CODEPTR NUMBER_CODE
 .proc   NUMBER_CODE
-	.a16
-	.i16
 	; ( addr -- n flag ) Convert counted string to number
 	; flag: TRUE if successful
 	jsr INTERPRET_CODE::do_number
@@ -3193,8 +2813,6 @@ LAST_WORD = DOT_PROMPT_CFA
 	HEADER "ABORT\"", ABORTQ_CFA, F_IMMEDIATE, NUMBER_CFA
 	CODEPTR ABORTQ_CODE
 .proc   ABORTQ_CODE
-	.a16
-	.i16
 	; Stub
 	NEXT
 .endproc
