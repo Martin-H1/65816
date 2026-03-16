@@ -139,7 +139,7 @@ ENDPUBLIC
 ;   C - number
 ; Outputs:
 ;   C - preserved
-PUBLIC f_print_chex
+PUBLIC print_chex
 	pha
 	pha
 	xba
