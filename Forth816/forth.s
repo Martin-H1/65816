@@ -79,7 +79,7 @@ TMPB:		.res 2		; Temp for multiply/divide
 ;           set IP to first cell of body (W+2),
 ;           then NEXT.
 ;------------------------------------------------------------------------------
-.proc DOCOL
+PUBLIC DOCOL
 	.a16
 	.i16
 	tya			; Current IP → A
@@ -89,7 +89,7 @@ TMPB:		.res 2		; Temp for multiply/divide
 	adc #2			; Body starts at CFA+2
 	tay			; IP = body start
 	NEXT			; Execute first body word
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; DOVAR - Code pointer for VARIABLE definitions

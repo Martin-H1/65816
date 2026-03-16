@@ -105,6 +105,11 @@ PUBLIC hal_cputs
 	rts
 ENDPUBLIC
 
+; returns true if data in in buffer
+PUBLIC hal_cready
+	rts
+ENDPUBLIC
+
 ; returns a character from the terminal input buffer.
 PUBLIC hal_getch
 @loop1:	jsl GET_BYTE_FROM_PC

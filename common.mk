@@ -23,8 +23,14 @@ endif
 
 # Global implicit rules
 
+bin:
+	mkdir bin
+
+obj:
+	mkdir obj
+
 %.o : %.asm
 	$(CA65) --cpu 65816 -I include $< -l $*.lst -o $@
 
-%.o : %.s
-	$(CA65) --cpu 65816 -I include $< -l $*.lst -o $@
+obj/%.o : %.s obj
+	$(CA65) --cpu 65816 -I include $< -l obj/$*.lst -o $@
