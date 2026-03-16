@@ -18,12 +18,27 @@ targeting a single-board computer with UART serial I/O.
 ## File Structure
 
 ```
-forth.cfg       Linker memory map configuration
-forth.s         Main kernel: init, inner interpreter, vectors
-primitives.s    All assembly-coded primitive words
-macros.inc      ca65 macros (NEXT, PUSH, POP, HEADER, CODEPTR)
-dictionary.inc  Forward declarations for all CFA labels
-build.sh        Build script (requires cc65 suite)
+Makefile
+README.md
+build.sh
+compare.s
+dictionary.inc	Forward declarations for all CFA labels
+forth.cfg	Linker memory map configuration
+forth.inc	Include file for Forth zero page and global symbols
+forth.s		Main kernel: init, inner interpreter, vectors
+hal.inc		Include file for hardware abstraction layer
+hal_mench.s	HAL implementation for w65c265 SBC
+interpreter.s	Here, allot, comma, latest, >IN
+io.s
+macros.inc	ca65 macros (NEXT, PUSH, POP, HEADER, CODEPTR)
+math.s		Mathroutines for interpreter
+memory.s	Fetch, store, c fetch, c store, move, and fill
+primitives.s
+print.inc	Header file for print functions.
+print.s		Print to console in hex, decimal, and binary
+stack.s		Stack functions like dup, drop, swap, 2dup, 2swap, etc
+stubs.s		Stubs for unimplemented functions to allow linking
+system.s	Forth dictionary functions for REPL
 ```
 
 ## Memory Map
@@ -54,7 +69,7 @@ $0500-$05FF     Terminal Input Buffer (TIB)
 $0600-$7EFF     RAM Dictionary (user definitions grow upward)
 $7F00-$7FFF     I/O Space (UART)
 $8000-$FFBF     ROM Kernel
-$FFE0-$FFFF     Hardware Vectors
+$FFE0-$FFFF     Hardware Vectors (HAL dependent)
 ```
 
 ## Register Conventions
