@@ -6,27 +6,37 @@
 ;
 ; Macros
 ;
-.macro print MSG
+
+; These print macros are intended for debugging.
+; Use in the main code responsibly.
+.macro PRINT MSG
 	pha
 	lda #MSG
 	jsr hal_cputs
 	pla
 .endmacro
 
-.macro printcr
+.macro PRINTCR
 	pha
 	lda #C_RETURN
 	jsr hal_putch
 	pla
 .endmacro
 
-.macro println MSG
-       print MSG
-       printcr
+.macro PRINTLN MSG
+       PRINT MSG
+       PRINTCR
 .endmacro
 
-.macro printc
+.macro PRINTC
        jsr print_chex
+.endmacro
+
+.macro POP_PRINTCR msg
+	PRINT msg
+	POP
+	PRINTC
+	PRINTCR
 .endmacro
 
 ; Conditionally import via functions in consuming modules.
