@@ -5,9 +5,11 @@ ifeq ($(OS),Windows_NT)
     LD65 = "%HOMEPATH%\cc65-snapshot-win32\bin\ld65.exe"
     PY65MON = "%HOMEPATH%\AppData\Local\Programs\Python\Python311\Scripts\py65mon"
     PYTHON = python
+    65816S = "%HOMEPATH%\Documents\git\65816\tools\65816S.exe"
     SREC_CAT = "C:\Program Files\srecord\bin\srec_cat.exe"
     RM = del /f /q
     RMDIR = rmdir /s /q
+    SEP =\\
     SHELL_EXT = bat
     TOUCH = type nul >
 else
@@ -29,8 +31,16 @@ bin:
 obj:
 	mkdir obj
 
+tests/obj:
+	mkdir tests$(SEP)obj
+
+tests/bin:
+	mkdir tests$(SEP)bin
+
 %.o : %.asm
 	$(CA65) --cpu 65816 -I include $< -l $*.lst -o $@
 
 obj/%.o : %.s obj
 	$(CA65) --cpu 65816 -I include $< -l obj/$*.lst -o $@
+
+tests/obj/%.o : %s tests/obj
