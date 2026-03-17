@@ -13,7 +13,9 @@ SOURCE = compare.s \
 	stubs.s \
 	system.s
 
-all: bin bin/forth816.rom
+all: release tests
+
+release: bin bin/forth816.rom
 
 bin/forth816.rom: obj/compare.o obj/forth.o obj/hal_mench.o \
 	obj/interpreter.o obj/io.o obj/math.o obj/memory.o \
@@ -23,6 +25,8 @@ bin/forth816.rom: obj/compare.o obj/forth.o obj/hal_mench.o \
 
 test:
 	$(65816S) v 8000 bin\forth816.rom
+
+tests: tests/bin/compareTest.srec tests/bin/stackTest.srec
 
 tests/bin/compareTest.bin: tests/obj/compareTest.o tests/obj/hal_test.o \
 	obj/compare.o obj/print.o obj/stack.o
