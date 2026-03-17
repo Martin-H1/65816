@@ -9,10 +9,10 @@
 ;
 ;   HEADER  "NAME", NAME_CFA, flags, PREV_CFA
 ;   CODEPTR NAME_CODE
-;   .proc   NAME_CODE
+;   PUBLIC   NAME_CODE
 ;           ... machine code ...
 ;           NEXT
-;   .endproc
+;   ENDPUBLIC
 ;
 ; All code assumes:
 ;   Native mode, A=16-bit, X=16-bit, Y=16-bit
@@ -35,7 +35,7 @@
 ;------------------------------------------------------------------------------
 	HEADER "+", PLUS_CFA, 0, RFETCH_CFA
 	CODEPTR PLUS_CODE
-.proc PLUS_CODE
+PUBLIC PLUS_CODE
 	lda 0,X			; b
 	clc
 	adc 2,X			; a + b
@@ -43,14 +43,14 @@
 	inx			; drop b
 	sta 0,X			; Replace a with result
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; - ( a b -- a-b )
 ;------------------------------------------------------------------------------
 	HEADER "-", MINUS_CFA, 0, PLUS_CFA
 	CODEPTR MINUS_CODE
-.proc MINUS_CODE
+PUBLIC MINUS_CODE
 	lda 2,X			; a
 	sec
 	sbc  0,X		; a - b
@@ -58,14 +58,14 @@
 	inx			; drop b
 	sta 0,X			; replace a with result
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; * ( a b -- a*b ) 16x16 -> 16 (low word)
 ;------------------------------------------------------------------------------
 	HEADER "*", STAR_CFA, 0, MINUS_CFA
 	CODEPTR STAR_CODE
-.proc STAR_CODE
+PUBLIC STAR_CODE
 	lda 0,X			; b (multiplier)
 	sta TMPA
 	lda 2,X			; a (multiplicand)
@@ -87,7 +87,7 @@
 	;; TOS now contains the final result
 	ply			; restore IP for NEXT call
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; UM* ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
@@ -95,7 +95,7 @@
 ;------------------------------------------------------------------------------
 	HEADER "UM*", UMSTAR_CFA, 0, STAR_CFA
 	CODEPTR UMSTAR_CODE
-.proc UMSTAR_CODE
+PUBLIC UMSTAR_CODE
 	lda 0,X			; u2 (multiplier)
 	sta TMPA
 	lda 2,X			; u1 (multiplicand)
@@ -129,14 +129,14 @@
 	sta 2,X
 	ply			; restore IP
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; UM/MOD ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
 ;------------------------------------------------------------------------------
 	HEADER "UM/MOD", UMSLASHMOD_CFA, 0, UMSTAR_CFA
 	CODEPTR UMSLASHMOD_CODE
-.proc   UMSLASHMOD_CODE
+PUBLIC   UMSLASHMOD_CODE
 	; Stack: NOS_HI=ud_high NOS=ud_low TOS=u (divisor)
 	; This is a standard 32/16 non-restoring division
 	lda 0,X			; divisor
@@ -165,14 +165,14 @@
 	; NOS=remainder, TOS=quotient (already in place)
 	ply
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; /MOD ( n1 n2 -- rem quot ) signed division
 ;------------------------------------------------------------------------------
 	HEADER "/MOD", SLASHMOD_CFA, 0, UMSLASHMOD_CFA
 	CODEPTR SLASHMOD_CODE
-.proc SLASHMOD_CODE
+PUBLIC SLASHMOD_CODE
 	; Sign extend n1 (NOS) to 32 bits for UM/MOD
 	; Use: sign of n2 and n1 for result sign adjustment
 	lda 2,X			; n1
@@ -256,67 +256,67 @@
 @quot_pos:
 	ply
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; / ( n1 n2 -- quot ) signed division
 ;------------------------------------------------------------------------------
 	HEADER "/", SLASH_CFA, 0, SLASHMOD_CFA
 	CODEPTR SLASH_CODE
-.proc SLASH_CODE
+PUBLIC SLASH_CODE
 	jsr SLASHMOD_CODE	; Call /MOD then drop remainder
 	lda 0,X			; Stack: NOS=rem TOS=quot → NIP
 	inx			; Inline: NIP
 	inx
 	sta 0,X
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; MOD ( n1 n2 -- rem )
 ;------------------------------------------------------------------------------
 	HEADER "MOD", MOD_CFA, 0, SLASH_CFA
 	CODEPTR MOD_CODE
-.proc MOD_CODE
+PUBLIC MOD_CODE
 	jsr SLASHMOD_CODE
 	inx			; Stack: NOS=rem TOS=quot → DROP
 	inx
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; NEGATE ( n -- -n )
 ;------------------------------------------------------------------------------
 	HEADER "NEGATE", NEGATE_CFA, 0, MOD_CFA
 	CODEPTR NEGATE_CODE
-.proc NEGATE_CODE
+PUBLIC NEGATE_CODE
 	lda 0,X
 	eor #$FFFF
 	inc
 	sta 0,X
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; ABS ( n -- |n| )
 ;------------------------------------------------------------------------------
 	HEADER "ABS", ABS_CFA, 0, NEGATE_CFA
 	CODEPTR ABS_CODE
-.proc ABS_CODE
+PUBLIC ABS_CODE
 	lda 0,X
 	bpl @done
 	eor #$FFFF
 	inc
 	sta 0,X
 @done:	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; MAX ( a b -- max )
 ;------------------------------------------------------------------------------
 	HEADER "MAX", MAX_CFA, 0, ABS_CFA
 	CODEPTR MAX_CODE
-.proc MAX_CODE
+PUBLIC MAX_CODE
 	lda 2,X			; a
 	cmp 0,X			; a - b (signed)
 	bpl @endif		; a >= b
@@ -325,14 +325,14 @@
 @endif:	inx			; Drop TOS as NOS is max
 	inx
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; MIN ( a b -- min )
 ;------------------------------------------------------------------------------
 	HEADER "MIN", MIN_CFA, 0, MAX_CFA
 	CODEPTR MIN_CODE
-.proc MIN_CODE
+PUBLIC MIN_CODE
 	lda 2,X			; a
 	cmp 0,X			; a - b (signed)
 	bmi @endif		; a < b
@@ -341,47 +341,47 @@
 @endif:	inx			; drop TOS
 	inx
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; 1+ ( n -- n+1 )
 ;------------------------------------------------------------------------------
 	HEADER "1+", ONEPLUS_CFA, 0, MIN_CFA
 	CODEPTR ONEPLUS_CODE
-.proc ONEPLUS_CODE
+PUBLIC ONEPLUS_CODE
 	inc 0,X
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; 1- ( n -- n-1 )
 ;------------------------------------------------------------------------------
 	HEADER "1-", ONEMINUS_CFA, 0, ONEPLUS_CFA
 	CODEPTR ONEMINUS_CODE
-.proc ONEMINUS_CODE
+PUBLIC ONEMINUS_CODE
 	dec 0,X
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; 2* ( n -- n*2 )
 ;------------------------------------------------------------------------------
 	HEADER "2*", TWOSTAR_CFA, 0, ONEMINUS_CFA
 	CODEPTR TWOSTAR_CODE
-.proc TWOSTAR_CODE
+PUBLIC TWOSTAR_CODE
 	asl 0,X
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; 2/ ( n -- n/2 ) arithmetic shift right
 ;------------------------------------------------------------------------------
 	HEADER "2/", TWOSLASH_CFA, 0, TWOSTAR_CFA
 	CODEPTR TWOSLASH_CODE
-.proc   TWOSLASH_CODE
+PUBLIC TWOSLASH_CODE
 	lda 0,X			; Arithmetic shift right: preserve sign bit
 	cmp #$8000		; Set carry if negative
 	ror			; Shift right, sign bit from carry
 	sta 0,X
 	NEXT
-.endproc
+ENDPUBLIC
