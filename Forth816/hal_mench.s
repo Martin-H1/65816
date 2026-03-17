@@ -112,8 +112,11 @@ ENDPUBLIC
 
 ; returns a character from the terminal input buffer.
 PUBLIC hal_getch
+	OFF16MEM
 @loop1:	jsl GET_BYTE_FROM_PC
 	bcs @loop1
+	ON16MEM
+	and #$00ff
 	rts
 ENDPUBLIC
 
