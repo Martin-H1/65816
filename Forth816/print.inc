@@ -32,7 +32,7 @@
        jsr print_chex
 .endmacro
 
-.macro POP_PRINTCR msg
+.macro PRINTLN_POP msg
 	PRINT msg
 	POP
 	PRINTC

@@ -53,14 +53,14 @@ exit:	.asciiz "compare test - exit!"
 	lda #32
 	PUSH
 	jsr EQUAL_CODE
-	POP_PRINTCR  equal1
+	PRINTLN_POP  equal1
 
 	lda #42
 	PUSH
 	lda #32
 	PUSH
 	jsr EQUAL_CODE
-	POP_PRINTCR equal2
+	PRINTLN_POP equal2
 	rts
 .endproc
 equal1:	.asciiz "= test 32=32 - "
@@ -72,14 +72,14 @@ equal2:	.asciiz "= test 42=32 - "
 	lda #32
 	PUSH
 	jsr NOTEQUAL_CODE
-	POP_PRINTCR nequal1
+	PRINTLN_POP nequal1
 
 	lda #42
 	PUSH
 	lda #32
 	PUSH
 	jsr NOTEQUAL_CODE
-	POP_PRINTCR nequal2
+	PRINTLN_POP nequal2
 	rts
 .endproc
 nequal1:
@@ -93,28 +93,28 @@ nequal2:
 	lda #32
 	PUSH
 	jsr LESS_CODE
-	POP_PRINTCR less_test1
+	PRINTLN_POP less_test1
 
 	lda #42
 	PUSH
 	lda #32
 	PUSH
 	jsr LESS_CODE
-	POP_PRINTCR less_test2
+	PRINTLN_POP less_test2
 
 	lda #32
 	PUSH
 	lda #42
 	PUSH
 	jsr LESS_CODE
-	POP_PRINTCR less_test3
+	PRINTLN_POP less_test3
 
 	lda #32
 	PUSH
 	lda #$ffbe
 	PUSH
 	jsr LESS_CODE
-	POP_PRINTCR less_test4
+	PRINTLN_POP less_test4
 
 	rts
 .endproc
@@ -133,28 +133,28 @@ less_test4:
 	lda #32
 	PUSH
 	jsr GREATER_CODE
-	POP_PRINTCR gt_test1
+	PRINTLN_POP gt_test1
 
 	lda #42
 	PUSH
 	lda #32
 	PUSH
 	jsr GREATER_CODE
-	POP_PRINTCR gt_test2
+	PRINTLN_POP gt_test2
 
 	lda #32
 	PUSH
 	lda #42
 	PUSH
 	jsr GREATER_CODE
-	POP_PRINTCR gt_test3
+	PRINTLN_POP gt_test3
 
 	lda #32
 	PUSH
 	lda #$ffbe
 	PUSH
 	jsr GREATER_CODE
-	POP_PRINTCR gt_test4
+	PRINTLN_POP gt_test4
 
 	rts
 .endproc
@@ -173,28 +173,28 @@ gt_test4:
 	lda #32
 	PUSH
 	jsr ULESS_CODE
-	POP_PRINTCR uless_test1
+	PRINTLN_POP uless_test1
 
 	lda #42
 	PUSH
 	lda #32
 	PUSH
 	jsr ULESS_CODE
-	POP_PRINTCR uless_test2
+	PRINTLN_POP uless_test2
 
 	lda #32
 	PUSH
 	lda #42
 	PUSH
 	jsr ULESS_CODE
-	POP_PRINTCR uless_test3
+	PRINTLN_POP uless_test3
 
 	lda #32
 	PUSH
 	lda #$ffbe
 	PUSH
 	jsr ULESS_CODE
-	POP_PRINTCR uless_test4
+	PRINTLN_POP uless_test4
 
 	rts
 .endproc
@@ -213,28 +213,28 @@ uless_test4:
 	lda #32
 	PUSH
 	jsr UGREATER_CODE
-	POP_PRINTCR ugt_test1
+	PRINTLN_POP ugt_test1
 
 	lda #42
 	PUSH
 	lda #32
 	PUSH
 	jsr UGREATER_CODE
-	POP_PRINTCR ugt_test2
+	PRINTLN_POP ugt_test2
 
 	lda #32
 	PUSH
 	lda #42
 	PUSH
 	jsr UGREATER_CODE
-	POP_PRINTCR gt_test3
+	PRINTLN_POP gt_test3
 
 	lda #32
 	PUSH
 	lda #$ffbe
 	PUSH
 	jsr UGREATER_CODE
-	POP_PRINTCR ugt_test4
+	PRINTLN_POP ugt_test4
 
 	rts
 .endproc
@@ -251,12 +251,12 @@ ugt_test4:
 	lda #32
 	PUSH
 	jsr ZEROEQ_CODE
-	POP_PRINTCR zequal1
+	PRINTLN_POP zequal1
 
 	lda #0000
 	PUSH
 	jsr ZEROEQ_CODE
-	POP_PRINTCR zequal2
+	PRINTLN_POP zequal2
 
 	rts
 .endproc
@@ -269,12 +269,12 @@ zequal2:
 	lda #32
 	PUSH
 	jsr ZEROLESS_CODE
-	POP_PRINTCR zeroless1
+	PRINTLN_POP zeroless1
 
 	lda #$ffbe
 	PUSH
 	jsr ZEROLESS_CODE
-	POP_PRINTCR zeroless2
+	PRINTLN_POP zeroless2
 
 	rts
 .endproc
@@ -287,12 +287,12 @@ zeroless2:
 	lda #32
 	PUSH
 	jsr ZEROGT_CODE
-	POP_PRINTCR zerogt1
+	PRINTLN_POP zerogt1
 
 	lda #$ffbe
 	PUSH
 	jsr ZEROGT_CODE
-	POP_PRINTCR zerogt2
+	PRINTLN_POP zerogt2
 
 	rts
 .endproc
@@ -307,7 +307,7 @@ zerogt2:
 	lda #$0ff0
 	PUSH
 	jsr AND_CODE
-	POP_PRINTCR and1
+	PRINTLN_POP and1
 
 	rts
 .endproc
@@ -319,7 +319,7 @@ and1:	.asciiz "AND test ff00 and 0ff0 - "
 	lda #$0ff0
 	PUSH
 	jsr OR_CODE
-	POP_PRINTCR or1
+	PRINTLN_POP or1
 
 	rts
 .endproc
@@ -331,7 +331,7 @@ or1:	.asciiz "OR test ff00 and 0ff0 - "
 	lda #$0ff0
 	PUSH
 	jsr XOR_CODE
-	POP_PRINTCR xor1
+	PRINTLN_POP xor1
 
 	rts
 .endproc
@@ -341,7 +341,7 @@ xor1:	.asciiz "XOR test ff00 and 0ff0 - "
 	lda #$f0f0
 	PUSH
 	jsr INVERT_CODE
-	POP_PRINTCR invert1
+	PRINTLN_POP invert1
 
 	rts
 .endproc
@@ -354,14 +354,14 @@ invert1:
 	lda #0
 	PUSH
 	jsr LSHIFT_CODE
-	POP_PRINTCR lshift1
+	PRINTLN_POP lshift1
 
 	lda #32
 	PUSH
 	lda #3
 	PUSH
 	jsr LSHIFT_CODE
-	POP_PRINTCR lshift2
+	PRINTLN_POP lshift2
 
 	rts
 .endproc
@@ -376,14 +376,14 @@ lshift2:
 	lda #0
 	PUSH
 	jsr RSHIFT_CODE
-	POP_PRINTCR rshift1
+	PRINTLN_POP rshift1
 
 	lda #32
 	PUSH
 	lda #3
 	PUSH
 	jsr RSHIFT_CODE
-	POP_PRINTCR rshift2
+	PRINTLN_POP rshift2
 
 	rts
 .endproc

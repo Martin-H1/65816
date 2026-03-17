@@ -9,10 +9,10 @@
 ;
 ;   HEADER  "NAME", NAME_CFA, flags, PREV_CFA
 ;   CODEPTR NAME_CODE
-;   .proc   NAME_CODE
+;   PUBLIC   NAME_CODE
 ;           ... machine code ...
 ;           NEXT
-;   .endproc
+;   ENDPUBLIC
 ;
 ; All code assumes:
 ;   Native mode, A=16-bit, X=16-bit, Y=16-bit
@@ -36,34 +36,34 @@
 ;------------------------------------------------------------------------------
 	HEADER "EMIT", EMIT_CFA, 0, FILL_CFA
 	CODEPTR EMIT_CODE
-.proc EMIT_CODE
+PUBLIC EMIT_CODE
 	lda 0,X			; pop char and call HAL
 	inx
 	inx
 	jsr hal_putch
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; KEY ( -- char ) receive character from UART (blocking)
 ;------------------------------------------------------------------------------
 	HEADER "KEY", KEY_CFA, 0, EMIT_CFA
 	CODEPTR KEY_CODE
-.proc KEY_CODE
+PUBLIC KEY_CODE
 	jsr hal_getch
 	and #$00FF          ; Zero extend to 16-bit
 	dex		    ; push to TOS
 	dex
 	sta 0,X
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; KEY? ( -- flag ) non-blocking check for available input
 ;------------------------------------------------------------------------------
 	HEADER "KEY?", KEYQ_CFA, 0, KEY_CFA
 	CODEPTR KEYQ_CODE
-.proc KEYQ_CODE
+PUBLIC KEYQ_CODE
 	dex
 	dex
 	jsr hal_cready
@@ -73,14 +73,14 @@
 	NEXT
 @false: stz 0,X
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; TYPE ( addr u -- ) transmit u characters from addr
 ;------------------------------------------------------------------------------
 	HEADER "TYPE", TYPE_CFA, 0, KEYQ_CFA
 	CODEPTR TYPE_CODE
-.proc TYPE_CODE
+PUBLIC TYPE_CODE
 	lda 0,X			; pop u to TMPA
 	sta TMPA
 	inx
@@ -103,38 +103,38 @@
 	bne @loop
 @done:	ply
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; CR ( -- ) emit carriage return + line feed
 ;------------------------------------------------------------------------------
 	HEADER "CR", CR_CFA, 0, TYPE_CFA
 	CODEPTR CR_CODE
-.proc CR_CODE
+PUBLIC CR_CODE
 	lda #$000D		; CR
 	jsr hal_putch
 	lda #$000A		; LF
 	jsr hal_putch
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; SPACE ( -- ) emit a single space
 ;------------------------------------------------------------------------------
 	HEADER "SPACE", SPACE_CFA, 0, CR_CFA
 	CODEPTR SPACE_CODE
-.proc SPACE_CODE
+PUBLIC SPACE_CODE
 	lda #$0020		; TODO get rid of magic number
 	jsr hal_putch
 	NEXT
-.endproc
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; SPACES ( n -- ) emit n spaces
 ;------------------------------------------------------------------------------
 	HEADER "SPACES", SPACES_CFA, 0, SPACE_CFA
 	CODEPTR SPACES_CODE
-.proc SPACES_CODE
+PUBLIC SPACES_CODE
 	lda 0,X
 	beq @done
 	sta TMPA		; peek count n to TMPA
@@ -146,4 +146,5 @@
 @done:	inx			; drop n
 	inx
 	NEXT
-.endproc
+ENDPUBLIC
+
