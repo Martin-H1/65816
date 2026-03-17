@@ -14,8 +14,8 @@
 .proc main
 	ON16MEM
 	ON16X
-	printcr
-	println enter
+	PRINTCR
+	PRINTLN enter
 	ldx #PSP_INIT
 
 	jsr dupTest
@@ -35,7 +35,7 @@
 	jsr rFromTest
 	jsr rFetchTest
 
-	println exit
+	PRINTLN exit
 	rtl
 .endproc
 
@@ -47,13 +47,6 @@ ENDPUBLIC
 
 enter:	.asciiz "stack test - enter!"
 exit:	.asciiz "stack test - exit!"
-
-.macro POP_PRINTCR msg
-	print msg
-	POP
-	printc
-	printcr
-.endmacro
 
 .proc dupTest
 	lda #32
@@ -275,10 +268,10 @@ pick1:
 	lda #32
 	PUSH
 	jsr TOR_CODE
-	print tor1
+	PRINT tor1
 	pla
-	printc
-	printcr
+	PRINTC
+	PRINTCR
 	rts
 .endproc
 tor1:
