@@ -43,4 +43,6 @@ tests/bin:
 obj/%.o : %.s obj
 	$(CA65) --cpu 65816 -I include $< -l obj/$*.lst -o $@
 
-tests/obj/%.o : %s tests/obj
+tests/obj/%.o : tests/%.s tests/obj tests/bin
+	$(CA65) --cpu 65816 -I . $< -l $*.lst -o $@
+
