@@ -4,11 +4,11 @@
 ; -----------------------------------------------------------------------------
 
 .include "ascii.inc"
-.include "compare.inc"
 .include "forth.inc"
 .include "hal.inc"
 .include "macros.inc"
 .include "print.inc"
+.include "stack.inc"
 
 ; Main entry point for the test
 .proc main
@@ -16,7 +16,7 @@
 	ON16X
 	printcr
 	println enter
-	ldx PSP_INIT
+	ldx #PSP_INIT
 
 	jsr dupTest
 	jsr dropTest
@@ -32,8 +32,8 @@
 	jsr depthTest
 	jsr pickTest
 	jsr toRTest
-	jsr fromRTest
-	jsr RAtTest
+	jsr rFromTest
+	jsr rFetchTest
 
 	println exit
 	rtl
@@ -48,24 +48,21 @@ ENDPUBLIC
 enter:	.asciiz "stack test - enter!"
 exit:	.asciiz "stack test - exit!"
 
+.macro POP_PRINTCR msg
+	print msg
+	POP
+	printc
+	printcr
+.endmacro
+
 .proc dupTest
 	lda #32
 	PUSH
 	jsr DUP_CODE
 	jsr DEPTH_CODE
-	POP
-	print dup1
-	printc
-	printcr
-	POP
-	print dup2
-	printc
-	printcr
-	POP
-	print dup2
-	printc
-	printcr
-
+	POP_PRINTCR dup1
+	POP_PRINTCR dup2
+	POP_PRINTCR dup2
 	rts
 .endproc
 dup1:	.asciiz "dup test depth = "
@@ -77,17 +74,11 @@ dup2:	.asciiz "dup test pop = "
 	lda #32
 	PUSH
 	jsr DEPTH_CODE
-	POP
-	print drop1
-	printc
-	printcr
+	POP_PRINTCR drop1
 	POP
 	POP
 	jsr DEPTH_CODE
-	POP
-	print drop1
-	printc
-	printcr
+	POP_PRINTCR drop1
 	rts
 .endproc
 drop1:	.asciiz "drop test depth = "
@@ -98,18 +89,11 @@ drop1:	.asciiz "drop test depth = "
 	lda #2
 	PUSH
 	jsr SWAP_CODE
-	POP
-	print swaptest1
-	printc
-	printcr
-	POP
-	print swaptest1
-	printc
-	printcr
-
+	POP_PRINTCR swaptest1
+	POP_PRINTCR swaptest1
 	rts
 .endproc
-swaptest:
+swaptest1:
 	.asciiz "swap test pop = "
 
 .proc overTest
@@ -119,21 +103,11 @@ swaptest:
 	PUSH
 	jsr OVER_CODE
 
-	POP
-	print overtest1
-	printc
-	printcr
+	POP_PRINTCR overtest1
 	PUSH
 
-	POP
-	print overtest1
-	printc
-	printcr
-
-	POP
-	print overtest1
-	printc
-	printcr
+	POP_PRINTCR overtest1
+	POP_PRINTCR overtest1
 
 	rts
 .endproc
@@ -149,20 +123,9 @@ overtest1:
 	PUSH
 	jsr ROT_CODE
 
-	POP
-	print rottest1
-	printc
-	printcr
-
-	POP
-	print rottest1
-	printc
-	printcr
-
-	POP
-	print rottest1
-	printc
-	printcr
+	POP_PRINTCR rottest1
+	POP_PRINTCR rottest1
+	POP_PRINTCR rottest1
 
 	rts
 .endproc
@@ -176,185 +139,168 @@ rottest1:
 	PUSH
 	jsr NIP_CODE
 
-	POP
-	print niptest1
-	printc
-	printcr
+	POP_PRINTCR niptest1
 
 	jsr DEPTH_CODE
-	POP
-	printc
-	printcr
+	POP_PRINTCR niptest1
 
 	rts
 .endproc
 niptest1:
 	.asciiz "nip test pop = "
 
-.proc zeroEqualsTest
-	lda #32
+.proc tuckTest
+	lda #1
 	PUSH
-	jsr ZEROEQ_CODE
-	POP
-	print zequal1
-	printc
+	lda #2
+	PUSH
+	jsr TUCK_CODE
 
-	lda #0000
-	PUSH
-	jsr ZEROEQ_CODE
-	POP
-	print zequal2
-	printc
+	POP_PRINTCR tuck1
+	POP_PRINTCR tuck1
+	POP_PRINTCR tuck1
 	rts
 .endproc
-zequal1:
-	.asciiz "0= 32 test - "
-zequal2:
-	.asciiz "0= 0 equals - "
+tuck1:	.asciiz "tuck test - "
 
-.proc zeroLessTest
-	lda #32
+.proc twoDropTest
+	lda #1
 	PUSH
-	jsr ZEROLESS_CODE
-	POP
-	print zeroless1
-	printc
+	lda #1
+	PUSH
+	lda #2
+	PUSH
+	lda #2
+	PUSH
 
-	lda #$ffbe
-	PUSH
-	jsr ZEROLESS_CODE
-	POP
-	print zeroless2
-	printc
+	jsr TWODROP_CODE
+
+	POP_PRINTCR twodrop1
+	POP_PRINTCR twodrop1
 	rts
 .endproc
-zeroless1:
-	.asciiz "0< 32 test - "
-zeroless2:
-	.asciiz "0< -42 test - "
+twodrop1:
+	.asciiz "2DROP test - "
 
-.proc zeroGtTest
-	lda #32
+.proc twoDupTest
+	lda #1
 	PUSH
-	jsr ZEROGT_CODE
-	POP
-	print zerogt1
-	printc
-
-	lda #$ffbe
+	lda #2
 	PUSH
-	jsr ZEROGT_CODE
-	POP
-	print zerogt2
-	printc
+	jsr TWODUP_CODE
+	POP_PRINTCR twodup1
+	POP_PRINTCR twodup1
+	POP_PRINTCR twodup1
+	POP_PRINTCR twodup1
 	rts
 .endproc
-zerogt1:
-	.asciiz "0> 32 test - "
-zerogt2:
-	.asciiz "0> -42 test - "
+twodup1:
+	.asciiz "2DUP test - "
 
-.proc andTest
-	lda #$ff00
+.proc twoSwapTest
+	lda #$1
 	PUSH
-	lda #$0ff0
+	lda #$2
 	PUSH
-	jsr AND_CODE
-	POP
-	print and1
-	printc
+	lda #$3
+	PUSH
+	lda #$4
+	PUSH
+	jsr TWOSWAP_CODE
+	POP_PRINTCR twoswap1
+	POP_PRINTCR twoswap1
+	POP_PRINTCR twoswap1
+	POP_PRINTCR twoswap1
 
 	rts
 .endproc
-and1:	.asciiz "AND test ff00 and 0ff0 - "
+twoswap1:
+	.asciiz "2SWAP test - "
 
-.proc orTest
-	lda #$ff00
+.proc twoOverTest
+	lda #$1
 	PUSH
-	lda #$0ff0
+	lda #$2
 	PUSH
-	jsr OR_CODE
-	POP
-	print or1
-	printc
-
+	lda #$3
+	PUSH
+	lda #$4
+	PUSH
+	jsr TWOOVER_CODE
+	POP_PRINTCR twoover1
+	POP_PRINTCR twoover1
+	POP_PRINTCR twoover1
+	POP_PRINTCR twoover1
+	POP_PRINTCR twoover1
+	POP_PRINTCR twoover1
 	rts
 .endproc
-or1:	.asciiz "OR test ff00 and 0ff0 - "
+twoover1:
+	.asciiz "2OVER test - "
 
-.proc xorTest
-	lda #$ff00
+.proc depthTest
+	lda #1
 	PUSH
-	lda #$0ff0
+	lda #2
 	PUSH
-	jsr XOR_CODE
+
+	jsr DEPTH_CODE
+	POP_PRINTCR depth1
 	POP
-	print xor1
-	printc
-
+	POP
 	rts
 .endproc
-xor1:	.asciiz "XOR test ff00 and 0ff0 - "
+depth1:	.asciiz "DEPTH test - "
 
-.proc invertTest
-	lda #$f0f0
+.proc pickTest
+	lda #1
 	PUSH
-	jsr INVERT_CODE
-	POP
-	print invert1
-	printc
-
-	rts
-.endproc
-invert1:
-	.asciiz "Invert test f0f0 - "
-
-.proc lshiftTest
-	lda #32
-	PUSH
-	lda #0
-	PUSH
-	jsr LSHIFT_CODE
-	POP
-	print lshift1
-	printc
-
-	lda #32
+	lda #2
 	PUSH
 	lda #3
 	PUSH
-	jsr LSHIFT_CODE
+	lda #2
+	PUSH
+	jsr PICK_CODE
+	POP_PRINTCR pick1
 	POP
-	print lshift2
-	printc
+	POP
+	POP
 	rts
 .endproc
-lshift1:
-	.asciiz "lshift test 32 0 - "
-lshift2:
-	.asciiz "lshift test 32 3 - "
+pick1:
+	.asciiz "PICK test - "
 
-.proc rshiftTest
+.proc toRTest
 	lda #32
 	PUSH
-	lda #0
-	PUSH
-	jsr RSHIFT_CODE
-	POP
-	print rshift1
+	jsr TOR_CODE
+	print tor1
+	pla
 	printc
-
-	lda #32
-	PUSH
-	lda #3
-	PUSH
-	jsr RSHIFT_CODE
-	POP
-	print rshift2
-	printc
+	printcr
 	rts
 .endproc
-rshift1:
-	.asciiz "rshift test 32 0 - "
-rshift2:
-	.asciiz "rshift test 32 3 - "
+tor1:
+	.asciiz ">R test - "
+
+.proc rFromTest
+	lda #32
+	pha
+	jsr RFROM_CODE
+	POP_PRINTCR rfrom1
+	rts
+.endproc
+rfrom1:
+	.asciiz "R> test - "
+
+.proc rFetchTest
+	lda #32
+	pha
+	jsr RFETCH_CODE
+	POP_PRINTCR rfrom1
+	pla
+	rts
+.endproc
+rfetch1:
+	.asciiz "R@ test - "
