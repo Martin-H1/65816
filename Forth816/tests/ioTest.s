@@ -11,12 +11,8 @@
 .include "print.inc"
 
 ; Main entry point for the test
-.proc main
-	ON16MEM
-	ON16X
-	PRINTCR
+PUBLIC main
 	PRINTLN enter
-	ldx #PSP_INIT
 
 	jsr emitTest
 	jsr keyTest
@@ -28,7 +24,7 @@
 
 	PRINTLN exit
 	rtl
-.endproc
+ENDPUBLIC
 
 ; This is the next link in the dictionary. Place a stub here.
 ; TODO remove this when the dictionary is collapsed into a single module.

@@ -29,19 +29,19 @@ test:
 tests: tests/bin/compareTest.srec tests/bin/stackTest.srec \
 	tests/bin/ioTest.srec tests/bin/mathTest.srec
 
-tests/bin/compareTest.bin: tests/obj/compareTest.o tests/obj/hal_test.o \
+tests/bin/compareTest.bin: tests/obj/hal_test.o tests/obj/compareTest.o  \
 	obj/compare.o obj/print.o obj/stack.o
 	$(LD65) -C tests/test.cfg -o tests/bin/compareTest.bin -m tests/bin/compareTest.map $^
 
-tests/bin/ioTest.bin: tests/obj/ioTest.o tests/obj/hal_test.o \
+tests/bin/ioTest.bin: tests/obj/hal_test.o tests/obj/ioTest.o \
 	obj/io.o obj/print.o
 	$(LD65) -C tests/test.cfg -o tests/bin/ioTest.bin -m tests/bin/ioTest.map $^
 
-tests/bin/mathTest.bin: tests/obj/mathTest.o tests/obj/hal_test.o \
+tests/bin/mathTest.bin: tests/obj/hal_test.o tests/obj/mathTest.o \
 	obj/math.o obj/print.o
 	$(LD65) -C tests/test.cfg -o tests/bin/mathTest.bin -m tests/bin/mathTest.map $^
 
-tests/bin/stackTest.bin: tests/obj/stackTest.o tests/obj/hal_test.o \
+tests/bin/stackTest.bin: tests/obj/hal_test.o tests/obj/stackTest.o \
 	obj/stack.o obj/print.o obj/stack.o
 	$(LD65) -C tests/test.cfg -o tests/bin/stackTest.bin -m tests/bin/stackTest.map $^
 

@@ -12,12 +12,7 @@
 
 ; Main entry point for the test
 PUBLIC main
-	ON16MEM
-	ON16X
-	PRINTCR
 	PRINTLN enter
-	ldx #PSP_INIT
-	ldy #CFA_LIST
 
 	jsr dupTest
 	jsr dropTest
@@ -38,16 +33,6 @@ PUBLIC main
 	; jsr rFetchTest
 
 	PRINTLN exit
-	rtl
-ENDPUBLIC
-
-; CFA used to handle the NEXT at the end of code were testing.
-CFA_LIST:
-	.word RTS_CFA
-HEADER "RTS", RTS_CFA, 0, 0
-CODEPTR RTS_CODE
-PUBLIC  RTS_CODE
-	ldy #CFA_LIST
 	rts
 ENDPUBLIC
 
@@ -305,16 +290,17 @@ CODEPTR RTEST_CODE
 PUBLIC  RTEST_CODE
 	pla			; pull the item pushed by the pimitive
 	PUSH			; push it onto the parameter stack
-	ldy #CFA_LIST		; restore to default unit test CFA list
 	rts
 ENDPUBLIC
 
 .proc toRTest
+	phy			; save unit test IP list
 	ldy #TORTESTCFA_LIST
 	lda #32
 	PUSH
 	jsr TOR_CODE
 	PRINTLN_POP tor1
+	ply
 	rts
 .endproc
 tor1:
