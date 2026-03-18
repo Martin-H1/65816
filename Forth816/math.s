@@ -173,6 +173,10 @@ ENDPUBLIC
 	HEADER "/MOD", SLASHMOD_CFA, 0, UMSLASHMOD_CFA
 	CODEPTR SLASHMOD_CODE
 PUBLIC SLASHMOD_CODE
+	jsr SLASHMOD_IMPL
+	NEXT
+ENDPUBLIC
+.proc SLASHMOD_IMPL
 	; Sign extend n1 (NOS) to 32 bits for UM/MOD
 	; Use: sign of n2 and n1 for result sign adjustment
 	lda 2,X			; n1
@@ -255,8 +259,8 @@ PUBLIC SLASHMOD_CODE
 	sta 0,X
 @quot_pos:
 	ply
-	NEXT
-ENDPUBLIC
+	rts
+.endproc
 
 ;------------------------------------------------------------------------------
 ; / ( n1 n2 -- quot ) signed division
@@ -264,7 +268,7 @@ ENDPUBLIC
 	HEADER "/", SLASH_CFA, 0, SLASHMOD_CFA
 	CODEPTR SLASH_CODE
 PUBLIC SLASH_CODE
-	jsr SLASHMOD_CODE	; Call /MOD then drop remainder
+	jsr SLASHMOD_IMPL	; Call /MOD then drop remainder
 	lda 0,X			; Stack: NOS=rem TOS=quot → NIP
 	inx			; Inline: NIP
 	inx
@@ -278,7 +282,7 @@ ENDPUBLIC
 	HEADER "MOD", MOD_CFA, 0, SLASH_CFA
 	CODEPTR MOD_CODE
 PUBLIC MOD_CODE
-	jsr SLASHMOD_CODE
+	jsr SLASHMOD_IMPL
 	inx			; Stack: NOS=rem TOS=quot → DROP
 	inx
 	NEXT

@@ -109,7 +109,7 @@ ENDPUBLIC
 .endproc
 
 ;------------------------------------------------------------------------------
-; DOCON - Code pointer for CONstaNT definitions
+; DOCON - Code pointer for CONSTANT definitions
 ;
 ; Pushes the value stored in the body (CFA+2) onto parameter stack.
 ;------------------------------------------------------------------------------
