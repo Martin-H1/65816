@@ -27,7 +27,8 @@ test:
 	$(65816S) v 8000 bin\forth816.rom
 
 tests: tests/bin/compareTest.srec tests/bin/stackTest.srec \
-	tests/bin/ioTest.srec tests/bin/mathTest.srec
+	tests/bin/ioTest.srec tests/bin/memoryTest.srec  \
+	tests/bin/mathTest.srec
 
 tests/bin/compareTest.bin: tests/obj/hal_test.o tests/obj/compareTest.o  \
 	obj/compare.o obj/print.o obj/stack.o
@@ -40,6 +41,10 @@ tests/bin/ioTest.bin: tests/obj/hal_test.o tests/obj/ioTest.o \
 tests/bin/mathTest.bin: tests/obj/hal_test.o tests/obj/mathTest.o \
 	obj/math.o obj/print.o
 	$(LD65) -C tests/test.cfg -o tests/bin/mathTest.bin -m tests/bin/mathTest.map $^
+
+tests/bin/memoryTest.bin: tests/obj/hal_test.o tests/obj/memoryTest.o \
+	obj/memory.o obj/print.o
+	$(LD65) -C tests/test.cfg -o tests/bin/memoryTest.bin -m tests/bin/memoryTest.map $^
 
 tests/bin/stackTest.bin: tests/obj/hal_test.o tests/obj/stackTest.o \
 	obj/stack.o obj/print.o obj/stack.o
