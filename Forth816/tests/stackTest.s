@@ -11,12 +11,8 @@
 .include "stack.inc"
 
 ; Main entry point for the test
-.proc main
-	ON16MEM
-	ON16X
-	PRINTCR
+PUBLIC main
 	PRINTLN enter
-	ldx #PSP_INIT
 
 	jsr dupTest
 	jsr dropTest
@@ -31,14 +27,14 @@
 	jsr twoOverTest
 	jsr depthTest
 	jsr pickTest
+	jsr toRTest
 	; At present these tests fail because debug RTS in TOR_CODE will fail
-	; jsr toRTest
 	; jsr rFromTest
 	; jsr rFetchTest
 
 	PRINTLN exit
-	rtl
-.endproc
+	rts
+ENDPUBLIC
 
 ; This is the next link in the dictionary. Place a stub here.
 ; TODO remove this when the dictionary is collapsed into a single module.
@@ -53,6 +49,29 @@ exit:	.asciiz "stack test - exit!"
 	lda #32
 	PUSH
 	jsr DUP_CODE
+
+	;; temp debug code start
+	PUSH
+	PRINTLN_POP msg1
+	TYA
+	PUSH
+	PRINTLN_POP msg2
+	lda W
+	PUSH
+	PRINTLN_POP msg3
+	lda (W)
+	PRINTLN_POP msg4
+	sta SCRATCH0
+	lda (SCRATCH0)
+	PRINTLN_POP msg5
+	rts
+msg1:	.asciiz "C = "
+msg2:	.asciiz "Y = "
+msg3:	.asciiz "W = "
+msg4:	.asciiz "(W) = "
+msg5:	.asciiz "(SCRATCH0) = "
+	;; temp debug code end
+
 	jsr DEPTH_CODE
 	PRINTLN_POP dup1
 	PRINTLN_POP dup2
@@ -263,14 +282,25 @@ depth1:	.asciiz "DEPTH test - "
 pick1:
 	.asciiz "PICK test - "
 
+; CFA used to handle the NEXT at the end of code were testing.
+TORTESTCFA_LIST:
+	.word RTEST_CFA
+HEADER "RTS", RTEST_CFA, 0, 0
+CODEPTR RTEST_CODE
+PUBLIC  RTEST_CODE
+	pla			; pull the item pushed by the pimitive
+	PUSH			; push it onto the parameter stack
+	rts
+ENDPUBLIC
+
 .proc toRTest
+	phy			; save unit test IP list
+	ldy #TORTESTCFA_LIST
 	lda #32
 	PUSH
 	jsr TOR_CODE
-	PRINT tor1
-	pla
-	PRINTC
-	PRINTCR
+	PRINTLN_POP tor1
+	ply
 	rts
 .endproc
 tor1:

@@ -80,9 +80,31 @@ TMPA:		.res 2		; Temp for multiply/divide
 TMPB:		.res 2		; Temp for multiply/divide
 
 ;==============================================================================
-; CODE SEGMENT - ROM kernel
+; CODE SEGMENT - Entry from ROM monitor
 ;==============================================================================
 .segment "CODE"
+.import main			; unit test entry point
+.proc MONITOR_ENTRY
+	ON16MEM
+	ON16X
+	lda #$0D
+	jsr hal_putch
+	ldx #PSP_INIT
+	ldy #CFA_LIST
+
+	jsr main
+	rtl
+.endproc
+
+; CFA used to handle the NEXT at the end of code were testing.
+CFA_LIST:
+	.word RTS_CFA
+HEADER "RTS", RTS_CFA, 0, 0
+CODEPTR RTS_CODE
+PUBLIC  RTS_CODE
+	ldy #CFA_LIST
+	rts
+ENDPUBLIC
 
 ; reads a CR terminated line from console into buffer
 PUBLIC hal_cgets
