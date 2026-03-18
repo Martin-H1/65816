@@ -31,7 +31,7 @@ PUBLIC main
 	jsr rshiftTest
 
 	PRINTLN exit
-	rtl
+	rts
 ENDPUBLIC
 
 ; This is the next link in the dictionary. Place a stub here.
