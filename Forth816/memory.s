@@ -128,7 +128,7 @@ ENDPUBLIC
 	HEADER "2!", TWOSTORE_CFA, 0, TWOFETCH_CFA
 	CODEPTR TWOSTORE_CODE
 PUBLIC TWOSTORE_CODE
-	lda 0,X			; pop addr to scratch pointer
+	lda 0,X			; peek addr to scratch pointer
 	sta SCRATCH0
 	clc
 	adc #2			; We rely on this to leave Carry clear
