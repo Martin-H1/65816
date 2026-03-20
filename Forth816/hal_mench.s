@@ -153,6 +153,35 @@ PUBLIC hal_set_nmi
 ENDPUBLIC
 
 ;==============================================================================
+; SYSTEM INITIALIZATION
+;==============================================================================
+.import MAIN
+.proc hal_init
+	; --- Switch to 65816 native mode ---
+	clc
+	xce
+
+	; --- 16-bit registers ---
+	rep #$30
+	.a16
+	.i16
+
+	; --- Set Direct Page to $0000 ---
+	lda #$0000
+	tcd
+
+	; --- Set Data Bank to $00 ---
+	pea $0000
+	plb			; pop extra zero off stack
+	plb			; DB = $00
+
+	; --- Initialize stacks ---
+	lda #RSP_INIT
+	tas			; Hardware (return) stack pointer
+	jsr MAIN
+.endproc
+
+;==============================================================================
 ; HARDWARE VECTORS
 ;==============================================================================
 .segment "VECTORS"
@@ -166,7 +195,7 @@ ENDPUBLIC
 .word $0000			; $FFE8 - ABORT (emulation)
 .word $0000			; $FFEA - unused
 .word $0000			; $FFEC - NMI (emulation)
-.word FORTH_INIT		; $FFEE - RESET (emulation) init
+.word hal_init			; $FFEE - RESET (emulation) init
 
 ; Native mode vectors ($FFF0-$FFFF)
 .word $0000			; $FFF0 - COP (native)
@@ -174,6 +203,6 @@ ENDPUBLIC
 .word $0000			; $FFF4 - ABORT (native)
 .word $0000			; $FFF6 - unused
 .word $0000			; $FFF8 - NMI (native)
-.word FORTH_INIT		; $FFFA - unused
-.word FORTH_INIT		; $FFFC - RESET (native)
+.word hal_init			; $FFFA - unused
+.word hal_init			; $FFFC - RESET (native)
 .word $0000			; $FFFE - IRQ/BRK (native)
