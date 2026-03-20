@@ -65,25 +65,11 @@ ISDECIMAL		= $E09B	; Checks character for ASCII Decimal Digit.
 ISHEX			= $E09F	; Checks character for ASCII Hexadecimal Digit
 UPPER_CASE		= $E0A3	; Converts lower-case ASCII chars to upper-case.
 
-;------------------------------------------------------------------------------
-; ZERO PAGE - Direct Page variables
-; ca65 will use direct page addressing for these automatically
-;------------------------------------------------------------------------------
-.segment "ZEROPAGE"
-
-IP:		.res 2		; Instruction Pointer
-W:		.res 2		; Working register (current CFA)
-UP:		.res 2		; User Pointer (base of user area)
-SCRATCH0:	.res 2		; General purpose scratch
-SCRATCH1:	.res 2		; General purpose scratch
-TMPA:		.res 2		; Temp for multiply/divide
-TMPB:		.res 2		; Temp for multiply/divide
-
 ;==============================================================================
 ; CODE SEGMENT - Entry from ROM monitor
 ;==============================================================================
 .segment "CODE"
-.import main			; unit test entry point
+.import MAIN			; unit test entry point
 .proc MONITOR_ENTRY
 	ON16MEM
 	ON16X
@@ -92,7 +78,7 @@ TMPB:		.res 2		; Temp for multiply/divide
 	ldx #PSP_INIT
 	ldy #CFA_LIST
 
-	jsr main
+	jsr MAIN
 	rtl
 .endproc
 

@@ -43,7 +43,6 @@ F_IMMEDIATE	= $80		; Immediate word flag
 F_HIDDEN	= $40		; Hidden word flag (during compilation)
 F_LENMASK	= $1F		; Name length mask
 
-.globalzp IP			; Instruction Pointer
 .globalzp W			; Working register (current CFA)
 .globalzp UP			; User Pointer (base of user area)
 .globalzp SCRATCH0		; General purpose scratch

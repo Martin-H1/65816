@@ -41,7 +41,6 @@ __forth_s__ = 1
 ;------------------------------------------------------------------------------
 .segment "ZEROPAGE"
 
-IP:		.res 2		; Instruction Pointer
 W:		.res 2		; Working register (current CFA)
 UP:		.res 2		; User Pointer (base of user area)
 SCRATCH0:	.res 2		; General purpose scratch
@@ -53,6 +52,50 @@ TMPB:		.res 2		; Temp for multiply/divide
 ; CODE SEGMENT - ROM kernel
 ;==============================================================================
 .segment "CODE"
+
+;==============================================================================
+; SYSTEM INITIALIZATION
+;==============================================================================
+PUBLIC MAIN
+	ldx #PSP_INIT		; Parameter stack pointer
+
+	; --- Initialize User Pointer ---
+	lda #UP_BASE
+	sta UP
+
+	; --- User area: BASE = 10 ---
+	lda #10
+	sta UP_BASE + U_BASE
+
+	; --- User area: STATE = 0 (interpret) ---
+	stz UP_BASE + U_STATE
+
+	; --- User area: DP = DICT_BASE ---
+	lda #DICT_BASE
+	sta UP_BASE + U_DP
+
+	; --- User area: LATEST = last ROM word ---
+	lda #LAST_WORD		; Defined at end of dictionary.
+	sta UP_BASE + U_LATEST
+
+	; --- User area: TIB = TIB_BASE ---
+	lda #TIB_BASE
+	sta UP_BASE + U_TIB
+
+	; --- User area: >IN = 0 ---
+	stz UP_BASE + U_TOIN
+
+	; --- User area: SOURCE-LEN = 0 ---
+	stz UP_BASE + U_SOURCELEN
+
+	; --- Jump to QUIT (outer interpreter) ---
+	; Load CFA of QUIT and execute it
+	lda #QUIT_CFA		; CFA of QUIT word
+	sta W
+	lda (W)			; Fetch code pointer
+	sta SCRATCH0
+	jmp (SCRATCH0)
+ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; INNER INTERPRETER
@@ -149,68 +192,3 @@ ENDPUBLIC
 	; IP (Y) was set by the caller to point to DOES> code.
 	NEXT
 .endproc
-
-;==============================================================================
-; SYSTEM INITIALIZATION
-;==============================================================================
-PUBLIC FORTH_INIT
-	; --- Switch to 65816 native mode ---
-	clc
-	xce			; Clear emulation bit → native mode
-
-	; --- 16-bit registers ---
-	rep #$30
-	.a16
-	.i16
-
-	; --- Set Direct Page to $0000 ---
-	lda #$0000
-	tcd
-
-	; --- Set Data Bank to $00 ---
-	pea $0000
-	plb			; pop extra zero off stack
-	plb			; DB = $00
-
-	; --- Initialize stacks ---
-	ldx #PSP_INIT		; Parameter stack pointer
-	lda #RSP_INIT
-	tas			; Hardware (return) stack pointer
-
-	; --- Initialize User Pointer ---
-	lda #UP_BASE
-	sta UP
-
-	; --- User area: BASE = 10 ---
-	lda #10
-	sta UP_BASE + U_BASE
-
-	; --- User area: STATE = 0 (interpret) ---
-	stz UP_BASE + U_STATE
-
-	; --- User area: DP = DICT_BASE ---
-	lda #DICT_BASE
-	sta UP_BASE + U_DP
-
-	; --- User area: LATEST = last ROM word ---
-	lda #LAST_WORD		; Defined at end of dictionary.
-	sta UP_BASE + U_LATEST
-
-	; --- User area: TIB = TIB_BASE ---
-	lda #TIB_BASE
-	sta UP_BASE + U_TIB
-
-	; --- User area: >IN = 0 ---
-	stz UP_BASE + U_TOIN
-
-	; --- User area: SOURCE-LEN = 0 ---
-	stz UP_BASE + U_SOURCELEN
-
-	; --- Jump to QUIT (outer interpreter) ---
-	; Load CFA of QUIT and execute it
-	lda #QUIT_CFA		; CFA of QUIT word
-	sta W
-	lda (W)			; Fetch code pointer
-	sta SCRATCH0
-	jmp (SCRATCH0)
-ENDPUBLIC

@@ -35,9 +35,15 @@ PUBLIC main
 	rts
 ENDPUBLIC
 
-; This is the next link in the dictionary. Place a stub here.
-; TODO remove this when the dictionary is collapsed into a single module.
+; These are stubs are to allow the binary to link.
+; TODO find a way to gather these into a stubs file
 PUBLIC RFETCH_CFA
+	nop
+ENDPUBLIC
+PUBLIC LAST_WORD
+	nop
+ENDPUBLIC
+PUBLIC QUIT_CFA
 	nop
 ENDPUBLIC
 
