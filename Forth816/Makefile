@@ -1,64 +1,35 @@
 include ../common.mk
 
-SOURCE = compare.s \
-	forth.s \
-	hal_mench.s \
-	interpreter.s \
-	io.s \
-	math.s \
-	memory.s \
-	primitives.s \
-	print.s \
-	stack.s \
-	stubs.s \
-	system.s
-
-all: release tests
+all: release
 
 release: bin bin/forth816.rom
 
-debug: bin/forth_debug.srec
-
-bin/forth_debug.bin: obj/forth.o obj/compare.o tests/obj/hal_test.o \
-	obj/interpreter.o obj/io.o obj/math.o obj/memory.o obj/primitives.o \
-	obj/print.o obj/stack.o obj/stubs.o obj/system.o
-	$(LD65) -C tests/test.cfg -o bin/forth_debug.bin -m bin/forth_debug.map $^
-
-bin/forth816.rom: obj/compare.o obj/forth.o obj/hal_mench.o \
-	obj/interpreter.o obj/io.o obj/math.o obj/memory.o \
-	obj/primitives.o obj/print.o obj/stack.o obj/stubs.o \
-	obj/system.o
+bin/forth816.rom: obj/forth.o obj/hal.o obj/primitives.o
 	$(LD65) -C forth.cfg -o bin/forth816.rom -m bin/forth816.map $^
 
-test:
-	$(65816S) v 8000 bin\forth816.rom
+tests: tests/bin/compareTest.srec tests/bin/ioTest.srec tests/bin/mathTest.srec \
+	tests/bin/memoryTest.srec tests/bin/stackTest.srec
 
-tests: tests/bin/compareTest.srec tests/bin/stackTest.srec \
-	tests/bin/ioTest.srec tests/bin/memoryTest.srec  \
-	tests/bin/mathTest.srec
-
-tests/bin/compareTest.bin: tests/obj/hal_test.o obj/forth.o \
-	tests/obj/compareTest.o obj/compare.o obj/print.o obj/stack.o
+tests/bin/compareTest.bin: tests/obj/hal_test.o tests/obj/compareTest.o obj/primitives.o obj/print.o
 	$(LD65) -C tests/test.cfg -o tests/bin/compareTest.bin -m tests/bin/compareTest.map $^
 
-tests/bin/ioTest.bin: tests/obj/hal_test.o obj/forth.o tests/obj/ioTest.o \
-	obj/io.o obj/print.o
+tests/bin/ioTest.bin: tests/obj/hal_test.o tests/obj/ioTest.o obj/primitives.o obj/print.o
 	$(LD65) -C tests/test.cfg -o tests/bin/ioTest.bin -m tests/bin/ioTest.map $^
 
-tests/bin/mathTest.bin: tests/obj/hal_test.o obj/forth.o tests/obj/mathTest.o \
-	obj/math.o obj/print.o
+tests/bin/mathTest.bin: tests/obj/hal_test.o tests/obj/mathTest.o obj/primitives.o obj/print.o
 	$(LD65) -C tests/test.cfg -o tests/bin/mathTest.bin -m tests/bin/mathTest.map $^
 
-tests/bin/memoryTest.bin: tests/obj/hal_test.o obj/forth.o \
-	tests/obj/memoryTest.o obj/memory.o obj/print.o
+tests/bin/memoryTest.bin: tests/obj/hal_test.o tests/obj/memoryTest.o obj/primitives.o obj/print.o
 	$(LD65) -C tests/test.cfg -o tests/bin/memoryTest.bin -m tests/bin/memoryTest.map $^
 
-tests/bin/stackTest.bin: tests/obj/hal_test.o obj/forth.o \
-	tests/obj/stackTest.o obj/stack.o obj/print.o obj/stack.o
+tests/bin/stackTest.bin: tests/obj/hal_test.o tests/obj/stackTest.o obj/primitives.o obj/print.o
 	$(LD65) -C tests/test.cfg -o tests/bin/stackTest.bin -m tests/bin/stackTest.map $^
 
 %.srec : %.bin
 	$(SREC_CAT) -address-length=3 -execution_start_address 0x000600 $< -binary -offset 0x0600 -O -Motorola -DISable Header > $@
+
+
+
 
 clean:
 	-$(RM) bin$(SEP)*.map

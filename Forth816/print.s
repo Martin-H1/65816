@@ -5,8 +5,13 @@
 
 __print_s__ = 1
 
+.p816                   ; Enable 65816 instruction set
+.smart off              ; Manual size tracking (safer for Forth)
+.A16
+.I16
+
+.include "dictionary.inc"
 .include "macros.inc"
-.include "hal.inc"
 .include "print.inc"
 
 .segment "CODE"

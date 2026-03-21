@@ -2,14 +2,8 @@
 ; macros.inc - ca65 Macros for 65816 Forth Kernel
 ;==============================================================================
 
-;
-; Put assembler in 16 bit mode, as 8 bit mode is the exception
-; selected at module level. Set processor, and turn off smart mode.
-;
-.A16
-.I16
-.p816				; Enable 65816 instruction set
-.smart off			; Manual size tracking (safer for Forth)
+.ifndef MACROS_INC
+MACROS_INC = 1
 
 ;------------------------------------------------------------------------------
 ; NEXT - Inner interpreter dispatch
@@ -25,8 +19,8 @@
 ; Cycle cost: ~14 cycles (inlined)
 ;------------------------------------------------------------------------------
 .macro  NEXT
-        .a16
         LDA     0,Y             ; A = *IP (fetch CFA of next word)
+        .a16
         INY                     ; IP += 1
         INY                     ; IP += 2  (advance past this cell)
         STA     W               ; W = CFA
@@ -48,9 +42,9 @@
 ; POP - Pop top of parameter stack into A
 ;------------------------------------------------------------------------------
 .macro  POP
-	lda 0,X			; load value off stack
-	inx			; advance pointer, but this
-	inx			; resets processor flags
+        LDA     0,X
+        INX
+        INX
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -129,54 +123,79 @@ lbl:
 ; (No combined macro for PRIM+body since ca65 can't open a .proc in a macro)
 ; Use HEADER + CODEPTR + .proc separately - see primitives.s for pattern.
 
-; These are from the WDC 65c265 monitor ROM listing. Reusing them allows
-; using code from the monitor with minimal changes.
+;==============================================================================
+; W65C265 ROM MONITOR CONSTANTS
+; From the WDC W65C265 monitor ROM listing.
+;==============================================================================
 
-; masking building symbols
-LOWNIB	= $0F
-HINIB	= $F0
+; ROM monitor entry points (long call via JSL)
+SEND_BYTE_TO_PC         = $E063 ; Output byte in A to serial port 3
+GET_BYTE_FROM_PC        = $E033 ; Read byte from serial port 3
+                                ; Carry clear = byte in A, carry set = no byte
 
-; control bits for REP and SEP
-MEM16	= $20
-IND16	= $10
+; Nibble masks (from monitor ROM listing)
+LOWNIB  = $0F
+HINIB   = $F0
+
+; Control bits for REP and SEP
+MEM16   = $20                   ; Accumulator width bit
+IND16   = $10                   ; Index register width bit
+
+;==============================================================================
+; REGISTER WIDTH MACROS
+; These match the W65C265 monitor ROM conventions exactly.
+; NOTE: ON16MEM/OFF16MEM comments below describe the RESULT, not the operation:
+;   ON16MEM  → REP #MEM16 → accumulator becomes 16-bit
+;   OFF16MEM → SEP #MEM16 → accumulator becomes 8-bit
+;==============================================================================
 
 .macro ON16MEM
-       .A16		; tell the assembler about mode
-       rep #MEM16	; set 8-bit accumulator mode
+        REP     #MEM16          ; Accumulator = 16-bit
+        .A16
 .endmacro
 
 .macro OFF16MEM
-       .A8
-       sep #MEM16
+        SEP     #MEM16          ; Accumulator = 8-bit
+        .A8
 .endmacro
 
 .macro ON16X
-       .I16
-       rep #IND16
+        REP     #IND16          ; Index registers = 16-bit
+        .I16
 .endmacro
 
 .macro OFF16X
-       .I8
-       sep #IND16
+        SEP     #IND16          ; Index registers = 8-bit
+        .I8
 .endmacro
 
 .macro ON16
-       .A16
-       .I16
-       rep #(MEM16 | IND16)
+        REP     #(MEM16 | IND16) ; All registers = 16-bit
+        .A16
+        .I16
 .endmacro
 
 .macro OFF16
-       .A8
-       .I8
-       sep #(MEM16 | IND16)
+        SEP     #(MEM16 | IND16) ; All registers = 8-bit
+        .A8
+        .I8
 .endmacro
 
-.macro PUBLIC function_name
-.export function_name
-.proc function_name
+;------------------------------------------------------------------------------
+; PUBLIC / ENDPUBLIC - Export a subroutine as a global symbol
+;
+; Usage:
+;   PUBLIC my_function
+;       ... code ...
+;   ENDPUBLIC
+;------------------------------------------------------------------------------
+.macro  PUBLIC function_name
+        .export function_name
+        .proc   function_name
 .endmacro
 
-.macro ENDPUBLIC
-.endproc
+.macro  ENDPUBLIC
+        .endproc
 .endmacro
+
+.endif ; MACROS_INC

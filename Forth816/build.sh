@@ -22,20 +22,24 @@ OUTDIR=build
 mkdir -p $OUTDIR
 
 # Assemble each source file
-echo "[1/3] Assembling forth.s ..."
+echo "[1/4] Assembling forth.s ..."
 ca65 --cpu 65816 -o $OUTDIR/forth.o forth.s
 
-echo "[2/3] Assembling primitives.s ..."
+echo "[2/4] Assembling primitives.s ..."
 ca65 --cpu 65816 -o $OUTDIR/primitives.o primitives.s
 
+echo "[3/4] Assembling hal.s ..."
+ca65 --cpu 65816 -o $OUTDIR/hal.o hal.s
+
 # Link
-echo "[3/3] Linking ..."
+echo "[4/4] Linking ..."
 ld65 -C forth.cfg \
      -o $OUTDIR/forth.bin \
      --mapfile $OUTDIR/forth.map \
      --dbgfile $OUTDIR/forth.dbg \
      $OUTDIR/forth.o \
-     $OUTDIR/primitives.o
+     $OUTDIR/primitives.o \
+     $OUTDIR/hal.o
 
 echo ""
 echo "=== Build complete ==="

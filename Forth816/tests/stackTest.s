@@ -3,15 +3,36 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+.p816                   ; Enable 65816 instruction set
+.smart off              ; Manual size tracking (safer for Forth)
+.A16
+.I16
+
 .include "ascii.inc"
-.include "forth.inc"
-.include "hal.inc"
+.include "constants.inc"
+.include "dictionary.inc"
 .include "macros.inc"
 .include "print.inc"
-.include "stack.inc"
+
+.import DUP_CODE
+.import DROP_CODE
+.import SWAP_CODE
+.import OVER_CODE
+.import ROT_CODE
+.import NIP_CODE
+.import TUCK_CODE
+.import TWODROP_CODE
+.import TWODUP_CODE
+.import TWOSWAP_CODE
+.import TWOOVER_CODE
+.import DEPTH_CODE
+.import PICK_CODE
+.import TOR_CODE
+.import RFROM_CODE
+.import RFETCH_CODE
 
 ; Main entry point for the test
-PUBLIC main
+PUBLIC MAIN
 	PRINTLN enter
 
 	jsr dupTest
@@ -36,18 +57,6 @@ PUBLIC main
 	rts
 ENDPUBLIC
 
-; These are stubs are to allow the binary to link.
-; TODO find a way to gather these into a stubs file
-PUBLIC TWOSLASH_CFA
-	nop
-ENDPUBLIC
-PUBLIC LAST_WORD
-	nop
-ENDPUBLIC
-PUBLIC QUIT_CFA
-	nop
-ENDPUBLIC
-
 enter:	.asciiz "stack test - enter!"
 exit:	.asciiz "stack test - exit!"
 
@@ -56,36 +65,14 @@ exit:	.asciiz "stack test - exit!"
 	PUSH
 	jsr DUP_CODE
 
-	;; temp debug code start
-	PUSH
-	PRINTLN_POP msg1
-	TYA
-	PUSH
-	PRINTLN_POP msg2
-	lda W
-	PUSH
-	PRINTLN_POP msg3
-	lda (W)
-	PRINTLN_POP msg4
-	sta SCRATCH0
-	lda (SCRATCH0)
-	PRINTLN_POP msg5
-	rts
-msg1:	.asciiz "C = "
-msg2:	.asciiz "Y = "
-msg3:	.asciiz "W = "
-msg4:	.asciiz "(W) = "
-msg5:	.asciiz "(SCRATCH0) = "
-	;; temp debug code end
-
 	jsr DEPTH_CODE
 	PRINTLN_POP dup1
 	PRINTLN_POP dup2
 	PRINTLN_POP dup2
 	rts
 .endproc
-dup1:	.asciiz "dup test depth = "
-dup2:	.asciiz "dup test pop = "
+dup1:	.asciiz "dup test depth (expect 0002) = "
+dup2:	.asciiz "dup test pop (expect 0020) = "
 
 .proc dropTest
 	lda #32
@@ -100,7 +87,7 @@ dup2:	.asciiz "dup test pop = "
 	PRINTLN_POP drop1
 	rts
 .endproc
-drop1:	.asciiz "drop test depth = "
+drop1:	.asciiz "drop test depth (expect 0002, 0000) = "
 
 .proc swapTest
 	lda #1
@@ -113,7 +100,7 @@ drop1:	.asciiz "drop test depth = "
 	rts
 .endproc
 swaptest1:
-	.asciiz "swap test pop = "
+	.asciiz "swap test pop (expect 0001, 0002) = "
 
 .proc overTest
 	lda #1
@@ -129,7 +116,7 @@ swaptest1:
 	rts
 .endproc
 overtest1:
-	.asciiz "over test pop = "
+	.asciiz "over test pop (expect 0001, 0002, 0001) = "
 
 .proc rotTest
 	lda #1
@@ -147,7 +134,7 @@ overtest1:
 	rts
 .endproc
 rottest1:
-	.asciiz "rot test pop = "
+	.asciiz "rot test pop (expect 0001, 0003, 0002) = "
 
 .proc nipTest
 	lda #1
@@ -164,7 +151,7 @@ rottest1:
 	rts
 .endproc
 niptest1:
-	.asciiz "nip test pop = "
+	.asciiz "nip test pop (0002, 0000) = "
 
 .proc tuckTest
 	lda #1
@@ -178,7 +165,7 @@ niptest1:
 	PRINTLN_POP tuck1
 	rts
 .endproc
-tuck1:	.asciiz "tuck test - "
+tuck1:	.asciiz "tuck test (expect 0002, 0001, 0002) = "
 
 .proc twoDropTest
 	lda #1
@@ -197,7 +184,7 @@ tuck1:	.asciiz "tuck test - "
 	rts
 .endproc
 twodrop1:
-	.asciiz "2DROP test - "
+	.asciiz "2DROP test (expect 0001, 0001) = "
 
 .proc twoDupTest
 	lda #1
@@ -212,7 +199,7 @@ twodrop1:
 	rts
 .endproc
 twodup1:
-	.asciiz "2DUP test - "
+	.asciiz "2DUP test (expect 2, 1, 2, 1) = "
 
 .proc twoSwapTest
 	lda #$1
@@ -232,7 +219,7 @@ twodup1:
 	rts
 .endproc
 twoswap1:
-	.asciiz "2SWAP test - "
+	.asciiz "2SWAP test (expect 2, 1, 4, 3) = "
 
 .proc twoOverTest
 	lda #$1
@@ -253,7 +240,7 @@ twoswap1:
 	rts
 .endproc
 twoover1:
-	.asciiz "2OVER test - "
+	.asciiz "2OVER test (expect 2, 1, 4, 3, 2, 1) = "
 
 .proc depthTest
 	lda #1
@@ -267,7 +254,7 @@ twoover1:
 	POP
 	rts
 .endproc
-depth1:	.asciiz "DEPTH test - "
+depth1:	.asciiz "DEPTH test (expect 0002) = "
 
 .proc pickTest
 	lda #1
@@ -286,7 +273,7 @@ depth1:	.asciiz "DEPTH test - "
 	rts
 .endproc
 pick1:
-	.asciiz "PICK test - "
+	.asciiz "PICK test (expect 0001) = "
 
 ; CFA used to handle the NEXT at the end of code were testing.
 TORTESTCFA_LIST:
@@ -310,7 +297,7 @@ ENDPUBLIC
 	rts
 .endproc
 tor1:
-	.asciiz ">R test - "
+	.asciiz ">R test (expect 0020) = "
 
 .proc rFromTest
 	lda #32

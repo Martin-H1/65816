@@ -3,15 +3,35 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+.p816                   ; Enable 65816 instruction set
+.smart off              ; Manual size tracking (safer for Forth)
+.A16
+.I16
+
 .include "ascii.inc"
-.include "compare.inc"
-.include "forth.inc"
-.include "hal.inc"
+.include "constants.inc"
+.include "dictionary.inc"
 .include "macros.inc"
 .include "print.inc"
 
+.import EQUAL_CODE
+.import NOTEQUAL_CODE
+.import LESS_CODE
+.import GREATER_CODE
+.import ULESS_CODE
+.import UGREATER_CODE
+.import ZEROEQ_CODE
+.import ZEROLESS_CODE
+.import ZEROGT_CODE
+.import AND_CODE
+.import OR_CODE
+.import XOR_CODE
+.import INVERT_CODE
+.import LSHIFT_CODE
+.import RSHIFT_CODE
+
 ; Main entry point for the test
-PUBLIC main
+PUBLIC MAIN
 	PRINTLN enter
 
 	jsr equalsTest
@@ -34,18 +54,6 @@ PUBLIC main
 	rts
 ENDPUBLIC
 
-; These are stubs are to allow the binary to link.
-; TODO find a way to gather these into a stubs file
-PUBLIC TWOSLASH_CFA
-	nop
-ENDPUBLIC
-PUBLIC LAST_WORD
-	nop
-ENDPUBLIC
-PUBLIC QUIT_CFA
-	nop
-ENDPUBLIC
-
 enter:	.asciiz "compare test - enter!"
 exit:	.asciiz "compare test - exit!"
 
@@ -65,8 +73,8 @@ exit:	.asciiz "compare test - exit!"
 	PRINTLN_POP equal2
 	rts
 .endproc
-equal1:	.asciiz "= test 32=32 - "
-equal2:	.asciiz "= test 42=32 - "
+equal1:	.asciiz "= test 32=32 (expect FFFF) = "
+equal2:	.asciiz "= test 42=32 (expect 0000) = "
 
 .proc notEqualsTest
 	lda #32
@@ -85,9 +93,9 @@ equal2:	.asciiz "= test 42=32 - "
 	rts
 .endproc
 nequal1:
-	.asciiz "<> test 32=32 - "
+	.asciiz "<> test 32=32 (expect 0000) = "
 nequal2:
-	.asciiz "<> test 42=32 - "
+	.asciiz "<> test 42=32 (expect FFFF) = "
 
 .proc lessThanTest
 	lda #32
@@ -121,13 +129,13 @@ nequal2:
 	rts
 .endproc
 less_test1:
-	.asciiz "< test 32 < 32 - "
+	.asciiz "< test 32 < 32 (expect 0000) = "
 less_test2:
-	.asciiz "< test 42 < 32 - "
+	.asciiz "< test 42 < 32 (expect 0000) = "
 less_test3:
-	.asciiz "< test 32 < 42 - "
+	.asciiz "< test 32 < 42 (expect FFFF) = "
 less_test4:
-	.asciiz "< test 32 < -42 - "
+	.asciiz "< test 32 < -42 (expect 0000) = "
 
 .proc GreaterThanTest
 	lda #32
@@ -161,13 +169,13 @@ less_test4:
 	rts
 .endproc
 gt_test1:
-	.asciiz "> test 32 > 32 - "
+	.asciiz "> test 32 > 32 (expect 0000) = "
 gt_test2:
-	.asciiz "> test 42 > 32 - "
+	.asciiz "> test 42 > 32 (expect FFFF) = "
 gt_test3:
-	.asciiz "> test 32 > 42 - "
+	.asciiz "> test 32 > 42 (expect 0000) = "
 gt_test4:
-	.asciiz "> test 32 > -42 - "
+	.asciiz "> test 32 > -42 (expect FFFF) = "
 
 .proc ulessThanTest
 	lda #32
@@ -201,13 +209,13 @@ gt_test4:
 	rts
 .endproc
 uless_test1:
-	.asciiz "U< test 32 < 32 - "
+	.asciiz "U< test 32 < 32 (expect 0000) = "
 uless_test2:
-	.asciiz "U< test 42 < 32 - "
+	.asciiz "U< test 42 < 32 (expect 0000) = "
 uless_test3:
-	.asciiz "U< test 32 < 42 - "
+	.asciiz "U< test 32 < 42 (expect FFFF) = "
 uless_test4:
-	.asciiz "U< test 32 < -42 - "
+	.asciiz "U< test 32 < -42 (expect FFFF) = "
 
 .proc uGreaterThanTest
 	lda #32
@@ -241,13 +249,13 @@ uless_test4:
 	rts
 .endproc
 ugt_test1:
-	.asciiz "U> test 32 > 32 - "
+	.asciiz "U> test 32 > 32 (expect 0000) = "
 ugt_test2:
-	.asciiz "U> test 42 > 32 - "
+	.asciiz "U> test 42 > 32 (expect FFFF) = "
 ugt_test3:
-	.asciiz "U> test 32 > 42 - "
+	.asciiz "U> test 32 > 42 (expect 0000) = "
 ugt_test4:
-	.asciiz "U> test 32 > -42 - "
+	.asciiz "U> test 32 > -42 (expect 0000) = "
 
 .proc zeroEqualsTest
 	lda #32
@@ -263,9 +271,9 @@ ugt_test4:
 	rts
 .endproc
 zequal1:
-	.asciiz "0= 32 test - "
+	.asciiz "0= 32 test (expect 0000) = "
 zequal2:
-	.asciiz "0= 0 equals - "
+	.asciiz "0= 0 equals (expect FFFF) = "
 
 .proc zeroLessTest
 	lda #32
@@ -281,9 +289,9 @@ zequal2:
 	rts
 .endproc
 zeroless1:
-	.asciiz "0< 32 test - "
+	.asciiz "0< 32 test (expect 0000) = "
 zeroless2:
-	.asciiz "0< -42 test - "
+	.asciiz "0< -42 test (expect FFFF) = "
 
 .proc zeroGtTest
 	lda #32
@@ -299,9 +307,9 @@ zeroless2:
 	rts
 .endproc
 zerogt1:
-	.asciiz "0> 32 test - "
+	.asciiz "0> 32 test (expect FFFF) = "
 zerogt2:
-	.asciiz "0> -42 test - "
+	.asciiz "0> -42 test (expect 0000) = "
 
 .proc andTest
 	lda #$ff00
@@ -313,7 +321,7 @@ zerogt2:
 
 	rts
 .endproc
-and1:	.asciiz "AND test ff00 and 0ff0 - "
+and1:	.asciiz "AND test ff00 and 0ff0 (expect 0F00) = "
 
 .proc orTest
 	lda #$ff00
@@ -325,7 +333,7 @@ and1:	.asciiz "AND test ff00 and 0ff0 - "
 
 	rts
 .endproc
-or1:	.asciiz "OR test ff00 and 0ff0 - "
+or1:	.asciiz "OR test ff00 and 0ff0 (expect FFF0) = "
 
 .proc xorTest
 	lda #$ff00
@@ -337,7 +345,7 @@ or1:	.asciiz "OR test ff00 and 0ff0 - "
 
 	rts
 .endproc
-xor1:	.asciiz "XOR test ff00 and 0ff0 - "
+xor1:	.asciiz "XOR test ff00 and 0ff0 (expect F0F0) = "
 
 .proc invertTest
 	lda #$f0f0
@@ -348,7 +356,7 @@ xor1:	.asciiz "XOR test ff00 and 0ff0 - "
 	rts
 .endproc
 invert1:
-	.asciiz "Invert test f0f0 - "
+	.asciiz "Invert test f0f0 (expect 0F0F) = "
 
 .proc lshiftTest
 	lda #32
@@ -368,9 +376,9 @@ invert1:
 	rts
 .endproc
 lshift1:
-	.asciiz "lshift test 32 0 - "
+	.asciiz "lshift test 0020 0 (expect 0020) = "
 lshift2:
-	.asciiz "lshift test 32 3 - "
+	.asciiz "lshift test 0020 3  (expect 0100) = "
 
 .proc rshiftTest
 	lda #32
@@ -390,6 +398,6 @@ lshift2:
 	rts
 .endproc
 rshift1:
-	.asciiz "rshift test 32 0 - "
+	.asciiz "rshift test 0020 0 (expect 0020) = "
 rshift2:
-	.asciiz "rshift test 32 3 - "
+	.asciiz "rshift test 0020 3 (expect 0004) = "

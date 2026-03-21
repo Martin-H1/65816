@@ -3,15 +3,36 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+.p816                   ; Enable 65816 instruction set
+.smart off              ; Manual size tracking (safer for Forth)
+.A16
+.I16
+
 .include "ascii.inc"
-.include "forth.inc"
-.include "hal.inc"
+.include "constants.inc"
+.include "dictionary.inc"
 .include "macros.inc"
-.include "math.inc"
 .include "print.inc"
 
+.import PLUS_CODE
+.import MINUS_CODE
+.import STAR_CODE
+.import UMSTAR_CODE
+.import UMSLASHMOD_CODE
+.import SLASHMOD_CODE
+.import SLASH_CODE
+.import MOD_CODE
+.import NEGATE_CODE
+.import ABS_CODE
+.import MAX_CODE
+.import MIN_CODE
+.import ONEPLUS_CODE
+.import ONEMINUS_CODE
+.import TWOSTAR_CODE
+.import TWOSLASH_CODE
+
 ; Main entry point for the test
-PUBLIC main
+PUBLIC MAIN
 	PRINTLN enter
 
 	jsr plusTest
@@ -33,18 +54,6 @@ PUBLIC main
 
 	PRINTLN exit
 	rts
-ENDPUBLIC
-
-; These are stubs are to allow the binary to link.
-; TODO find a way to gather these into a stubs file
-PUBLIC RFETCH_CFA
-	nop
-ENDPUBLIC
-PUBLIC LAST_WORD
-	nop
-ENDPUBLIC
-PUBLIC QUIT_CFA
-	nop
 ENDPUBLIC
 
 enter:	.asciiz "math test - enter!"
