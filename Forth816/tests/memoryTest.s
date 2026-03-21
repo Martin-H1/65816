@@ -3,15 +3,28 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+.p816                   ; Enable 65816 instruction set
+.smart off              ; Manual size tracking (safer for Forth)
+.A16
+.I16
+
 .include "ascii.inc"
-.include "forth.inc"
-.include "hal.inc"
+.include "constants.inc"
+.include "dictionary.inc"
 .include "macros.inc"
-.include "memory.inc"
 .include "print.inc"
 
+.import FETCH_CODE
+.import STORE_CODE
+.import CFETCH_CODE
+.import CSTORE_CODE
+.import TWOFETCH_CODE
+.import TWOSTORE_CODE
+.import MOVE_CODE
+.import FILL_CODE
+
 ; Main entry point for the test
-PUBLIC main
+PUBLIC MAIN
 	PRINTLN enter
 
 	jsr fetchTest
@@ -25,18 +38,6 @@ PUBLIC main
 	
 	PRINTLN exit
 	rts
-ENDPUBLIC
-
-; These are stubs are to allow the binary to link.
-; TODO find a way to gather these into a stubs file
-PUBLIC RSHIFT_CFA
-	nop
-ENDPUBLIC
-PUBLIC LAST_WORD
-	nop
-ENDPUBLIC
-PUBLIC QUIT_CFA
-	nop
 ENDPUBLIC
 
 enter:	.asciiz "memory test - enter!"
@@ -53,7 +54,7 @@ exit:	.asciiz "memory test - exit!"
 fetch1:
 	.word $beef
 fetch2:
-	.asciiz "@ test output (expected BEEF) = "
+	.asciiz "@ test output (expect BEEF) = "
 
 .proc storeTest
 	lda #$feed
@@ -69,7 +70,7 @@ fetch2:
 store1:
 	.word $beef
 store2:
-	.asciiz "! test output (expected FEED) = "
+	.asciiz "! test output (expect FEED) = "
 
 .proc cfetchTest
 	lda #cfetch1
@@ -79,7 +80,7 @@ store2:
 	rts
 .endproc
 cfetch1:
-	.asciiz "C@ test output (expected C 0043) = "
+	.asciiz "C@ test output (expect C 0043) = "
 
 .proc cstoreTest
 	lda #'$'
@@ -95,7 +96,7 @@ cfetch1:
 cstore1:
 	.word $FFFF
 cstore2:
-	.asciiz "C! test output (expected FF24) = "
+	.asciiz "C! test output (expect FF24) = "
 
 .proc twoFetchTest
 	lda #twofetch1
@@ -108,7 +109,7 @@ cstore2:
 twofetch1:
 	.word $FEED, $BEEF
 twofetch2:
-	.asciiz "2@ test output (exepcted BEEF, FEED) = "
+	.asciiz "2@ test output (expect BEEF, FEED) = "
 
 .proc twoStoreTest
 	lda #$feed
@@ -129,7 +130,7 @@ twofetch2:
 twostore1:
 	.word $0000, $0000
 twostore2:
-	.asciiz "2! test (exepcted FEED, BEEF) = "
+	.asciiz "2! test (expect FEED, BEEF) = "
 
 .proc moveTest
 	lda #movesrc
@@ -145,7 +146,7 @@ twostore2:
 movesrc:
 	.asciiz "original"
 movedst1:
-	.byte "MOVE test (expected original) = "
+	.byte "MOVE test (expect original) = "
 movedst2:
 	.asciiz "        "
 
@@ -161,6 +162,6 @@ movedst2:
 	rts
 .endproc
 filldst1:
-	.byte "FILL test (expected $$$$$$$$) = "
+	.byte "FILL test (expect $$$$$$$$) = "
 filldst2:
 	.asciiz "        "

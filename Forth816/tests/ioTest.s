@@ -3,15 +3,27 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
+.p816                   ; Enable 65816 instruction set
+.smart off              ; Manual size tracking (safer for Forth)
+.A16
+.I16
+
 .include "ascii.inc"
-.include "forth.inc"
-.include "hal.inc"
-.include "io.inc"
+.include "constants.inc"
+.include "dictionary.inc"
 .include "macros.inc"
 .include "print.inc"
 
+.import EMIT_CODE
+.import KEY_CODE
+.import KEYQ_CODE
+.import TYPE_CODE
+.import CR_CODE
+.import SPACE_CODE
+.import SPACES_CODE
+
 ; Main entry point for the test
-PUBLIC main
+PUBLIC MAIN
 	PRINTLN enter
 
 	jsr emitTest
@@ -26,21 +38,6 @@ PUBLIC main
 	rts
 ENDPUBLIC
 
-; These are stubs are to allow the binary to link.
-; TODO find a way to gather these into a stubs file
-PUBLIC FILL_CFA
-	nop
-ENDPUBLIC
-PUBLIC TWOSLASH_CFA
-	nop
-ENDPUBLIC
-PUBLIC LAST_WORD
-	nop
-ENDPUBLIC
-PUBLIC QUIT_CFA
-	nop
-ENDPUBLIC
-
 enter:	.asciiz "io test - enter!"
 exit:	.asciiz "io test - exit!"
 
@@ -52,7 +49,7 @@ exit:	.asciiz "io test - exit!"
 	PRINTLN emit2
 	rts
 .endproc
-emit1:	.asciiz "emit test char ="
+emit1:	.asciiz "emit test char (expect E) = "
 emit2:	.asciiz "."
 
 .proc keyTest
@@ -83,7 +80,7 @@ keyq2:	.asciiz "."
 
 	rts
 .endproc
-type1:	.asciiz "type test - "
+type1:	.asciiz "type test = "
 
 .proc crTest
 	PRINTLN cr1

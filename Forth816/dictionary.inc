@@ -3,7 +3,17 @@
 ;
 ; Included by forth.s and primitives.s so all files can reference
 ; CFA labels and constants without ordering dependencies.
+
+.ifndef DICTIONARY_INC
+DICTIONARY_INC = 1
 ;==============================================================================
+
+;------------------------------------------------------------------------------
+; Flag constants (also defined in forth.s but repeated here for includes)
+;------------------------------------------------------------------------------
+F_IMMEDIATE     = $80
+F_HIDDEN        = $40
+F_LENMASK       = $1F
 
 ;------------------------------------------------------------------------------
 ; Forward declarations for all CFA labels
@@ -106,8 +116,11 @@
 
 ; System words
         .global QUIT_CFA
+        .global QUIT_BODY
         .global ABORT_CFA
+        .global ABORT_CODE
         .global ABORTQ_CFA
+        .global DOABORTQ_CFA
         .global BYE_CFA
 
 ; String/parse words
@@ -123,8 +136,7 @@
         .global UDOT_CFA
         .global DOTHEX_CFA
         .global DOTS_CFA
-        .global DOT_PROMPT_CFA
-	.global WORDS_CFA
+        .global WORDS_CFA
 
 ; Defining words
         .global COLON_CFA
@@ -142,3 +154,17 @@
 
 ; Last word in ROM dictionary (used by FORTH_INIT)
         .global LAST_WORD
+
+; Inner interpreter entry points (defined in forth.s)
+        .global DOCOL
+        .global DOVAR
+        .global DOCON
+        .global DODOES
+
+; HAL functions (defined in hal.s)
+        .global hal_putch
+        .global hal_getch
+        .global hal_kbhit
+        .global hal_cputs
+
+.endif ; DICTIONARY_INC
