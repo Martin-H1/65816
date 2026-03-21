@@ -28,9 +28,6 @@ tests/bin/stackTest.bin: tests/obj/hal_test.o tests/obj/stackTest.o obj/primitiv
 %.srec : %.bin
 	$(SREC_CAT) -address-length=3 -execution_start_address 0x000600 $< -binary -offset 0x0600 -O -Motorola -DISable Header > $@
 
-
-
-
 clean:
 	-$(RM) bin$(SEP)*.map
 	-$(RM) bin$(SEP)*.rom
