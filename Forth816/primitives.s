@@ -492,6 +492,21 @@
         PUBLIC  SLASHMOD_CODE
         .a16
         .i16
+                JSR     SLASHMOD_IMPL
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; SLASHMOD_IMPL - shared implementation for /MOD, / and MOD
+; Performs signed 16x16 division
+; Entry: stack has ( n1 n2 -- )
+; Exit:  stack has ( rem quot )
+; Returns via RTS so it can be called by / and MOD
+;------------------------------------------------------------------------------
+        .export SLASHMOD_IMPL
+        .proc   SLASHMOD_IMPL
+        .a16
+        .i16
                 ; Sign extend n1 (NOS) to 32 bits for UM/MOD
                 ; Use: sign of n2 and n1 for result sign adjustment
                 LDA     2,X             ; n1
@@ -519,8 +534,6 @@
                 LDA     2,X             ; |n1|
                 STA     0,X             ; low word
                 STZ     2,X             ; high word = 0
-                ; Stack is now: NOS=0(ud_high) TOS2=|n1|(ud_low) TOS=|n2|
-                ; But we need NOS_HI, NOS, TOS ordering - fix stack
                 ; Swap to get: high, low, divisor
                 LDA     0,X             ; |n2|
                 PHA
@@ -532,8 +545,6 @@
                 DEX
                 STA     0,X
                 ; Now: 4,X=0(high) 2,X=|n1|(low) 0,X=|n2|(divisor)
-                ; This is correct for UM/MOD
-                ; ... call UM/MOD inline
                 LDA     0,X             ; divisor
                 STA     SCRATCH0
                 LDA     2,X
@@ -574,8 +585,8 @@
                 INC     A
                 STA     0,X
 @quot_pos:
-                NEXT
-        ENDPUBLIC
+                RTS
+        .endproc
 
 ;------------------------------------------------------------------------------
 ; / ( n1 n2 -- quot ) signed division
@@ -585,10 +596,7 @@
         PUBLIC  SLASH_CODE
         .a16
         .i16
-                ; Call /MOD then drop remainder
-                ; Inline: SLASHMOD then NIP
-                ; (reuse /MOD code via JSR for clarity)
-                JSR     SLASHMOD_CODE
+                JSR     SLASHMOD_IMPL
                 ; Stack: NOS=rem TOS=quot → NIP
                 LDA     0,X             ; quot
                 INX
@@ -605,7 +613,7 @@
         PUBLIC  MOD_CODE
         .a16
         .i16
-                JSR     SLASHMOD_CODE
+                JSR     SLASHMOD_IMPL
                 ; Stack: NOS=rem TOS=quot → DROP
                 INX
                 INX
