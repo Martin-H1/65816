@@ -453,36 +453,68 @@
         PUBLIC  UMSLASHMOD_CODE
         .a16
         .i16
-                ; Stack: NOS_HI=ud_high NOS=ud_low TOS=u (divisor)
-                ; This is a standard 32/16 non-restoring division
-                LDA     0,X             ; divisor
+                JSR     UMSLASHMOD_IMPL
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; UMSLASHMOD_IMPL - unsigned 32/16 -> 16 remainder, 16 quotient
+;
+; Entry stack: ( ud_low ud_high divisor -- )
+;   0,X = divisor  (u)
+;   2,X = ud_low   (low cell of 32-bit dividend)
+;   4,X = ud_high  (high cell of 32-bit dividend)
+;
+; Exit stack: ( remainder quotient )
+;   0,X = quotient
+;   2,X = remainder
+;
+; Algorithm: restoring shift-and-subtract (non-restoring variant)
+;   Uses a 32-bit working register split across the two stack cells:
+;     remainder = 2,X (starts as ud_high, accumulates remainder bits)
+;     quotient  = 0,X (starts as ud_low,  accumulates quotient bits)
+;   Each iteration:
+;     1. Shift remainder:quotient left 1 bit
+;     2. If remainder >= divisor: subtract divisor, set quotient bit
+;
+; Returns via RTS.
+;------------------------------------------------------------------------------
+        .export UMSLASHMOD_IMPL
+        .proc   UMSLASHMOD_IMPL
+        .a16
+        .i16
+                ; Load divisor, drop its stack slot
+                LDA     0,X             ; divisor → TMPA
                 STA     TMPA
-                LDA     2,X             ; ud_low
-                STA     TMPB
-                LDA     4,X             ; ud_high → remainder register
                 INX
-                INX                     ; Drop divisor slot
-                ; Now: NOS=ud_high (remainder), TOS=ud_low (will become quotient)
-                PHY                     ; Save IP
-                LDY     #16
+                INX
+                ; Stack is now: 0,X=ud_low (quotient reg)
+                ;               2,X=ud_high (remainder reg)
+
+                PHY                     ; Save IP (LDY #16 would clobber it)
+                LDY     #16             ; 16 iterations, one per bit
+
 @loop:
-                ; Shift remainder:quotient left 1
-                ASL     0,X             ; Shift quotient (ud_low) left
-                ROL     2,X             ; Shift remainder left, carry in
-                ; Subtract divisor from remainder
-                LDA     2,X
+                ; Shift remainder:quotient left by 1
+                ; quotient (0,X) shifts left, its MSB goes into remainder (2,X)
+                ASL     0,X             ; Shift quotient left, MSB → carry
+                ROL     2,X             ; Shift remainder left, carry → LSB
+
+                ; Try to subtract divisor from remainder
+                LDA     2,X             ; Current remainder
                 SEC
-                SBC     TMPA
-                BCC     @no_sub         ; If borrow, don't subtract
-                STA     2,X             ; Update remainder
-                INC     0,X             ; Set quotient bit
+                SBC     TMPA            ; remainder - divisor
+                BCC     @no_sub         ; Borrow set = remainder < divisor, skip
+                STA     2,X             ; Update remainder with result
+                INC     0,X             ; Set quotient LSB (shifted in)
 @no_sub:
                 DEY
                 BNE     @loop
-                ; NOS=remainder, TOS=quotient (already in place)
+
+                ; Result: 0,X = quotient, 2,X = remainder
                 PLY                     ; Restore IP
-                NEXT
-        ENDPUBLIC
+                RTS
+        .endproc
 
 ;------------------------------------------------------------------------------
 ; /MOD ( n1 n2 -- rem quot ) signed division
@@ -497,96 +529,92 @@
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; SLASHMOD_IMPL - shared implementation for /MOD, / and MOD
-; Performs signed 16x16 division
-; Entry: stack has ( n1 n2 -- )
-; Exit:  stack has ( rem quot )
-; Returns via RTS so it can be called by / and MOD
+; SLASHMOD_IMPL - signed 16/16 -> 16 remainder, 16 quotient
+;
+; Entry stack: ( n1 n2 -- )
+;   0,X = n2 (divisor)
+;   2,X = n1 (dividend)
+;
+; Exit stack: ( rem quot )
+;   0,X = quotient
+;   2,X = remainder
+;
+; Sign rules (ANS Forth floored division):
+;   Remainder sign = sign of dividend (n1)
+;   Quotient sign  = sign(n1) XOR sign(n2)
+;
+; Method:
+;   1. Save signs of both operands
+;   2. Take absolute values
+;   3. Sign-extend |n1| to 32 bits → call UMSLASHMOD_IMPL
+;   4. Apply correct signs to remainder and quotient
+;
+; Returns via RTS.
 ;------------------------------------------------------------------------------
-        .export SLASHMOD_IMPL
-        .proc   SLASHMOD_IMPL
+        PUBLIC  SLASHMOD_IMPL
         .a16
         .i16
-                ; Sign extend n1 (NOS) to 32 bits for UM/MOD
-                ; Use: sign of n2 and n1 for result sign adjustment
+DIVIDEND        = 3             ; Stack offset to saved dividend (n1)
+DIVISOR         = 1             ; Stack offset to saved divisor (n2)
+                ; --- Step 1: Save signs ---
+                ; DIVIDEND,S = n1 (dividend), DIVISOR,S = n2 (divisor)
                 LDA     2,X             ; n1
-                STA     TMPA            ; Save n1
-                LDA     0,X             ; n2
-                STA     TMPB            ; Save n2
-
-                ; Take absolute values
-                LDA     TMPA
-                BPL     @n1_pos
-                EOR     #$FFFF
+                PHA                     ; Save dividend as stack local
+                BPL     @n1_pos         ; Step 2: Take absolute value
+                EOR     #$FFFF          ; Negate n1
                 INC     A
-                STA     2,X
+                STA     2,X             ; |n1| back to stack
 @n1_pos:
-                LDA     TMPB
-                BPL     @n2_pos
-                EOR     #$FFFF
+                LDA     0,X             ; n2
+                PHA                     ; Save divisor as stack local
+                BPL     @n2_pos         ; Step 2: Take absolute value
+                EOR     #$FFFF          ; Negate n2
                 INC     A
-                STA     0,X
+                STA     0,X             ; |n2| back to stack
 @n2_pos:
-                ; Sign-extend n1 into 32-bit for UM/MOD
-                ; Push zero as high word
+                ; Stack: 0,X=|n2|  2,X=|n1|
+                ; --- Step 3: Sign-extend |n1| to 32 bits ---
+                ; UMSLASHMOD_IMPL expects: ( ud_high ud_low divisor -- rem quot )
+                ;   0,X = divisor  = |n2|
+                ;   2,X = ud_low   = |n1|
+                ;   4,X = ud_high  = 0
+                ; We currently have: 0,X=|n2|  2,X=|n1|
+                LDA     0,X             ; Save |n2| (divisor)
                 DEX
-                DEX
-                LDA     2,X             ; |n1|
-                STA     0,X             ; low word
-                STZ     2,X             ; high word = 0
-                ; Swap to get: high, low, divisor
-                LDA     0,X             ; |n2|
-                PHA
-                LDA     2,X             ; |n1|
-                STA     0,X
-                STZ     2,X
-                PLA
-                DEX
-                DEX
-                STA     0,X
-                ; Now: 4,X=0(high) 2,X=|n1|(low) 0,X=|n2|(divisor)
-                LDA     0,X             ; divisor
-                STA     SCRATCH0
+                DEX                     ; Push one extra cell
+                STA     0,X             ; |n2| (divisor) to 0,X
+                LDA     4,X             ; get |n1|
+                STA     2,X             ; |n1| → ud_low at 2,X
+                STZ     4,X             ; 4,X = 0 (ud_high)
+                ; Stack: 0,X=|n2|(divisor)  2,X=|n1|(ud_low)  4,X=0(ud_high)
+                ; --- Step 4: Unsigned division ---
+                JSR     UMSLASHMOD_IMPL
+                ; UMSLASHMOD_IMPL pops divisor (INX/INX) internally
+                ; Stack after: 0,X=quotient  2,X=remainder
+                ; --- Step 5: Apply signs ---
+                ; Remainder gets sign of n1 (DIVIDEND,S)
+                LDA     DIVIDEND,S
+                BPL     @rem_pos        ; n1 positive → remainder positive
                 LDA     2,X
-                STA     TMPB
-                LDA     4,X
-                INX
-                INX
-                PHY                     ; Save IP
-                LDY     #16
-@divloop:
-                ASL     0,X
-                ROL     2,X
-                LDA     2,X
-                SEC
-                SBC     SCRATCH0
-                BCC     @nodiv
-                STA     2,X
-                INC     0,X
-@nodiv:
-                DEY
-                BNE     @divloop
-                PLY                     ; Restore IP
-                ; Apply signs:
-                ; Remainder sign = sign of dividend (TMPA)
-                ; Quotient sign  = XOR of signs
-                LDA     TMPA
-                BPL     @rem_pos
-                LDA     2,X
+                BEQ     @rem_pos        ; Zero remainder stays zero
                 EOR     #$FFFF
                 INC     A
-                STA     2,X
+                STA     2,X             ; Negate remainder
 @rem_pos:
-                LDA     TMPA
-                EOR     TMPB
-                BPL     @quot_pos
+                ; Quotient gets sign of n1 XOR n2
+                LDA     DIVIDEND,S
+                EOR     DIVISOR,S       ; XOR signs
+                BPL     @quot_pos       ; Same sign → quotient positive
                 LDA     0,X
+                BEQ     @quot_pos       ; Zero quotient stays zero
                 EOR     #$FFFF
                 INC     A
-                STA     0,X
+                STA     0,X             ; Negate quotient
 @quot_pos:
+                PLA                     ; Clean off stack locals
+                PLA
                 RTS
-        .endproc
+        ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; / ( n1 n2 -- quot ) signed division

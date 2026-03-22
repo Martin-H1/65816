@@ -34,7 +34,6 @@
 ; Main entry point for the test
 PUBLIC MAIN
 	PRINTLN enter
-
 	jsr plusTest
 	jsr minusTest
 	jsr starTest
@@ -172,9 +171,9 @@ umstar42:	.asciiz "UM* test $fffd * $0014 LOW (expect FFC4) = "
 	jsr UMSLASHMOD_CODE
 	PRINTLN_POP umslashmod21
 	PRINTLN_POP umslashmod22
-	lda #$ffff
+	lda #$0009
 	PUSH
-	lda #$fffd
+	lda #$0e79
 	PUSH
 	lda #$fffd
 	PUSH
@@ -196,8 +195,8 @@ umslashmod11:	.asciiz "UM/MOD test $00001025 UM/MOD $0014 HIGH (expect 00CE) = "
 umslashmod12:	.asciiz "UM/MOD test $00001025 UM/MOD $0014 LOW (expect 000D) = "
 umslashmod21:	.asciiz "UM/MOD test $00001025 UM/MOD $fffd HIGH (expect 0000) = "
 umslashmod22:	.asciiz "UM/MOD test $00001025 UM/MOD $fffd LOW (expect 1025) = "
-umslashmod31:	.asciiz "UM/MOD test $fffffffd UM/MOD $fffd HIGH (expect 0009) = "
-umslashmod32:	.asciiz "UM/MOD test $fffffffd UM/MOD $fffd LOW (expect 0009) = "
+umslashmod31:	.asciiz "UM/MOD test $00090E70 UM/MOD $fffd HIGH (expect 0009) = "
+umslashmod32:	.asciiz "UM/MOD test $00090E70 UM/MOD $fffd LOW (expect 0E8B) = "
 umslashmod41:	.asciiz "UM/MOD test $fffffffd UM/MOD $0014 HIGH (expect FFC4) = "
 umslashmod42:	.asciiz "UM/MOD test $fffffffd UM/MOD $0014 LOW (expect FFC4) = "
 
@@ -225,21 +224,21 @@ umslashmod42:	.asciiz "UM/MOD test $fffffffd UM/MOD $0014 LOW (expect FFC4) = "
 	PRINTLN_POP slashmod32
 	lda #$fffd
 	PUSH
-	lda #$1
+	lda #$14
 	PUSH
 	jsr SLASHMOD_CODE
 	PRINTLN_POP slashmod41
 	PRINTLN_POP slashmod42
 	rts
 .endproc
-slashmod11:	.asciiz "/MOD test $1025 * $0014 HIGH (expect 42E4) = "
-slashmod12:	.asciiz "/MOD test $1025 * $0014 LOW (expect 42E4) = "
-slashmod21:	.asciiz "/MOD test $1025 * $fffd HIGH (expect CF91) = "
-slashmod22:	.asciiz "/MOD test $1025 * $fffd LOW (expect CF91) = "
-slashmod31:	.asciiz "/MOD test $fffd * $fffd HIGH (expect 0009) = "
-slashmod32:	.asciiz "/MOD test $fffd * $fffd LOW (expect 0009) = "
-slashmod41:	.asciiz "/MOD test $fffd * $0014 HIGH (expect FFC4) = "
-slashmod42:	.asciiz "/MOD test $fffd * $0014 LOW (expect FFC4) = "
+slashmod11:	.asciiz "/MOD test $1025 /MOD $0014 HIGH (expect 00CE) = "
+slashmod12:	.asciiz "/MOD test $1025 /MOD $0014 LOW (expect 000D) = "
+slashmod21:	.asciiz "/MOD test $1025 /MOD $fffd HIGH (expect FA9F) = "
+slashmod22:	.asciiz "/MOD test $1025 /MOD $fffd LOW (expect 0002) = "
+slashmod31:	.asciiz "/MOD test $fffd /MOD $fffd HIGH (expect 0001) = "
+slashmod32:	.asciiz "/MOD test $fffd /MOD $fffd LOW (expect 0000) = "
+slashmod41:	.asciiz "/MOD test $fffd /MOD $0014 HIGH (expect 0000) = "
+slashmod42:	.asciiz "/MOD test $fffd /MOD $0014 LOW (expect FFFD) = "
 
 .proc slashTest
 	lda #$1025
@@ -262,16 +261,23 @@ slashmod42:	.asciiz "/MOD test $fffd * $0014 LOW (expect FFC4) = "
 	PRINTLN_POP slash3
 	lda #$fffd
 	PUSH
-	lda #$1
+	lda #$14
 	PUSH
 	jsr SLASH_CODE
 	PRINTLN_POP slash4
+	lda #$fffd
+	PUSH
+	lda #$1
+	PUSH
+	jsr SLASH_CODE
+	PRINTLN_POP slash5
 	rts
 .endproc
 slash1:	.asciiz "/ test $1025 / $0014 (expect 00CE) = "
 slash2:	.asciiz "/ test $1025 / $fffd (expect FA9F) = "
 slash3:	.asciiz "/ test $fffd / $fffd (expect 0001) = "
 slash4:	.asciiz "/ test $fffd / $0014 (expect 0000) = "
+slash5:	.asciiz "/ test $fffd / $0001 (expect fffd) = "
 
 .proc modTest
 	lda #$1025
