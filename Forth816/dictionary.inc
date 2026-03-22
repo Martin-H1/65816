@@ -161,6 +161,10 @@ F_LENMASK       = $1F
         .global DOCON
         .global DODOES
 
+; Arithmetic helpers
+        .global UMSLASHMOD_IMPL
+        .global SLASHMOD_IMPL
+
 ; HAL functions (defined in hal.s)
         .global hal_putch
         .global hal_getch
