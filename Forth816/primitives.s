@@ -372,6 +372,8 @@
 
 ;------------------------------------------------------------------------------
 ; * ( a b -- a*b ) 16x16 -> 16 (low word)
+; TODO: Failing unit tests on edge cases (negative/large numbers).
+;       Replace with a verified implementation.
 ;------------------------------------------------------------------------------
         HEADER  "*", STAR_CFA, 0, MINUS_CFA
         CODEPTR STAR_CODE
@@ -404,6 +406,8 @@
 ;------------------------------------------------------------------------------
 ; UM* ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
 ; Result: TOS = high cell, NOS = low cell
+; TODO: Failing unit tests on edge cases (negative/large numbers).
+;       Replace with a verified implementation.
 ;------------------------------------------------------------------------------
         HEADER  "UM*", UMSTAR_CFA, 0, STAR_CFA
         CODEPTR UMSTAR_CODE
@@ -447,6 +451,8 @@
 
 ;------------------------------------------------------------------------------
 ; UM/MOD ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
+; TODO: Failing unit tests on edge cases (negative/large numbers).
+;       Replace with a verified implementation.
 ;------------------------------------------------------------------------------
         HEADER  "UM/MOD", UMSLASHMOD_CFA, 0, UMSTAR_CFA
         CODEPTR UMSLASHMOD_CODE
@@ -518,6 +524,8 @@
 
 ;------------------------------------------------------------------------------
 ; /MOD ( n1 n2 -- rem quot ) signed division
+; TODO: Failing unit tests on edge cases (negative/large numbers).
+;       Replace with a verified implementation.
 ;------------------------------------------------------------------------------
         HEADER  "/MOD", SLASHMOD_CFA, 0, UMSLASHMOD_CFA
         CODEPTR SLASHMOD_CODE
@@ -635,6 +643,8 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 
 ;------------------------------------------------------------------------------
 ; MOD ( n1 n2 -- rem )
+; TODO: Failing unit tests on edge cases (negative/large numbers).
+;       Depends on SLASHMOD_IMPL - replace both with verified implementations.
 ;------------------------------------------------------------------------------
         HEADER  "MOD", MOD_CFA, 0, SLASH_CFA
         CODEPTR MOD_CODE
@@ -1207,33 +1217,35 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  MOVE_CODE
         .a16
         .i16
-                LDA     0,X             ; pop u (byte count) to TMPA
-                STA     TMPA
-                INX
-                INX
-                LDA     0,X             ; pop dst to SCRATCH1
-                STA     SCRATCH1
-                INX
-                INX
-                LDA     0,X             ; pop src to SCRATCH0
-                STA     SCRATCH0
-                INX
-                INX
+                LOC_SRCPTR = 1
+                LOC_DSTPTR = 3
                 PHY                     ; Save IP
-                LDY     #0              ; Byte-by-byte copy (MVN could be used)
-                LDA     TMPA            ; Zero count = no-op (test TMPA directly,
-                BEQ     @done           ; not after INX which clobbers zero flag)
+                LDA     0,X             ; pop u (byte count) to Y
+                INX
+                INX
+                TAY
+                LDA     0,X             ; pop dst to LOC_DSTPTR
+                INX
+                INX
+                PHA
+                LDA     0,X             ; pop src to LOC_SRCPTR
+                INX
+                INX
+                PHA
+                TYA                     ; Test for zero count = no-op
+                BEQ     @done
+                DEY                     ; Change count to an index
 @loop:
                 SEP     #$20
                 .a8
-                LDA     (SCRATCH0),Y
-                STA     (SCRATCH1),Y
+                LDA     (LOC_SRCPTR,S),Y
+                STA     (LOC_DSTPTR,S),Y
                 REP     #$20
                 .a16
-                INY
-                DEC     TMPA
-                BNE     @loop
-@done:
+                DEY
+                BPL     @loop           ; loop terminates at -1 to copy 0 byte as well.
+@done:          PLA                     ; Drop stack locals
+                PLA
                 PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
@@ -1246,33 +1258,35 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  FILL_CODE
         .a16
         .i16
-                LDA     0,X             ; pop fill byte to SCRATCH1
-                STA     SCRATCH1
-                INX
-                INX
-                LDA     0,X             ; pop u (byte count) to TMPA
-                STA     TMPA
-                INX
-                INX
-                LDA     0,X             ; pop addr to SCRATCH0
-                STA     SCRATCH0
-                INX
-                INX
+                LOC_DSTPTR = 1
+                LOC_BYTE = 3
                 PHY                     ; Save IP
-                LDY     #0
-                LDA     TMPA            ; Zero count = no-op (test TMPA directly,
-                BEQ     @done           ; not after INX which clobbers zero flag)
+                LDA     0,X             ; pop fill byte to LOC_BYTE
+                INX
+                INX
+                PHA
+                LDA     0,X             ; pop u (byte count) to Y
+                INX
+                INX
+                TAY
+                LDA     0,X             ; pop addr to LOC_DTSPTR
+                INX
+                INX
+                PHA
+                TYA                     ; Test for zero count = no-op
+                BEQ     @done
+                DEY                     ; Change count to an index
 @loop:
                 SEP     #$20
                 .a8
-                LDA     SCRATCH1
-                STA     (SCRATCH0),Y
+                LDA     LOC_BYTE,S
+                STA     (LOC_DSTPTR,S),Y
                 REP     #$20
                 .a16
-                INY
-                DEC     TMPA
-                BNE     @loop
-@done:
+                DEY
+                BPL     @loop
+@done:          PLA                     ; Drop stack locals
+                PLA
                 PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
@@ -1920,84 +1934,71 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;   LOC_DELIM = 9,S   delimiter char
 ;   (saved IP at 11,S, pushed first by PHY)
 ;------------------------------------------------------------------------------
-LOC_IDX   = 1
-LOC_LEN   = 3
-LOC_TIB   = 5
-LOC_HERE  = 7
-LOC_DELIM = 9
-
         HEADER  "WORD", WORD_CFA, 0, COUNT_CFA
         CODEPTR WORD_CODE
         PUBLIC  WORD_CODE
         .a16
         .i16
+                LOC_IDX   = 1
+                LOC_LEN   = 3
+                LOC_TIB   = 5
+                LOC_HERE  = 7
+                LOC_DELIM = 9
+                LOC_UP    = 11
+                LOC_SIZE  = LOC_UP+LOC_IDX
 
                 ; --- Save IP and set up stack frame ---
                 PHY                     ; Save IP (will be at 11,S after frame built)
+                TSC
+                SEC
+                SBC     #LOC_SIZE
+                TCS
 
                 ; Push delimiter (popped from parameter stack)
                 LDA     0,X             ; delimiter
-                INX
-                INX
-                PHA                     ; LOC_DELIM = 9,S
+                STA     LOC_DELIM,S
+
+                LDA     UP              ; Initialize pointer to user area
+                STA     LOC_UP,S
 
                 ; Push HERE
-                LDA     UP
-                CLC
-                ADC     #U_DP
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; HERE
-                PHA                     ; LOC_HERE = 7,S
+                LDY     #U_DP
+                LDA     (LOC_UP,S),Y    ; HERE
+                STA     LOC_HERE,S
 
                 ; Push TIB base
-                LDA     UP
-                CLC
-                ADC     #U_TIB
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; TIB base
-                PHA                     ; LOC_TIB = 5,S
+                LDY     #U_TIB
+                LDA     (LOC_UP,S),Y    ; TIB base
+                STA     LOC_TIB,S
 
                 ; Push source length
-                LDA     UP
-                CLC
-                ADC     #U_SOURCELEN
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; source length
-                PHA                     ; LOC_LEN = 3,S
+                LDY     #U_SOURCELEN
+                LDA     (LOC_UP,S),Y    ; source length
+                STA     LOC_LEN,S
 
                 ; Push parse index (>IN)
-                LDA     UP
-                CLC
-                ADC     #U_TOIN
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; >IN
-                PHA                     ; LOC_IDX = 1,S
+                LDY     #U_TOIN
+                LDA     (LOC_UP,S),Y    ; >IN
+                STA     LOC_IDX,S
+                TAY                     ; Use Y as the parse index during loops
 
                 ; --- Skip leading delimiters ---
 @skip:
-                LDA     LOC_IDX,S       ; parse index
-                CMP     LOC_LEN,S       ; >= source length?
-                BCC     @not_empty      ; Not at end, continue
-                JMP     @empty          ; End of input
-@not_empty:
+                CMP     LOC_LEN,S       ; A >= source length?
+                BCS     @empty          ; End of input
 
                 ; Fetch TIB[index] - only A supports stack-relative,
                 ; so load index into A then transfer to Y for indirect fetch
-                LDA     LOC_IDX,S       ; parse index → A
-                TAY                     ; Y = parse index
-                LDA     LOC_TIB,S       ; TIB base → A
-                STA     SCRATCH0        ; SCRATCH0 = TIB base
                 SEP     #$20
                 .a8
-                LDA     (SCRATCH0),Y    ; Fetch TIB[index]
+                LDA     (LOC_TIB,S),Y   ; Fetch TIB[index]
                 REP     #$20
                 .a16
                 AND     #$00FF
                 CMP     LOC_DELIM,S     ; Is it the delimiter?
                 BNE     @found_start    ; No - start of word found
-                LDA     LOC_IDX,S       ; Increment parse index
-                INC     A               ; (INC n,S not valid - only A supports SR)
-                STA     LOC_IDX,S
+                INY                     ; Increment parse index
+                TYA
                 BRA     @skip
 
                 ; --- Copy word characters to HERE+1 ---
@@ -2009,30 +2010,16 @@ LOC_DELIM = 9
                 STZ     SCRATCH1        ; SCRATCH1 = char count = 0
 
 @copy:
-                LDA     LOC_IDX,S       ; parse index
+                TYA                     ; parse index
                 CMP     LOC_LEN,S       ; >= source length?
                 BCS     @copy_done      ; End of input
 
-                LDA     LOC_IDX,S       ; parse index → A
-                TAY                     ; Y = parse index
-                LDA     LOC_TIB,S       ; TIB base
-                STA     SCRATCH0        ; Hmm - clobbers dest pointer
-                ; Save/restore dest pointer around TIB fetch
-                ; Use TMPB to preserve SCRATCH0 (dest)
-                LDA     SCRATCH0        ; Save dest pointer
-                STA     TMPB
-                LDA     LOC_TIB,S
-                STA     SCRATCH0
                 SEP     #$20
                 .a8
-                LDA     (SCRATCH0),Y    ; Fetch TIB[index]
+                LDA     (LOC_TIB,S),Y   ; Fetch TIB[index]
                 REP     #$20
                 .a16
                 AND     #$00FF
-                STA     TMPA            ; Save char
-                LDA     TMPB
-                STA     SCRATCH0        ; Restore dest pointer
-                LDA     TMPA            ; Restore char
                 CMP     LOC_DELIM,S     ; Is it the delimiter?
                 BEQ     @copy_done      ; Yes - end of word
 
@@ -2044,70 +2031,55 @@ LOC_DELIM = 9
                 .a16
                 INC     SCRATCH0        ; Advance dest pointer
                 INC     SCRATCH1        ; Increment char count
-                LDA     LOC_IDX,S       ; Advance parse index
-                INC     A
-                STA     LOC_IDX,S
+                INY                     ; Advance parse index
                 BRA     @copy
 
 @copy_done:
                 ; Skip the trailing delimiter if not at end
-                LDA     LOC_IDX,S
+                TYA
                 CMP     LOC_LEN,S
                 BCS     @store_count
-                LDA     LOC_IDX,S       ; Consume trailing delimiter
-                INC     A
-                STA     LOC_IDX,S
+                INY                     ; Consume trailing delimiter
 
 @store_count:
                 ; Store count byte at HERE
-                LDA     LOC_HERE,S
-                STA     SCRATCH0        ; SCRATCH0 = HERE
+                TYA
+                STA     LOC_IDX,S       ; Update LOC_IDX with Y contents.
                 SEP     #$20
                 .a8
-                LDA     SCRATCH1        ; char count
                 LDY     #0
-                STA     (SCRATCH0),Y    ; Store count byte at HERE
+                LDA     SCRATCH1        ; char count
+                STA     (LOC_HERE,S),Y  ; Store count byte at HERE
                 REP     #$20
                 .a16
 
                 ; Update >IN in user area
-                LDA     UP
-                CLC
-                ADC     #U_TOIN
-                STA     SCRATCH0
                 LDA     LOC_IDX,S
-                STA     (SCRATCH0)
+                STA     (U_TOIN,S),Y
 
                 ; Push HERE onto parameter stack
                 LDA     LOC_HERE,S
-                DEX
-                DEX
                 STA     0,X
 
                 ; --- Tear down stack frame and return ---
 @done:
-                PLA                     ; Drop LOC_IDX
-                PLA                     ; Drop LOC_LEN
-                PLA                     ; Drop LOC_TIB
-                PLA                     ; Drop LOC_HERE
-                PLA                     ; Drop LOC_DELIM
+                TSC                     ; Drop locals
+                CLC
+                ADC    #LOC_SIZE
+                TCS
                 PLY                     ; Restore IP
                 NEXT
 
 @empty:
                 ; Return HERE with zero-length counted string
-                LDA     LOC_HERE,S
-                STA     SCRATCH0
                 SEP     #$20
                 .a8
                 LDA     #0
                 LDY     #0
-                STA     (SCRATCH0),Y    ; Zero count byte at HERE
+                STA     (LOC_HERE,S),Y  ; Zero count byte at HERE
                 REP     #$20
                 .a16
                 LDA     LOC_HERE,S
-                DEX
-                DEX
                 STA     0,X
                 BRA     @done           ; Tear down frame and return
         ENDPUBLIC
