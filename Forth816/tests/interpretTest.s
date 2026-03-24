@@ -75,39 +75,81 @@ enter:	.asciiz "interpret test - enter!"
 exit:	.asciiz "interpret test - exit!"
 
 .proc wordTest
-	;Leading delimiters being skipped
-	;Empty input returning zero-length string
-	;Word at end of input with no trailing delimiter
-	;Maximum length words
+	; Empty input returning zero-length string
+
+	; Leading delimiters being skipped
 	LDA #word1
 	PUSH
 	LDA #TIB_BASE
 	PUSH
-	LDA #16
+	LDA #$20
 	PUSH
 	jsr MOVE_CODE
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
-	POP
-	sta SCRATCH0
-	lda (SCRATCH0)
+	PRINT wordmsg1
+	lda $600
 	and #$00ff
-	phy
-	tay
-	PRINT word2
-@loop:	inc SCRATCH0
-	lda (SCRATCH0)
-	jsr hal_putch
-	dey
-	bne @loop
-	PRINTLN word3
-	ply
+	PRINTC
+	PRINT wordmsg2
+	POP
+	jsr hal_lpputs
+	PRINTLN wordmsg3
+
+	; Word at end of input with no trailing delimiter
+	LDA #word2
+	PUSH
+	LDA #TIB_BASE
+	PUSH
+	LDA #$20
+	PUSH
+	jsr MOVE_CODE
+	lda #SPACE
+	PUSH
+	jsr WORD_CODE
+	PRINT wordmsg1
+	lda $600
+	and #$00ff
+	PRINTC
+	PRINT wordmsg2
+	POP
+	jsr hal_lpputs
+	PRINTLN wordmsg3
+
+	; Word at start of input with trailing delimiter
+	LDA #word3
+	PUSH
+	LDA #TIB_BASE
+	PUSH
+	LDA #$20
+	PUSH
+	jsr MOVE_CODE
+	lda #SPACE
+	PUSH
+	jsr WORD_CODE
+	PRINT wordmsg1
+	lda $600
+	and #$00ff
+	PRINTC
+	PRINT wordmsg2
+	POP
+	jsr hal_lpputs
+	PRINTLN wordmsg3
+
+	; Maximum length words
 	rts
 .endproc
-word1:	.asciiz "    word    "
-word2:	.asciiz "WORD='"
-word3:	.asciiz "'"
+word1:	.asciiz "             can                "
+word2:	.asciiz "                             you"
+word3:	.asciiz "read                            "
+word4:	.asciiz " this                           "
+wordmsg1:
+	.asciiz "Size="
+wordmsg2:
+	.asciiz ", WORD='"
+wordmsg3:
+	.asciiz "'"
 
 .proc findTest
 	;Word that exists in dictionary

@@ -170,5 +170,6 @@ F_LENMASK       = $1F
         .global hal_getch
         .global hal_kbhit
         .global hal_cputs
+        .global hal_lpputs
 
 .endif ; DICTIONARY_INC

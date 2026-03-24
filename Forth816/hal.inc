@@ -7,11 +7,14 @@
 ; -----------------------------------------------------------------------------
 
 ; Conditionally import via functions in consuming modules.
-.ifndef __hal_s__
+.ifndef HAL_INC
+HAL_INC = 1
 
 .import hal_cgets	; blocks to read a CR terminated line from console
 
 .import hal_cputs	; prints a null terminated string to the console.
+
+.import hal_lpputs	; prints a length prefixed string to the console.
 
 .import hal_cready	; returns true if characters are available.
 
@@ -29,4 +32,4 @@
 
 .import hal_set_nmi	; sets a callback for a non-maskable interrupt handler.
 
-.endif
+.endif ; HAL_INC

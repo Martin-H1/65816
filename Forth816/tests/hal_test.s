@@ -137,6 +137,34 @@ PUBLIC hal_cputs
 	rts
 ENDPUBLIC
 
+; hal_lpputs - prints a length-prefixed string to the console
+; Inputs:
+;   C - address of the string within the current bank
+; Outputs:
+;   C - preserved
+PUBLIC hal_lpputs
+	STRPTR = 1
+	php
+	phy
+	phx
+	pha
+	ldy #$0000
+	lda (STRPTR,S),Y
+	and #$00ff
+	tax
+@loop:	iny
+	lda (STRPTR,S),Y
+	jsr hal_putch
+	dex
+	bne @loop
+@return:
+	pla
+	plx
+	ply
+	plp
+	rts
+ENDPUBLIC
+
 ; returns true if data in in buffer
 PUBLIC hal_cready
 	lda #$ffff
