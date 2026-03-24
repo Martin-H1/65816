@@ -1,0 +1,59 @@
+I am writing an ITC threaded ANS Forth (ANSI 1994) for the 65816 CPU. Since the 65816 is natively 16-bit, a 16-bit cell size will be used.
+
+The first target board is a single board computer has with the w65c265 with 32KB RAM and 32 KB ROM. The Forth kernel will be located in the ROM, and the user will interact a UART serial interface. The memory map of the system is:
+
+$0000 - $00FF   Direct Page (Forth VM registers, scratch)
+$0100 - $01FF   Hardware stack (Return Stack)
+$0200 - $03FF   Parameter Stack (grows downward)
+$0400 - $04FF   User Area
+                +$00  BASE         numeric base (default 10)
+                +$02  STATE        0=interpret, 1=compile
+                +$04  DP           dictionary pointer
+                +$06  LATEST       latest definition link
+                +$08  TIB          terminal input buffer address
+                +$0A  >IN          parse offset
+                +$0C  SOURCE-LEN   current source length
+                +$0E  HANDLER      exception handler
+$0500-$05FF     Terminal Input Buffer (TIB)
+$0600-$7EFF     RAM Dictionary (user definitions grow upward)
+$8000 - $FFFF   ROM (kernel primitives, core word set)
+
+The Forth is written using the CA65 assembler with the following register allocations:
+  X  = Parameter Stack Pointer (PSP)
+  Y  = Instruction Pointer (IP)
+  A  = Working register
+  S  = Return Stack Pointer (RSP) - use the hardware stack!
+  D  = Direct Page base for Forth internals
+  DB = Data Bank for dictionary
+
+The current source files are located in GitHub and can be accessed with these URLs:
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/build.sh
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/macros.inc
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/constants.inc
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/forth.cfg
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/README.md
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/primitives.s
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/dictionary.inc
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/hal.s
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/forth.s
+
+In the source code you will notice the use of the macros PUBLIC and ENDPUBLIC. They are important as that allows the functions to be called by unit tests. The unit test are written in 65816 assembly and I don't have a testing framework.
+
+During our previous session we ran into a few issues with invalid 65816 op code, or CA54 syntax. I've retained a summary of some of those issues:
+
+The valid 65816 branch instructions for future reference:
+Condition    Unsigned  	     	    Signed
+=	     BEQ	     	     BEQ
+≠	     BNE	     	     BNE
+<	     BCC	     	     BMI (with overflow check)
+≥	     BCS	     	     BPL (with overflow check)
+>	     reverse operands + BCC  reverse operands + BMI
+≤	     reverse operands + BCS  reverse operands + BPL
+
+The 65816 CMP only supports immediate, direct page, absolute, and indexed memory operands - never a register directly. For comparing against Y or X you need to either use CPY/CPX with a memory or immediate value, or transfer with TYA/TXA first.
+
+On the 65816, arithmetic and logic instructions (ADC, SBC, AND, ORA, EOR, etc.) only operate on memory operands or immediate values - never directly on X or Y registers. To use X or Y as a source you always need TXA/TYA first, or store to a zero page location and use that.
+
+The CA65 asssembler doesn't support escaping the " character in string constants. This caused problems using the HEADER macro for words with " in the name (e.g. ABORT"). To resolve this we skipped the HEADER macro for these words and wrote header bytes manually, including the quote character as a numeric byte value $22.
+
+Word defintions end in NEXT, so a word definition can't JSR directly to another word definition. That's beecause the JSR return. When this is required, this is worked around by refactoring the word code into a helper function. SLASHMOD_CODE and SLASHMOD_IMPL are an example of this pattern.
