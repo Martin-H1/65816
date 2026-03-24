@@ -149,16 +149,17 @@ PUBLIC hal_lpputs
 	phx
 	pha
 	ldy #$0000
-	lda (STRPTR,S),Y
+	lda (STRPTR,S),Y	; Load the length byte
 	and #$00ff
 	tax
+	beq @return		; Nothing to print if zero
 @loop:	iny
 	lda (STRPTR,S),Y
 	jsr hal_putch
 	dex
 	bne @loop
 @return:
-	pla
+	pla			; Clean off stack and return
 	plx
 	ply
 	plp

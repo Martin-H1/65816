@@ -61,3 +61,18 @@ Word defintions end in NEXT, so a word definition can't JSR directly to another 
 The 65816 supports stack relative addressing which is used to create stack local variables within a procedure. This reduces the need for direct page space, and eases register starvation issues. A restriction is that the only indirect stack local addressing mode is indexed indirect addressing using the Y register like this: "lda (OFFSET,S),Y". This technique is used in the WORD_CODE procedure.
 
 However, the 65816 supports moving the direct page pointer to the procedure's stack frame. This is useful for using direct page addressing modes with stack locals. This technique is used in the hal_cputs function.
+
+Here are additional 65816 gotchas:
+
+STZ only supports direct page and absolute addressing — no indirect modes. Use LDA #0 / STA (addr) instead
+INC, DEC, LDY, LDX don't support stack-relative addressing — only LDA/STA do
+JSR indirect doesn't exist — use JMP indirect instead (safe since Forth words end in NEXT anyway)
+BGE, BLE, BLT, BGT don't exist — see the branch table in your summary
+PEA $0000 / PLB / PLB is a cleaner way to set the Data Bank Register than SEP / LDA #0 / PHA / PLB
+
+PHY/PLY around loops:
+Any primitive that uses LDY #n or TAY as a loop counter must save and restore Y with PHY/PLY since Y holds the Forth instruction pointer (IP).
+BEQ/BNE after INX/INX:
+INX/INX clobbers the zero flag, so you can't test the just-popped value with BEQ/BNE directly after. Save to a zero page variable or use CMP #0 after the pops.
+TODO items:
+STAR_CODE, UMSTAR_CODE, UMSLASHMOD_CODE, SLASHMOD_CODE, and MOD_CODE have known failures on edge cases and need replacing with verified implementations.

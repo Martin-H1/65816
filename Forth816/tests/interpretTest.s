@@ -137,13 +137,54 @@ exit:	.asciiz "interpret test - exit!"
 	jsr hal_lpputs
 	PRINTLN wordmsg3
 
+	; No word in buffer.
+	LDA #word4
+	PUSH
+	LDA #TIB_BASE
+	PUSH
+	LDA #$20
+	PUSH
+	jsr MOVE_CODE
+	lda #SPACE
+	PUSH
+	jsr WORD_CODE
+	PRINT wordmsg1
+	lda $600
+	and #$00ff
+	PRINTC
+	PRINT wordmsg2
+	POP
+	jsr hal_lpputs
+	PRINTLN wordmsg3
+
+	; Word with a single leading delimiter
+	LDA #word5
+	PUSH
+	LDA #TIB_BASE
+	PUSH
+	LDA #$20
+	PUSH
+	jsr MOVE_CODE
+	lda #SPACE
+	PUSH
+	jsr WORD_CODE
+	PRINT wordmsg1
+	lda $600
+	and #$00ff
+	PRINTC
+	PRINT wordmsg2
+	POP
+	jsr hal_lpputs
+	PRINTLN wordmsg3
+
 	; Maximum length words
 	rts
 .endproc
 word1:	.asciiz "             can                "
 word2:	.asciiz "                             you"
 word3:	.asciiz "read                            "
-word4:	.asciiz " this                           "
+word4:	.asciiz "                                "
+word5:	.asciiz " this                           "
 wordmsg1:
 	.asciiz "Size="
 wordmsg2:
