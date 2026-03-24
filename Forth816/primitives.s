@@ -25,7 +25,6 @@
         .include "macros.inc"
         .include "dictionary.inc"
         .include "constants.inc"
-        .include "constants.inc"
 
 ; Import zero page variables from forth.s
 ; Using .importzp ensures ca65 uses direct page addressing
@@ -1955,7 +1954,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 TCS
 
                 ; Push delimiter (popped from parameter stack)
-                LDA     0,X             ; delimiter
+                LDA     0,X             ; Peek TOS to get delimiter
                 STA     LOC_DELIM,S
 
                 LDA     UP              ; Initialize pointer to user area
@@ -1983,10 +1982,20 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 TAY                     ; Use Y as the parse index during loops
 
                 ; --- Skip leading delimiters ---
-@skip:
-                CMP     LOC_LEN,S       ; A >= source length?
-                BCS     @empty          ; End of input
+@skip_loop:
+                CMP     LOC_LEN,S       ; If A >= source length then end of input
+                BCC     @otherwise
 
+                SEP     #$20            ; Return HERE with zero-length counted string
+                .a8
+                LDA     #0
+                LDY     #0
+                STA     (LOC_HERE,S),Y  ; Zero count byte at HERE
+                REP     #$20
+                .a16
+                BRA     @return         ; Tear down frame and return
+
+@otherwise:
                 ; Fetch TIB[index] - only A supports stack-relative,
                 ; so load index into A then transfer to Y for indirect fetch
                 SEP     #$20
@@ -1999,7 +2008,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 BNE     @found_start    ; No - start of word found
                 INY                     ; Increment parse index
                 TYA
-                BRA     @skip
+                BRA     @skip_loop
 
                 ; --- Copy word characters to HERE+1 ---
 @found_start:
@@ -2057,31 +2066,17 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 LDA     LOC_IDX,S
                 STA     (U_TOIN,S),Y
 
-                ; Push HERE onto parameter stack
+@return:
                 LDA     LOC_HERE,S
-                STA     0,X
+                STA     0,X             ; Put HERE onto parameter stack TOS
 
-                ; --- Tear down stack frame and return ---
-@done:
+                ; --- Tear down stack frame and return to interpreter ---
                 TSC                     ; Drop locals
                 CLC
                 ADC    #LOC_SIZE
                 TCS
                 PLY                     ; Restore IP
                 NEXT
-
-@empty:
-                ; Return HERE with zero-length counted string
-                SEP     #$20
-                .a8
-                LDA     #0
-                LDY     #0
-                STA     (LOC_HERE,S),Y  ; Zero count byte at HERE
-                REP     #$20
-                .a16
-                LDA     LOC_HERE,S
-                STA     0,X
-                BRA     @done           ; Tear down frame and return
         ENDPUBLIC
 
 ;==============================================================================

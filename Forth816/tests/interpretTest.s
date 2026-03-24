@@ -15,17 +15,19 @@
 .include "macros.inc"
 .include "print.inc"
 
+.import MOVE_CODE
 .import WORD_CODE
 .import FIND_CODE
 .import NUMBER_CODE
 .import INTERPRET_CODE
 
-.globalzp UP
+.importzp SCRATCH0
+.importzp UP
 
 ; Main entry point for the test
 PUBLIC MAIN
 	PRINTLN enter
-
+	phy
 	; Perform Forth interpreter initialization
 	LDA #UP_BASE			; Initialize User Pointer
 	STA UP
@@ -46,7 +48,7 @@ PUBLIC MAIN
 	LDA #LAST_WORD			; Defined at end of dictionary.s
 	STA (UP),Y
 
-	LDA #U_TIB			; --- User area: TIB = TIB_BASE ---
+	LDY #U_TIB			; --- User area: TIB = TIB_BASE ---
 	LDA #TIB_BASE
 	STA (UP),Y
 
@@ -54,16 +56,19 @@ PUBLIC MAIN
 	LDA #0
 	STA (UP),Y			; >IN = 0
 
-        LDY #U_SOURCELEN		; SOURCE-LEN = 0
+        LDY #U_SOURCELEN		; SOURCE-LEN = $20
+	LDA #$20
 	STA (UP),Y
-
+	ply
 	jsr wordTest
+
+	PRINTLN exit
+	rts
+
 	jsr findTest
 	jsr numberTest
 	jsr interpretTest
 
-	PRINTLN exit
-	rts
 ENDPUBLIC
 
 enter:	.asciiz "interpret test - enter!"
@@ -74,11 +79,35 @@ exit:	.asciiz "interpret test - exit!"
 	;Empty input returning zero-length string
 	;Word at end of input with no trailing delimiter
 	;Maximum length words
-
+	LDA #word1
+	PUSH
+	LDA #TIB_BASE
+	PUSH
+	LDA #16
+	PUSH
+	jsr MOVE_CODE
+	lda #SPACE
+	PUSH
+	jsr WORD_CODE
+	POP
+	sta SCRATCH0
+	lda (SCRATCH0)
+	and #$00ff
+	phy
+	tay
+	PRINT word2
+@loop:	inc SCRATCH0
+	lda (SCRATCH0)
+	jsr hal_putch
+	dey
+	bne @loop
+	PRINTLN word3
+	ply
 	rts
 .endproc
-word1:	.asciiz "word = "
-word2:	.asciiz "."
+word1:	.asciiz "    word    "
+word2:	.asciiz "WORD='"
+word3:	.asciiz "'"
 
 .proc findTest
 	;Word that exists in dictionary
