@@ -168,7 +168,7 @@ F_LENMASK       = $1F
 ; HAL functions (defined in hal.s)
         .global hal_putch
         .global hal_getch
-        .global hal_kbhit
+        .global hal_cready
         .global hal_cputs
         .global hal_lpputs
 

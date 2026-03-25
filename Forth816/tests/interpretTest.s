@@ -75,8 +75,6 @@ enter:	.asciiz "interpret test - enter!"
 exit:	.asciiz "interpret test - exit!"
 
 .proc wordTest
-	; Empty input returning zero-length string
-
 	; Leading delimiters being skipped
 	LDA #word1
 	PUSH
@@ -137,7 +135,7 @@ exit:	.asciiz "interpret test - exit!"
 	jsr hal_lpputs
 	PRINTLN wordmsg3
 
-	; No word in buffer.
+	; Empty input returning zero-length string
 	LDA #word4
 	PUSH
 	LDA #TIB_BASE
@@ -192,6 +190,30 @@ wordmsg2:
 wordmsg3:
 	.asciiz "'"
 
+.proc numberTest
+	;Decimal and hex conversion
+	;Negative numbers
+	;Invalid input returning error flag
+	;Boundary values like $7FFF and $8000
+	rts
+.endproc
+num1:	.byte 01
+	.asciiz "0"
+num2:	.byte 03
+	.asciiz "-10"
+num3:	.byte 03
+	.asciiz "500"
+num4:	.byte 03
+	.asciiz "fpp"
+hex1:	.byte 00
+	.asciiz "DEAD"
+nummsg1:
+	.asciiz "Size="
+nummsg2:
+	.asciiz ", WORD='"
+nummsg3:
+	.asciiz "'"
+
 .proc findTest
 	;Word that exists in dictionary
 	;Word that doesn't exist
@@ -201,16 +223,6 @@ wordmsg3:
 .endproc
 find1:	.asciiz "word = "
 find2:	.asciiz "."
-
-.proc numberTest
-	;Decimal and hex conversion
-	;Negative numbers
-	;Invalid input returning error flag
-	;Boundary values like $7FFF and $8000
-	rts
-.endproc
-number1:
-	.asciiz ""
 
 .proc interpretTest
 	;Executing a known primitive by name
