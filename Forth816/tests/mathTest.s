@@ -11,6 +11,7 @@
 .include "ascii.inc"
 .include "constants.inc"
 .include "dictionary.inc"
+.include "hal.inc"
 .include "macros.inc"
 .include "print.inc"
 
