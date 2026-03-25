@@ -23,8 +23,6 @@ SCRATCH0:       .res 2          ; General purpose scratch
 SCRATCH1:       .res 2          ; General purpose scratch
 TMPA:           .res 2          ; Temp for multiply/divide
 TMPB:           .res 2          ; Temp for multiply/divide
-HAL_RXBUF:      .res 1          ; HAL receive lookahead buffer (1 byte)
-HAL_RXREADY:    .res 1          ; HAL receive buffer flag (0=empty, 1=full)
 
 ; Export zero page symbols with .globalzp so other translation units
 ; use direct page addressing when referencing them
@@ -34,8 +32,6 @@ HAL_RXREADY:    .res 1          ; HAL receive buffer flag (0=empty, 1=full)
         .globalzp       SCRATCH1
         .globalzp       TMPA
         .globalzp       TMPB
-        .globalzp       HAL_RXBUF
-        .globalzp       HAL_RXREADY
 
 ;==============================================================================
 ; CODE SEGMENT - Entry from ROM monitor
@@ -86,25 +82,9 @@ ENDPUBLIC
 ; so that hal_getch can return it without losing it.
 ;------------------------------------------------------------------------------
         PUBLIC  hal_kbhit
-        OFF16MEM
-        JSL     GET_BYTE_FROM_PC
-        ON16MEM
-        BCS     @none           ; Carry set = nothing available
-        ; A byte arrived - stash it in the lookahead buffer
-        SEP     #MEM16
-        .A8
-        STA     HAL_RXBUF       ; Save byte
-        LDA     #1
-        STA     HAL_RXREADY     ; Mark buffer full
-        REP     #MEM16
-        .A16
-        LDA     #$FFFF          ; Return TRUE
-        RTS
-@none:
         LDA     #$0000          ; Return FALSE
         RTS
         ENDPUBLIC
-
 
 ; hal_cputs - prints a null terminated string to the console
 ; Inputs:

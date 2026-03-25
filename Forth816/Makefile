@@ -4,7 +4,7 @@ all: release
 
 release: bin bin/forth816.rom
 
-bin/forth816.rom: obj/forth.o obj/hal.o obj/primitives.o
+bin/forth816.rom: obj/forth.o obj/hal_mench.o obj/primitives.o
 	$(LD65) -C forth.cfg -o bin/forth816.rom -m bin/forth816.map $^
 
 tests: tests/bin/compareTest.srec tests/bin/interpretTest.srec tests/bin/ioTest.srec \

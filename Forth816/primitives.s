@@ -34,8 +34,6 @@
         .importzp       SCRATCH1
         .importzp       TMPA
         .importzp       TMPB
-        .importzp       HAL_RXBUF
-        .importzp       HAL_RXREADY
 
         .segment "CODE"
 
@@ -1317,23 +1315,6 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  KEY_CODE
         .a16
         .i16
-                ; Check lookahead buffer first (may have been filled by KEY?)
-                SEP     #MEM16
-                .A8
-                LDA     HAL_RXREADY
-                BEQ     @fetch          ; Buffer empty, go get a byte
-                STZ     HAL_RXREADY     ; Clear buffer flag
-                LDA     HAL_RXBUF       ; Return buffered byte
-                REP     #MEM16
-                .A16
-                AND     #$00FF
-                DEX
-                DEX
-                STA     0,X
-                NEXT
-@fetch:
-                REP     #MEM16
-                .A16
                 JSR     hal_getch       ; Blocking receive, result in A
                 DEX
                 DEX
@@ -1350,22 +1331,9 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         .a16
         .i16
                 ; Check lookahead buffer first
-                SEP     #MEM16
-                .A8
-                LDA     HAL_RXREADY
-                REP     #MEM16
-                .A16
-                BNE     @true           ; Already have a buffered byte
-                JSR     hal_kbhit       ; Returns $FFFF or $0000 in A,
-                                        ; stores byte in HAL_RXBUF if available
+                JSR     hal_cready      ; Returns $FFFF or $0000 in A,
                 DEX
                 DEX
-                STA     0,X
-                NEXT
-@true:
-                DEX
-                DEX
-                LDA     #$FFFF
                 STA     0,X
                 NEXT
         ENDPUBLIC
