@@ -25,6 +25,7 @@
         .include "macros.inc"
         .include "dictionary.inc"
         .include "constants.inc"
+        .include "hal.inc"
 
 ; Import zero page variables from forth.s
 ; Using .importzp ensures ca65 uses direct page addressing

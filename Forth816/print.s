@@ -11,6 +11,7 @@ __print_s__ = 1
 .I16
 
 .include "dictionary.inc"
+.include "hal.inc"
 .include "macros.inc"
 .include "print.inc"
 

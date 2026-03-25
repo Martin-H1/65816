@@ -128,11 +128,6 @@ lbl:
 ; From the WDC W65C265 monitor ROM listing.
 ;==============================================================================
 
-; ROM monitor entry points (long call via JSL)
-SEND_BYTE_TO_PC         = $E063 ; Output byte in A to serial port 3
-GET_BYTE_FROM_PC        = $E033 ; Read byte from serial port 3
-                                ; Carry clear = byte in A, carry set = no byte
-
 ; Nibble masks (from monitor ROM listing)
 LOWNIB  = $0F
 HINIB   = $F0
