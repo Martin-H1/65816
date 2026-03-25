@@ -4,7 +4,6 @@
 ;==============================================================================
 
 .include "macros.inc"
-.include "forth.inc"
 
 ; Mench Monitor subroutine entry points.
 
@@ -173,7 +172,7 @@ ENDPUBLIC
 	plb			; DB = $00
 
 	; --- Initialize stacks ---
-	lda #RSP_INIT
+	lda #$01FF
 	tas			; Hardware (return) stack pointer
 	jsr MAIN
 .endproc

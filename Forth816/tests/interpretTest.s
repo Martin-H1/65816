@@ -9,7 +9,6 @@
 .A16
 .I16
 
-.include "ascii.inc"
 .include "constants.inc"
 .include "dictionary.inc"
 .include "hal.inc"
