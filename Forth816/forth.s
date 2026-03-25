@@ -47,8 +47,6 @@ SCRATCH0:       .res 2          ; General purpose scratch
 SCRATCH1:       .res 2          ; General purpose scratch
 TMPA:           .res 2          ; Temp for multiply/divide
 TMPB:           .res 2          ; Temp for multiply/divide
-HAL_RXBUF:      .res 1          ; HAL receive lookahead buffer (1 byte)
-HAL_RXREADY:    .res 1          ; HAL receive buffer flag (0=empty, 1=full)
 
 ; Export zero page symbols with .globalzp so other translation units
 ; use direct page addressing when referencing them
@@ -58,8 +56,6 @@ HAL_RXREADY:    .res 1          ; HAL receive buffer flag (0=empty, 1=full)
         .globalzp       SCRATCH1
         .globalzp       TMPA
         .globalzp       TMPB
-        .globalzp       HAL_RXBUF
-        .globalzp       HAL_RXREADY
 
 ;------------------------------------------------------------------------------
 ; CONSTANTS - shared with primitives.s via include file
@@ -101,12 +97,11 @@ HAL_RXREADY:    .res 1          ; HAL receive buffer flag (0=empty, 1=full)
         PUBLIC  DOCOL
         .a16
         .i16
-                TYA                     ; Current IP → A
-                PHA                     ; Push IP onto return stack
+                PHY                     ; Push IP onto return stack
                 LDA     W               ; W = CFA of this word
-                CLC
-                ADC     #2              ; Body starts at CFA+2
                 TAY                     ; IP = body start
+                INY                     ; Body starts at CFA+2
+                INY
                 NEXT                    ; Execute first body word
         ENDPUBLIC
 
@@ -135,11 +130,10 @@ HAL_RXREADY:    .res 1          ; HAL receive buffer flag (0=empty, 1=full)
         PUBLIC  DOCON
         .a16
         .i16
-                LDA     W               ; CFA
-                CLC
-                ADC     #2
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; Fetch constant value
+                PHY
+                LDY     #2
+                LDA     (W),Y           ; Fetch constant value at CFA+2
+                PLY
                 DEX
                 DEX
                 STA     0,X             ; Push value
@@ -172,7 +166,7 @@ HAL_RXREADY:    .res 1          ; HAL receive buffer flag (0=empty, 1=full)
 ;==============================================================================
 ; SYSTEM INITIALIZATION
 ;==============================================================================
-        .proc   FORTH_INIT
+        PUBLIC MAIN
                 ; --- Switch to 65816 native mode ---
                 CLC
                 XCE                     ; Clear emulation bit → native mode
@@ -205,45 +199,38 @@ HAL_RXREADY:    .res 1          ; HAL receive buffer flag (0=empty, 1=full)
                 STA     UP
 
                 ; --- User area: BASE = 10 ---
-                LDA     #UP_BASE + U_BASE
-                STA     SCRATCH0
+                LDY     #U_BASE
                 LDA     #10
-                STA     (SCRATCH0)
+                STA     (UP),Y
 
                 ; --- User area: STATE = 0 (interpret) ---
                 ; STZ (indirect) not supported - use STA (UP),Y
-                LDA     #UP_BASE
-                STA     SCRATCH0
-                LDA     #0
                 LDY     #U_STATE
-                STA     (SCRATCH0),Y    ; STATE = 0
+                LDA     #0
+                STA     (UP),Y          ; STATE = 0
 
                 ; --- User area: DP = DICT_BASE ---
-                LDA     #UP_BASE + U_DP
-                STA     SCRATCH0
+                LDY     #U_DP
                 LDA     #DICT_BASE
-                STA     (SCRATCH0)
+                STA     (UP),Y
 
                 ; --- User area: LATEST = last ROM word ---
-                LDA     #UP_BASE + U_LATEST
-                STA     SCRATCH0
+                LDY     #U_LATEST
                 LDA     #LAST_WORD      ; Defined at end of dictionary.s
-                STA     (SCRATCH0)
+                STA     (UP),Y
 
                 ; --- User area: TIB = TIB_BASE ---
-                LDA     #UP_BASE + U_TIB
-                STA     SCRATCH0
+                LDY     #U_TIB
                 LDA     #TIB_BASE
-                STA     (SCRATCH0)
+                STA     (UP),Y
 
                 ; --- User area: >IN = 0 and SOURCE-LEN = 0 ---
-                LDA     #UP_BASE
-                STA     SCRATCH0
-                LDA     #0
                 LDY     #U_TOIN
-                STA     (SCRATCH0),Y    ; >IN = 0
+                LDA     #0
+                STA     (UP),Y          ; >IN = 0
+
                 LDY     #U_SOURCELEN
-                STA     (SCRATCH0),Y    ; SOURCE-LEN = 0
+                STA     (UP),Y          ; SOURCE-LEN = 0
 
                 ; --- Jump to ABORT to reset stacks and start interpreter ---
                 ; ABORT_CODE is a machine code primitive that resets both
@@ -252,29 +239,4 @@ HAL_RXREADY:    .res 1          ; HAL receive buffer flag (0=empty, 1=full)
                 ; definition — DOCOL would try to push the current IP onto
                 ; the return stack, but there is no valid IP at startup.
                 JMP     ABORT_CODE
-        .endproc
-
-;==============================================================================
-; HARDWARE VECTORS
-;==============================================================================
-        .segment "VECTORS"
-
-        ; Emulation mode vectors ($FFE0-$FFEF are unused/reserved)
-        .word   $0000                   ; $FFE0 - unused
-        .word   $0000                   ; $FFE2 - unused
-        .word   $0000                   ; $FFE4 - COP (emulation)
-        .word   $0000                   ; $FFE6 - unused
-        .word   $0000                   ; $FFE8 - ABORT (emulation)
-        .word   $0000                   ; $FFEA - unused
-        .word   $0000                   ; $FFEC - NMI (emulation)
-        .word   FORTH_INIT              ; $FFEE - RESET (emulation) → init
-
-        ; Native mode vectors ($FFF0-$FFFF)
-        .word   $0000                   ; $FFF0 - COP (native)
-        .word   $0000                   ; $FFF2 - BRK (native)
-        .word   $0000                   ; $FFF4 - ABORT (native)
-        .word   $0000                   ; $FFF6 - unused
-        .word   $0000                   ; $FFF8 - NMI (native)
-        .word   FORTH_INIT              ; $FFFA - unused
-        .word   FORTH_INIT              ; $FFFC - RESET (native)
-        .word   $0000                   ; $FFFE - IRQ/BRK (native)
+        ENDPUBLIC
