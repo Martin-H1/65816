@@ -1355,23 +1355,20 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 STA     SCRATCH0
                 INX
                 INX
-                PHY                     ; Save IP
-                LDY     #0
                 LDA     TMPA            ; Zero count = no-op (test TMPA directly,
                 BEQ     @done           ; not after INX which clobbers zero flag)
 @loop:
                 SEP     #MEM16
                 .A8
-                LDA     (SCRATCH0),Y    ; Fetch byte
+                LDA     (SCRATCH0)      ; Fetch byte
                 REP     #MEM16
                 .A16
                 AND     #$00FF
                 JSR     hal_putch
-                INY
+                INC     SCRATCH0        ; Advance pointer
                 DEC     TMPA
                 BNE     @loop
 @done:
-                PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
 
@@ -3028,34 +3025,53 @@ LAST_WORD = DOABORTQ_CFA
                 LDA     0,X
                 INX
                 INX
-                PHY                     ; Save IP (Y used as digit counter)
-                LDY     #4
-@hloop:
-                ; Rotate top nibble into low nibble position
-                ASL     A
-                ASL     A
-                ASL     A
-                ASL     A
-                PHA                     ; Save shifted value
-                LSR     A
-                LSR     A
-                LSR     A
-                LSR     A
-                AND     #$000F
-                CMP     #10
-                BCC     @hdigit
-                CLC
-                ADC     #'A'-10
-                BRA     @hemit
-@hdigit:        CLC
-                ADC     #'0'
-@hemit:
-                JSR     hal_putch       ; Print hex digit
-                PLA                     ; Restore shifted value
-                DEY
-                BNE     @hloop
-                PLY                     ; Restore IP
+                JSR     print_chex
                 NEXT
+
+        ; print_ahex - prints lower eight bits of the accumulator in hex
+        ; Inputs:
+        ;   A - byte to print
+        ; Outputs:
+        ;   A - retained
+	.proc print_ahex
+                PHA
+                PHA
+                LSR
+                LSR
+                LSR
+                LSR
+                JSR @print_nybble
+                PLA
+                JSR @print_nybble
+                PLA
+                RTS
+
+@print_nybble:
+                AND #LOWNIB
+                SED
+                CLC
+                ADC #$9990              ; Produce $90-$99 or $00-$05
+                ADC #$9940              ; Produce $30-$39 or $41-$46
+                CLD
+                jmp hal_putch
+        .endproc
+
+        ; print_chex - prints C as a 16 bit hex number to the console.
+        ; Inputs:
+        ;   C - number
+        ; Outputs:
+        ;   C - preserved
+        .proc print_chex
+                PHA
+                PHA
+                XBA
+                JSR print_ahex
+                PLA
+                JSR print_ahex
+                PLA
+                RTS
+        .endproc
+
         ENDPUBLIC
 
 ; String literal words - stubs
