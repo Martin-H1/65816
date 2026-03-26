@@ -14,6 +14,9 @@
 .include "macros.inc"
 .include "print.inc"
 
+.import DOT_CODE
+.import DOTS_CODE
+.import DOT_PROMPT_CODE
 .import EMIT_CODE
 .import KEY_CODE
 .import KEYQ_CODE
@@ -34,6 +37,7 @@ PUBLIC MAIN
 	jsr spaceTest
 	jsr spacesTest
 
+	jsr dotTest
 	PRINTLN exit
 	rts
 ENDPUBLIC
@@ -115,3 +119,20 @@ spaces1:
 	.asciiz "spaces test output = '"
 spaces2:
 	.asciiz "'."
+
+.proc dotTest
+	jsr DOT_PROMPT_CODE
+	PRINTCR
+	lda #0
+	PUSH
+	lda #10
+	PUSH
+	lda #$fffd
+	PUSH
+	lda #15936
+	PUSH
+	jsr DOTS_CODE
+	PRINTCR
+
+	rts
+.endproc
