@@ -99,6 +99,39 @@ TMPB:           .res 2          ; Temp for multiply/divide
 	lda #$0D
 	jsr hal_putch
 	ldx #PSP_INIT
+
+	; Perform Forth interpreter initialization
+	LDA #UP_BASE			; Initialize User Pointer
+	STA UP
+
+	LDY #U_BASE			; --- User area: BASE = 10 ---
+	LDA #10
+	STA (UP),Y
+
+	LDY #U_STATE  			; --- User area: STATE = 0 (interpret) ---
+	LDA #0
+	STA (UP),Y
+
+	LDY #U_DP			; --- User area: DP = DICT_BASE ---
+	LDA #DICT_BASE
+	STA (UP),Y
+
+	LDY #U_LATEST			; --- User area: LATEST = last ROM word ---
+	LDA #LAST_WORD			; Defined at end of dictionary.s
+	STA (UP),Y
+
+	LDY #U_TIB			; --- User area: TIB = TIB_BASE ---
+	LDA #TIB_BASE
+	STA (UP),Y
+
+	LDY #U_TOIN			; --- User area: >IN = 0 and SOURCE-LEN = 0 ---
+	LDA #0
+	STA (UP),Y			; >IN = 0
+
+        LDY #U_SOURCELEN		; SOURCE-LEN = $20
+	LDA #$20
+	STA (UP),Y
+
 	ldy #CFA_LIST
 
 	jsr MAIN
