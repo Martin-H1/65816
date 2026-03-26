@@ -1437,8 +1437,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  EXIT_CODE
         .a16
         .i16
-                PLA                     ; Pop saved IP from return stack
-                TAY                     ; Restore IP into Y
+                PLY                     ; Pop saved IP to restore IP in Y
                 NEXT
         ENDPUBLIC
 
@@ -1621,9 +1620,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ; Return stack: TOS=index NOS=limit NOS2=saved_IP
                 ; Pop index, copy, push back
                 PLA                     ; index
-                STA     SCRATCH0
                 PHA                     ; Push back
-                LDA     SCRATCH0
                 DEX
                 DEX
                 STA     0,X
@@ -1677,11 +1674,10 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  HERE_CODE
         .a16
         .i16
-                LDA     UP
-                CLC
-                ADC     #U_DP
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; Fetch DP
+                PHY
+                LDY     #U_DP
+                LDA     (UP),Y          ; Fetch DP
+                PLY
                 DEX
                 DEX
                 STA     0,X
@@ -1696,14 +1692,13 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  ALLOT_CODE
         .a16
         .i16
-                LDA     UP              ; Get UP and add DP offset
-                CLC
-                ADC     #U_DP
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; Fetch DP indirect
+                PHY
+                LDY     #U_DP
+                LDA     (UP),Y          ; Fetch DP indirect
                 CLC
                 ADC     0,X             ; Advance to DP + n
-                STA     (SCRATCH0)      ; Store new DP
+                STA     (UP),Y          ; Store new DP
+                PLY
                 INX                     ; Drop n
                 INX
                 NEXT
@@ -1717,20 +1712,18 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  COMMA_CODE
         .a16
         .i16
-                LDA     UP              ; Get UP, add DP offset, load DP
-                CLC
-                ADC     #U_DP
+                PHY
+                LDY     #U_DP
+                LDA     (UP),Y          ; DP → SCRATCH0
                 STA     SCRATCH0
-                LDA     (SCRATCH0)      ; DP → SCRATCH1
-                STA     SCRATCH1
+                CLC                     ; DP += 2
+                ADC     #2
+                STA     (UP),Y          ; Write updated DP back
                 LDA     0,X             ; Pop val off parameter stack
                 INX
                 INX
-                STA     (SCRATCH1)      ; Store val at DP
-                LDA     SCRATCH1        ; DP += 2
-                CLC
-                ADC     #2
-                STA     (SCRATCH0)      ; Write updated DP back
+                STA     (SCRATCH0)      ; Store val at DP
+                PLY
                 NEXT
         ENDPUBLIC
 
@@ -2094,13 +2087,11 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ; --- Reset STATE and >IN to 0 ---
                 ; STZ (indirect) is not supported on 65816.
                 ; Store UP in SCRATCH0, use Y as offset into user area.
-                LDA     UP
-                STA     SCRATCH0
                 LDA     #0
                 LDY     #U_STATE
-                STA     (SCRATCH0),Y    ; STATE = 0 (interpret)
+                STA     (UP),Y          ; STATE = 0 (interpret)
                 LDY     #U_TOIN
-                STA     (SCRATCH0),Y    ; >IN = 0
+                STA     (UP),Y          ; >IN = 0
 
                 ; --- Jump into QUIT's body directly via NEXT ---
                 ; Cannot JSR/RTS because the return stack was just wiped.
@@ -2755,79 +2746,85 @@ print_error:
                 LDA     0,X
                 INX
                 INX
-                STA     SCRATCH0
-                BPL     @positive
-                ; Negative: print minus sign, then negate value
-                LDA     #'-'
-                JSR     hal_putch
-                LDA     SCRATCH0
-                EOR     #$FFFF
-                INC     A
-                STA     SCRATCH0
-@positive:
-                JSR     print_udec
                 ; Print trailing space
-                LDA     #$20
+                STA     SCRATCH0
+                JSR     print_sdec
+                ; Print trailing space
+                LDA     #SPACE
                 JSR     hal_putch
                 NEXT
 
+print_sdec:
+                LDA     SCRATCH0
+                CMP     #0
+                BPL     print_udec
+                ; Negative: negate value, then print minus sign
+                EOR     #$FFFF
+                INC     A
+                STA     SCRATCH0
+                LDA     #'-'
+                JSR     hal_putch
 print_udec:
-        .a16
-        .i16
                 ; Print SCRATCH0 as unsigned decimal via repeated division
                 ; Digits pushed onto hardware stack in reverse, then printed
-                LDA     #UP_BASE + U_BASE
-                STA     SCRATCH1
-                LDA     (SCRATCH1)      ; BASE
-                STA     SCRATCH1
+                NUM_MSB = 4             ; Offsets to locals
+                NUM_LSB = 3
+                BCD = 2
+                BASE = 1
+
+                PHD                     ; save direct page register
                 PHY                     ; Save IP (Y used as digit counter)
-                LDY     #0
-@div_loop:
+
                 LDA     SCRATCH0
-                BEQ     @print_digits
-                STZ     TMPA            ; remainder = 0
-                LDA     #16
-                STA     TMPB            ; bit counter
-                LDA     SCRATCH0
-@div16:
-                ASL     A
-                ROL     TMPA
-                LDA     TMPA
-                CMP     SCRATCH1
-                BCC     @div16_no
-                SEC
-                SBC     SCRATCH1
-                STA     TMPA
-                INC     SCRATCH0        ; accumulate quotient bit
-@div16_no:
-                DEC     TMPB
-                BNE     @div16
-                ; TMPA = remainder digit, push as ASCII
-                LDA     TMPA
-                CMP     #10
-                BCC     @dec_digit
-                CLC
-                ADC     #'A'-10
-                BRA     @push_digit
-@dec_digit:
-                CLC
-                ADC     #'0'
-@push_digit:
+                PHA                     ; Establish working area
+                LDY     #U_BASE
+                LDA     (UP),Y          ; BASE (10 or 16)
                 PHA
-                INY
-                BRA     @div_loop
-@print_digits:
-                ; Print digits (popped in correct order)
-                CPY     #0
-                BEQ     @pd_done
-                PLA
+	        TSC                     ; Xfer RSP to direct page reg
+                TCD                     ; stack local space is now direct page.
+
+                OFF16MEM                ; Switch to byte mode.
+
+                LDA     #0              ; null delimiter for print loop
+                PHA
+@while:	                                ; divide TOS by base
+                STZ     BCD             ; clr BCD
+                LDY     #16             ; {>} = loop counter
+@foreachbit:
+                ASL     NUM_LSB         ; TOS is gradually replaced
+                ROL     NUM_MSB         ; with the quotient
+                ROL     BCD             ; BCD result is gradually replaced
+                LDA     BCD             ; with the remainder
+                SEC
+                SBC     BASE            ; partial BCD >= base ?
+                BCC     @else
+                STA     BCD             ; yes: update the partial result
+                INC     NUM_LSB         ; set low bit in partial quotient
+@else:
                 DEY
-                JSR     hal_putch
-                BRA     @print_digits
-@pd_done:
-                PLY                     ; Restore IP
+                BNE     @foreachbit     ; loop 16 times
+                LDA     BCD
+                CMP     #10
+                BCC     @decdigit
+                ADC     #6              ; 'A'-10-1+carry
+@decdigit:      ADC     #'0'            ; convert BCD result to ASCII
+                PHA                     ; stack digits in ascending
+                LDA     NUM_LSB         ; order ('0' for zero)
+                ORA     NUM_MSB
+                BNE     @while          ; } until TOS is 0
+@print:
+                PLA
+@loop:
+                JSR     hal_putch       ; print digits in descending order
+                PLA                     ; until null delimiter is encountered
+                BNE     @loop
+                ON16MEM                 ; exit byte mode
+                PLA                     ; clean up working area
+                PLA
+                PLY                     ; restore registers and return
+                PLD
                 RTS
-        ENDPUBLIC
+	ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; .S ( -- ) print stack contents non-destructively
@@ -2837,23 +2834,20 @@ print_udec:
         PUBLIC  DOTS_CODE
         .a16
         .i16
-                STX     SCRATCH0        ; Save PSP
+                PHX                     ; Save PSP
 @print_loop:
                 CPX     #$03FF          ; PSP_INIT
                 BCS     @ds_done
                 LDA     0,X
-                STA     SCRATCH1        ; Save stack value
-                LDA     SCRATCH1
+                INX
+                INX
                 STA     SCRATCH0
-                JSR     DOT_CODE::print_udec
-                LDA     #$20
+                JSR     DOT_CODE::print_sdec
+                LDA     #SPACE
                 JSR     hal_putch
-                INX
-                INX
                 BRA     @print_loop
 @ds_done:
-                LDA     SCRATCH0        ; Restore PSP
-                TAX
+                PLX                     ; Restore PSP
                 NEXT
         ENDPUBLIC
 
@@ -2865,17 +2859,10 @@ print_udec:
         PUBLIC  DOT_PROMPT_CODE
         .a16
         .i16
-                LDA     #' '
-                JSR     hal_putch
-                LDA     #'o'
-                JSR     hal_putch
-                LDA     #'k'
-                JSR     hal_putch
-                LDA     #$0D
-                JSR     hal_putch
-                LDA     #$0A
-                JSR     hal_putch
+                LDA     #@prompt
+                JSR     hal_cputs
                 NEXT
+        @prompt: .byte ' ', 'o', 'k', C_RETURN, L_FEED,0
         ENDPUBLIC
 
 ;==============================================================================
