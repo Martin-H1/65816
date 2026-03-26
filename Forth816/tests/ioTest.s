@@ -12,22 +12,19 @@
 .include "dictionary.inc"
 .include "hal.inc"
 .include "macros.inc"
-.include "print.inc"
+.include "macrosdbg.inc"
 
-.import DOT_CODE
-.import DOTS_CODE
 .import DOT_PROMPT_CODE
 .import EMIT_CODE
 .import KEY_CODE
 .import KEYQ_CODE
 .import TYPE_CODE
-.import CR_CODE
 .import SPACE_CODE
 .import SPACES_CODE
 
 ; Main entry point for the test
 PUBLIC MAIN
-	PRINTLN enter
+	TYPESTRCR "io test - enter!"
 
 	jsr emitTest
 	jsr keyTest
@@ -38,91 +35,67 @@ PUBLIC MAIN
 	jsr spacesTest
 
 	jsr dotTest
-	PRINTLN exit
+	TYPESTRCR "io test - exit!"
 	rts
 ENDPUBLIC
-
-enter:	.asciiz "io test - enter!"
-exit:	.asciiz "io test - exit!"
 
 .proc emitTest
 	lda #'E'
 	PUSH
-	PRINT emit1
+	TYPESTR "emit test char (expect E) = "
 	jsr EMIT_CODE
-	PRINTLN emit2
+	TYPESTRCR "."
 	rts
 .endproc
-emit1:	.asciiz "emit test char (expect E) = "
-emit2:	.asciiz "."
 
 .proc keyTest
-	PRINT key1
+	TYPESTR "key test char = "
 	jsr KEY_CODE
-	PRINTLN_POP key2
+	TYPESTR_DOT "."
 	rts
 .endproc
-key1:	.asciiz "key test char = "
-key2:	.asciiz "."
 
 .proc keyqTest
 	jsr KEYQ_CODE
-	PRINTLN_POP keyq1
-	PRINTLN keyq2
+	TYPESTR_DOT "keyq test flag = "
+	TYPESTRCR "."
 	rts
 .endproc
-keyq1:	.asciiz "keyq test flag = "
-keyq2:	.asciiz "."
 
 .proc typeTest
-	lda #type1
-	PUSH
-	lda #12
-	PUSH
-	jsr TYPE_CODE
-	PRINTCR
-
+	TYPESTRCR "type test = "
 	rts
 .endproc
-type1:	.asciiz "type test = "
 
 .proc crTest
-	PRINTLN cr1
+	TYPESTR "cr test - enter "
 	jsr CR_CODE
-	PRINTLN cr2
+	TYPESTR "cr test - exit "
 
 	rts
 .endproc
-cr1:	.asciiz "cr test - enter "
-cr2:	.asciiz "cr test - exit "
 
 .proc spaceTest
-	PRINT space1
+	TYPESTR "space test output = '"
 	jsr SPACE_CODE
-	PRINTLN space2
+	TYPESTRCR "'."
 
 	rts
 .endproc
-space1:	.asciiz "space test output = '"
-space2:	.asciiz "'."
 
 .proc spacesTest
 	lda #10
 	PUSH
-	PRINT spaces1
+	TYPESTR "spaces test output = '"
 	jsr SPACES_CODE
-	PRINTLN spaces2
+	TYPESTRCR "'."
 
 	rts
 .endproc
-spaces1:
-	.asciiz "spaces test output = '"
-spaces2:
-	.asciiz "'."
 
 .proc dotTest
 	jsr DOT_PROMPT_CODE
-	PRINTCR
+	jsr CR_CODE
 	lda #0
 	PUSH
 	lda #10
@@ -132,7 +105,7 @@ spaces2:
 	lda #15936
 	PUSH
 	jsr DOTS_CODE
-	PRINTCR
+	jsr CR_CODE
 
 	rts
 .endproc

@@ -12,12 +12,7 @@
 .include "dictionary.inc"
 .include "hal.inc"
 .include "macros.inc"
-
-.import CR_CODE
-.import DOT_CODE
-.import DOTS_CODE
-.import TYPE_CODE
-.import DOTHEX_CODE
+.include "macrosdbg.inc"
 
 .import EQUAL_CODE
 .import NOTEQUAL_CODE
@@ -34,31 +29,6 @@
 .import INVERT_CODE
 .import LSHIFT_CODE
 .import RSHIFT_CODE
-
-.macro TYPESTR str
-.scope
-	lda #@localstr
-	PUSH
-	lda #.strlen(str)
-	PUSH
-	jsr TYPE_CODE
-	bra @skip
-@localstr: .asciiz str
-@skip:
-.endscope
-.endmacro
-
-.macro TYPESTR_DOT str
-	TYPESTR str
-	jsr DOT_CODE
-	jsr CR_CODE
-.endmacro
-
-.macro TYPESTR_DOTHEX str
-	TYPESTR str
-	jsr DOTHEX_CODE
-	jsr CR_CODE
-.endmacro
 
 ; Main entry point for the test
 PUBLIC MAIN

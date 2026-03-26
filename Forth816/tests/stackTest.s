@@ -12,7 +12,7 @@
 .include "dictionary.inc"
 .include "hal.inc"
 .include "macros.inc"
-.include "print.inc"
+.include "macrosdbg.inc"
 
 .import DUP_CODE
 .import DROP_CODE
@@ -33,7 +33,7 @@
 
 ; Main entry point for the test
 PUBLIC MAIN
-	PRINTLN enter
+	TYPESTRCR "stack test - enter!"
 
 	jsr dupTest
 	jsr dropTest
@@ -53,12 +53,9 @@ PUBLIC MAIN
 	; jsr rFromTest
 	; jsr rFetchTest
 
-	PRINTLN exit
+	TYPESTRCR "stack test - exit!"
 	rts
 ENDPUBLIC
-
-enter:	.asciiz "stack test - enter!"
-exit:	.asciiz "stack test - exit!"
 
 .proc dupTest
 	lda #32
@@ -66,13 +63,11 @@ exit:	.asciiz "stack test - exit!"
 	jsr DUP_CODE
 
 	jsr DEPTH_CODE
-	PRINTLN_POP dup1
-	PRINTLN_POP dup2
-	PRINTLN_POP dup2
+	TYPESTR_DOT "dup test depth (expect 2) = "
+	TYPESTR_DOT "dup test pop (expect 32) = "
+	TYPESTR_DOT "dup test pop (expect 32) = "
 	rts
 .endproc
-dup1:	.asciiz "dup test depth (expect 0002) = "
-dup2:	.asciiz "dup test pop (expect 0020) = "
 
 .proc dropTest
 	lda #32
@@ -80,14 +75,13 @@ dup2:	.asciiz "dup test pop (expect 0020) = "
 	lda #32
 	PUSH
 	jsr DEPTH_CODE
-	PRINTLN_POP drop1
+	TYPESTR_DOT "drop test depth (expect 2) = "
 	jsr DROP_CODE
 	jsr DROP_CODE
 	jsr DEPTH_CODE
-	PRINTLN_POP drop1
+	TYPESTR_DOT "drop test depth (expect 0) = "
 	rts
 .endproc
-drop1:	.asciiz "drop test depth (expect 0002, 0000) = "
 
 .proc swapTest
 	lda #1
@@ -95,12 +89,10 @@ drop1:	.asciiz "drop test depth (expect 0002, 0000) = "
 	lda #2
 	PUSH
 	jsr SWAP_CODE
-	PRINTLN_POP swaptest1
-	PRINTLN_POP swaptest1
+	TYPESTR_DOT "swap test pop (expect 1) = "
+	TYPESTR_DOT "swap test pop (expect 2) = "
 	rts
 .endproc
-swaptest1:
-	.asciiz "swap test pop (expect 0001, 0002) = "
 
 .proc overTest
 	lda #1
@@ -109,14 +101,12 @@ swaptest1:
 	PUSH
 	jsr OVER_CODE
 
-	PRINTLN_POP overtest1
-	PRINTLN_POP overtest1
-	PRINTLN_POP overtest1
+	TYPESTR_DOT "over test pop (expect 1) = "
+	TYPESTR_DOT "over test pop (expect 2) = "
+	TYPESTR_DOT "over test pop (expect 1) = "
 
 	rts
 .endproc
-overtest1:
-	.asciiz "over test pop (expect 0001, 0002, 0001) = "
 
 .proc rotTest
 	lda #1
@@ -127,14 +117,12 @@ overtest1:
 	PUSH
 	jsr ROT_CODE
 
-	PRINTLN_POP rottest1
-	PRINTLN_POP rottest1
-	PRINTLN_POP rottest1
+	TYPESTR_DOT "rot test pop (expect 1) = "
+	TYPESTR_DOT "rot test pop (expect 3) = "
+	TYPESTR_DOT "rot test pop (expect 2) = "
 
 	rts
 .endproc
-rottest1:
-	.asciiz "rot test pop (expect 0001, 0003, 0002) = "
 
 .proc nipTest
 	lda #1
@@ -143,15 +131,13 @@ rottest1:
 	PUSH
 	jsr NIP_CODE
 
-	PRINTLN_POP niptest1
+	TYPESTR_DOT "nip test pop (expect 2) = "
 
 	jsr DEPTH_CODE
-	PRINTLN_POP niptest1
+	TYPESTR_DOT "nip test pop (expect 0) = "
 
 	rts
 .endproc
-niptest1:
-	.asciiz "nip test pop (0002, 0000) = "
 
 .proc tuckTest
 	lda #1
@@ -160,12 +146,11 @@ niptest1:
 	PUSH
 	jsr TUCK_CODE
 
-	PRINTLN_POP tuck1
-	PRINTLN_POP tuck1
-	PRINTLN_POP tuck1
+	TYPESTR_DOT "tuck test (expect 2) = "
+	TYPESTR_DOT "tuck test (expect 1) = "
+	TYPESTR_DOT "tuck test (expect 2) = "
 	rts
 .endproc
-tuck1:	.asciiz "tuck test (expect 0002, 0001, 0002) = "
 
 .proc twoDropTest
 	lda #1
@@ -179,12 +164,10 @@ tuck1:	.asciiz "tuck test (expect 0002, 0001, 0002) = "
 
 	jsr TWODROP_CODE
 
-	PRINTLN_POP twodrop1
-	PRINTLN_POP twodrop1
+	TYPESTR_DOT "2DROP test (expect 1) = "
+	TYPESTR_DOT "2DROP test (expect 1) = "
 	rts
 .endproc
-twodrop1:
-	.asciiz "2DROP test (expect 0001, 0001) = "
 
 .proc twoDupTest
 	lda #1
@@ -192,14 +175,12 @@ twodrop1:
 	lda #2
 	PUSH
 	jsr TWODUP_CODE
-	PRINTLN_POP twodup1
-	PRINTLN_POP twodup1
-	PRINTLN_POP twodup1
-	PRINTLN_POP twodup1
+	TYPESTR_DOT "2DUP test (expect 2) = "
+	TYPESTR_DOT "2DUP test (expect 1) = "
+	TYPESTR_DOT "2DUP test (expect 2) = "
+	TYPESTR_DOT "2DUP test (expect 1) = "
 	rts
 .endproc
-twodup1:
-	.asciiz "2DUP test (expect 2, 1, 2, 1) = "
 
 .proc twoSwapTest
 	lda #$1
@@ -211,15 +192,13 @@ twodup1:
 	lda #$4
 	PUSH
 	jsr TWOSWAP_CODE
-	PRINTLN_POP twoswap1
-	PRINTLN_POP twoswap1
-	PRINTLN_POP twoswap1
-	PRINTLN_POP twoswap1
+	TYPESTR_DOT "2SWAP test (expect 2) = "
+	TYPESTR_DOT "2SWAP test (expect 1) = "
+	TYPESTR_DOT "2SWAP test (expect 4) = "
+	TYPESTR_DOT "2SWAP test (expect 3) = "
 
 	rts
 .endproc
-twoswap1:
-	.asciiz "2SWAP test (expect 2, 1, 4, 3) = "
 
 .proc twoOverTest
 	lda #$1
@@ -231,16 +210,14 @@ twoswap1:
 	lda #$4
 	PUSH
 	jsr TWOOVER_CODE
-	PRINTLN_POP twoover1
-	PRINTLN_POP twoover1
-	PRINTLN_POP twoover1
-	PRINTLN_POP twoover1
-	PRINTLN_POP twoover1
-	PRINTLN_POP twoover1
+	TYPESTR_DOT "2OVER test (expect 2) = "
+	TYPESTR_DOT "2OVER test (expect 1) = "
+	TYPESTR_DOT "2OVER test (expect 4) = "
+	TYPESTR_DOT "2OVER test (expect 3) = "
+	TYPESTR_DOT "2OVER test (expect 2) = "
+	TYPESTR_DOT "2OVER test (expect 1) = "
 	rts
 .endproc
-twoover1:
-	.asciiz "2OVER test (expect 2, 1, 4, 3, 2, 1) = "
 
 .proc depthTest
 	lda #1
@@ -249,12 +226,11 @@ twoover1:
 	PUSH
 
 	jsr DEPTH_CODE
-	PRINTLN_POP depth1
+	TYPESTR_DOT "DEPTH test (expect 2) = "
 	POP
 	POP
 	rts
 .endproc
-depth1:	.asciiz "DEPTH test (expect 0002) = "
 
 .proc pickTest
 	lda #1
@@ -266,14 +242,12 @@ depth1:	.asciiz "DEPTH test (expect 0002) = "
 	lda #2
 	PUSH
 	jsr PICK_CODE
-	PRINTLN_POP pick1
+	TYPESTR_DOT "PICK test (expect 1) = "
 	POP
 	POP
 	POP
 	rts
 .endproc
-pick1:
-	.asciiz "PICK test (expect 0001) = "
 
 ; CFA used to handle the NEXT at the end of code were testing.
 TORTESTCFA_LIST:
@@ -292,30 +266,24 @@ ENDPUBLIC
 	lda #32
 	PUSH
 	jsr TOR_CODE
-	PRINTLN_POP tor1
 	ply
+	TYPESTR_DOT ">R test (expect 32) = "
 	rts
 .endproc
-tor1:
-	.asciiz ">R test (expect 0020) = "
 
 .proc rFromTest
 	lda #32
 	pha
 	jsr RFROM_CODE
-	PRINTLN_POP rfrom1
+	TYPESTR_DOT "R> test - "
 	rts
 .endproc
-rfrom1:
-	.asciiz "R> test - "
 
 .proc rFetchTest
 	lda #32
 	pha
 	jsr RFETCH_CODE
-	PRINTLN_POP rfrom1
+	TYPESTR_DOT "R@ test - "
 	pla
 	rts
 .endproc
-rfetch1:
-	.asciiz "R@ test - "

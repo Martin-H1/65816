@@ -13,7 +13,7 @@
 .include "dictionary.inc"
 .include "hal.inc"
 .include "macros.inc"
-.include "print.inc"
+.include "macrosdbg.inc"
 
 .import MOVE_CODE
 .import WORD_CODE
@@ -26,11 +26,11 @@
 
 ; Main entry point for the test
 PUBLIC MAIN
-	PRINTLN enter
+	TYPESTRCR "interpret test - enter!"
 
 	jsr wordTest
 
-	PRINTLN exit
+	TYPESTRCR "interpret test - exit!"
 	rts
 
 	jsr findTest
@@ -38,9 +38,6 @@ PUBLIC MAIN
 	jsr interpretTest
 
 ENDPUBLIC
-
-enter:	.asciiz "interpret test - enter!"
-exit:	.asciiz "interpret test - exit!"
 
 .proc wordTest
 	; Leading delimiters being skipped
@@ -54,14 +51,15 @@ exit:	.asciiz "interpret test - exit!"
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
-	PRINT wordmsg1
 	lda $600
 	and #$00ff
-	PRINTC
-	PRINT wordmsg2
+	PUSH
+	TYPESTR "Size="
+	jsr DOT_CODE
+	TYPESTR ", WORD='"
 	POP
 	jsr hal_lpputs
-	PRINTLN wordmsg3
+	TYPESTRCR "'"
 
 	; Word at end of input with no trailing delimiter
 	LDA #word2
@@ -74,14 +72,15 @@ exit:	.asciiz "interpret test - exit!"
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
-	PRINT wordmsg1
+	TYPESTR "Size="
 	lda $600
 	and #$00ff
-	PRINTC
-	PRINT wordmsg2
+	PUSH
+	jsr DOT_CODE
+	TYPESTR ", WORD='"
 	POP
 	jsr hal_lpputs
-	PRINTLN wordmsg3
+	TYPESTRCR "'"
 
 	; Word at start of input with trailing delimiter
 	LDA #word3
@@ -94,14 +93,15 @@ exit:	.asciiz "interpret test - exit!"
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
-	PRINT wordmsg1
+	TYPESTR "Size="
 	lda $600
 	and #$00ff
-	PRINTC
-	PRINT wordmsg2
+	PUSH
+	jsr DOT_CODE
+	TYPESTR ", WORD='"
 	POP
 	jsr hal_lpputs
-	PRINTLN wordmsg3
+	TYPESTRCR "'"
 
 	; Empty input returning zero-length string
 	LDA #word4
@@ -114,14 +114,15 @@ exit:	.asciiz "interpret test - exit!"
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
-	PRINT wordmsg1
+	TYPESTR "Size="
 	lda $600
 	and #$00ff
-	PRINTC
-	PRINT wordmsg2
+	PUSH
+	jsr DOT_CODE
+	TYPESTR ", WORD='"
 	POP
 	jsr hal_lpputs
-	PRINTLN wordmsg3
+	TYPESTRCR "'"
 
 	; Word with a single leading delimiter
 	LDA #word5
@@ -134,14 +135,15 @@ exit:	.asciiz "interpret test - exit!"
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
-	PRINT wordmsg1
+	TYPESTR "Size="
 	lda $600
 	and #$00ff
-	PRINTC
-	PRINT wordmsg2
+	PUSH
+	jsr DOT_CODE
+	TYPESTR ", WORD='"
 	POP
 	jsr hal_lpputs
-	PRINTLN wordmsg3
+	TYPESTRCR "'"
 
 	; Maximum length words
 	rts
@@ -151,12 +153,6 @@ word2:	.asciiz "                             you"
 word3:	.asciiz "read                            "
 word4:	.asciiz "                                "
 word5:	.asciiz " this                           "
-wordmsg1:
-	.asciiz "Size="
-wordmsg2:
-	.asciiz ", WORD='"
-wordmsg3:
-	.asciiz "'"
 
 .proc numberTest
 	;Decimal and hex conversion

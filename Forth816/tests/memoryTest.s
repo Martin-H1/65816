@@ -12,7 +12,7 @@
 .include "dictionary.inc"
 .include "hal.inc"
 .include "macros.inc"
-.include "print.inc"
+.include "macrosdbg.inc"
 
 .import FETCH_CODE
 .import STORE_CODE
@@ -25,7 +25,7 @@
 
 ; Main entry point for the test
 PUBLIC MAIN
-	PRINTLN enter
+	TYPESTRCR "memory test - enter!"
 
 	jsr fetchTest
 	jsr storeTest
@@ -35,26 +35,20 @@ PUBLIC MAIN
 	jsr twoStoreTest
 	jsr moveTest
 	jsr fillTest
-	
-	PRINTLN exit
+
+	TYPESTRCR "memory test - exit!"
 	rts
 ENDPUBLIC
-
-enter:	.asciiz "memory test - enter!"
-exit:	.asciiz "memory test - exit!"
-
 
 .proc fetchTest
 	lda #fetch1
 	PUSH
 	jsr FETCH_CODE
-	PRINTLN_POP fetch2
+	TYPESTR_DOTHEX "@ test output (expect BEEF) = "
 	rts
 .endproc
 fetch1:
 	.word $beef
-fetch2:
-	.asciiz "@ test output (expect BEEF) = "
 
 .proc storeTest
 	lda #$feed
@@ -64,23 +58,21 @@ fetch2:
 	jsr STORE_CODE
 	lda store1
 	PUSH
-	PRINTLN_POP store2
+	TYPESTR_DOTHEX "! test output (expect FEED) = "
 	rts
 .endproc
 store1:
 	.word $beef
-store2:
-	.asciiz "! test output (expect FEED) = "
 
 .proc cfetchTest
 	lda #cfetch1
 	PUSH
 	jsr CFETCH_CODE
-	PRINTLN_POP cfetch1
+	TYPESTR_DOTHEX "C@ test output (expect C 0043) = "
 	rts
 .endproc
 cfetch1:
-	.asciiz "C@ test output (expect C 0043) = "
+	.asciiz "C@"
 
 .proc cstoreTest
 	lda #'$'
@@ -90,26 +82,22 @@ cfetch1:
 	jsr CSTORE_CODE
 	lda cstore1
 	PUSH
-	PRINTLN_POP cstore2
+	TYPESTR_DOTHEX "C! test output (expect FF24) = "
 	rts
 .endproc
 cstore1:
 	.word $FFFF
-cstore2:
-	.asciiz "C! test output (expect FF24) = "
 
 .proc twoFetchTest
 	lda #twofetch1
 	PUSH
 	jsr TWOFETCH_CODE
-	PRINTLN_POP twofetch2
-	PRINTLN_POP twofetch2
+	TYPESTR_DOTHEX "2@ test output (expect BEEF) = "
+	TYPESTR_DOTHEX "2@ test output (expect FEED) = "
 	rts
 .endproc
 twofetch1:
 	.word $FEED, $BEEF
-twofetch2:
-	.asciiz "2@ test output (expect BEEF, FEED) = "
 
 .proc twoStoreTest
 	lda #$feed
@@ -123,14 +111,12 @@ twofetch2:
 	PUSH
 	lda twostore1+2
 	PUSH
-	PRINTLN_POP twostore2
-	PRINTLN_POP twostore2
+	TYPESTR_DOTHEX "2! test (expect FEED) = "
+	TYPESTR_DOTHEX "2! test (expect BEEF) = "
 	rts
 .endproc
 twostore1:
 	.word $0000, $0000
-twostore2:
-	.asciiz "2! test (expect FEED, BEEF) = "
 
 .proc moveTest
 	lda #movesrc
@@ -140,28 +126,36 @@ twostore2:
 	lda #$0008
 	PUSH
 	jsr MOVE_CODE
-	PRINTLN movedst1
+	TYPESTR "MOVE test (expect original) = "
+	lda #movedst2
+	PUSH
+	lda #$0008
+	PUSH
+	jsr TYPE_CODE
+	jsr CR_CODE
 	rts
 .endproc
 movesrc:
 	.asciiz "original"
-movedst1:
-	.byte "MOVE test (expect original) = "
 movedst2:
 	.asciiz "        "
 
 .proc fillTest
-	lda #filldst2
+	lda #filldst1
 	PUSH
 	lda #$0008
 	PUSH
 	lda #'$'
 	PUSH
 	jsr FILL_CODE
-	PRINTLN filldst1
+	TYPESTR "FILL test (expect $$$$$$$$) = "
+	lda #filldst1
+	PUSH
+	lda #$0008
+	PUSH
+	jsr TYPE_CODE
+	jsr CR_CODE
 	rts
 .endproc
 filldst1:
-	.byte "FILL test (expect $$$$$$$$) = "
-filldst2:
 	.asciiz "        "
