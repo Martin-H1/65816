@@ -1732,23 +1732,21 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  CCOMMA_CODE
         .a16
         .i16
-                LDA     UP              ; Get UP, add DP offset, load DP
-                CLC
-                ADC     #U_DP
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; DP → SCRATCH1
+                PHY
+                LDY     #U_DP
+                LDA     (UP),Y          ; DP → SCRATCH1
                 STA     SCRATCH1
+                INC     A               ; DP += 1
+                STA     (UP),Y          ; Write updated DP back
                 LDA     0,X             ; Pop byte off parameter stack
                 INX
                 INX
                 SEP     #$20
                 .a8
-                STA     (SCRATCH1)      ; Store byte at DP
+                STA     (SCRATCH1)      ; Store byte at DP pointer
                 REP     #$20
                 .a16
-                LDA     SCRATCH1        ; DP += 1
-                INC     A
-                STA     (SCRATCH0)      ; Write updated DP back
+                PLY
                 NEXT
         ENDPUBLIC
 
@@ -2862,6 +2860,141 @@ print_udec:
         @prompt: .byte ' ', 'o', 'k', C_RETURN, L_FEED,0
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; COMPARE
+; On entry:  PSP (X) has 4 cells: u2 addr2 u1 addr1 (TOS first)
+; On exit:   PSP (X) has 1 cell:  result
+; see: https://forth-standard.org/standard/string/COMPARE
+;------------------------------------------------------------------------------
+        HEADER  "COMPARE", COMPARE_CFA, 0, DOT_PROMPT_CFA
+        CODEPTR COMPARE_CODE
+        PUBLIC  COMPARE_CODE
+        .a16
+        .i16
+
+        LOC_ADDR1       = 1             ; hw stack offset for addr1
+        LOC_ADDR2       = 3             ; hw stack offset for addr2
+        ; saved IP lives at 5,S (pushed by PHY before the two PHAs)
+
+                PHY                     ; Save IP; hw stack: [saved_IP]
+
+                ;----------------------------------------------------------
+                ; Pop all four arguments from the parameter stack.
+                ; Save u1 -> TMPB, u2 -> SCRATCH1 for the length comparison
+                ; after the byte loop. Both addresses go onto the hw stack
+                ; as locals so (LOC,S),Y indirect indexed addressing works.
+                ;----------------------------------------------------------
+                LDA     0,X             ; u2
+                STA     SCRATCH1        ; SCRATCH1 = u2 (preserved for length cmp)
+                INX
+                INX
+
+                LDA     0,X             ; addr2
+                INX
+                INX
+                PHA                     ; hw stack: [addr2][saved_IP]
+                                        ; -> addr2 now at LOC_ADDR2 = 3,S
+
+                LDA     0,X             ; u1
+                STA     TMPB            ; TMPB = u1 (preserved for length cmp)
+                INX
+                INX
+
+                LDA     0,X             ; addr1
+                INX
+                INX
+                PHA                     ; hw stack: [addr1][addr2][saved_IP]
+                                        ; -> addr1 now at LOC_ADDR1 = 1,S
+
+                ;----------------------------------------------------------
+                ; Compute MIN(u1, u2) -> TMPA (the byte-loop trip count).
+                ; u1 is in TMPB, u2 is in SCRATCH1.
+                ; CMP is unsigned - lengths are always non-negative.
+                ;----------------------------------------------------------
+                LDA     TMPB            ; u1
+                CMP     SCRATCH1        ; unsigned: u1 - u2, sets C
+                BCS     @min_is_u2      ; C set  -> u1 >= u2  -> min = u2
+                STA     TMPA            ; C clear -> u1 <  u2  -> min = u1
+                BRA     @loop_start
+@min_is_u2:
+                LDA     SCRATCH1        ; min = u2
+                STA     TMPA
+
+@loop_start:
+                ;----------------------------------------------------------
+                ; Byte comparison loop.
+                ; Y is the byte index (0-based).
+                ; TMPA is the remaining byte count (counts down).
+                ; Uses (LOC_ADDR1,S),Y and (LOC_ADDR2,S),Y -- these are
+                ; 65816 stack-relative indirect indexed addressing modes,
+                ; the same technique used in MOVE_CODE and FILL_CODE.
+                ;----------------------------------------------------------
+                LDY     #0
+
+                LDA     TMPA
+                BEQ     @length_check   ; MIN = 0 -> skip loop, compare lengths
+
+@byte_loop:
+                ;------------------------------------------------------
+                ; Fetch one byte from each string in 8-bit mode.
+                ; SCRATCH0 is a zero-page cell; storing a byte there in
+                ; 8-bit mode is safe (only the low byte is written).
+                ;------------------------------------------------------
+                SEP     #$20            ; A = 8-bit
+                .a8
+                LDA     (LOC_ADDR1,S),Y ; byte from string1
+                STA     SCRATCH0        ; save for comparison
+                LDA     (LOC_ADDR2,S),Y ; byte from string2
+                CMP     SCRATCH0        ; str2[Y] - str1[Y]  (unsigned)
+                REP     #$20            ; A = 16-bit (before any branch)
+                .a16
+
+                BEQ     @next_byte      ; bytes equal -> continue
+                BCC     @str1_greater   ; str2[Y] < str1[Y]  -> str1 > str2
+                ; else  str2[Y] > str1[Y] -> str1 < str2
+                LDA     #$FFFF          ; result = -1
+                BRA     @store_result
+
+@str1_greater:
+                LDA     #$0001          ; result = +1
+                BRA     @store_result
+
+@next_byte:
+                INY                     ; advance byte index
+                DEC     TMPA            ; one fewer byte to compare
+                BNE     @byte_loop      ; loop until TMPA = 0
+
+                ;----------------------------------------------------------
+                ; All MIN(u1,u2) bytes matched. Compare lengths.
+                ; u1 is in TMPB, u2 is in SCRATCH1.
+                ;----------------------------------------------------------
+@length_check:
+                LDA     TMPB            ; u1
+                CMP     SCRATCH1        ; u1 - u2  (unsigned)
+                BEQ     @equal          ; u1 == u2 -> strings are equal
+                BCS     @str1_longer    ; u1 >  u2 -> str1 longer -> str1 > str2
+                LDA     #$FFFF          ; u1 <  u2 -> str1 shorter -> str1 < str2
+                BRA     @store_result
+@str1_longer:
+                LDA     #$0001
+                BRA     @store_result
+@equal:
+                LDA     #$0000
+
+@store_result:
+                ;----------------------------------------------------------
+                ; Tear down hw stack locals, restore IP, push result.
+                ;----------------------------------------------------------
+                PLY                     ; discard addr1
+                PLY                     ; discard addr2
+                PLY                     ; Restore IP
+
+                DEX
+                DEX
+                STA     0,X             ; Push result onto parameter stack
+                NEXT
+        ENDPUBLIC
+
 ;==============================================================================
 ; LAST_WORD - must be the CFA of the final word defined above
 ; Used by FORTH_INIT to seed LATEST
@@ -2874,7 +3007,7 @@ LAST_WORD = DOABORTQ_CFA
 ; These allow the project to assemble; implement fully in a later pass.
 ;==============================================================================
 
-        HEADER  "WORDS", WORDS_CFA, 0, DOT_PROMPT_CFA
+        HEADER  "WORDS", WORDS_CFA, 0, COMPARE_CFA
         CODEPTR WORDS_CODE
         PUBLIC  WORDS_CODE
         .a16

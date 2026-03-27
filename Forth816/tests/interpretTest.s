@@ -15,6 +15,7 @@
 .include "macros.inc"
 .include "macrosdbg.inc"
 
+.import COMPARE_CODE
 .import MOVE_CODE
 .import WORD_CODE
 .import FIND_CODE
@@ -29,6 +30,7 @@ PUBLIC MAIN
 	TYPESTRCR "interpret test - enter!"
 
 	jsr wordTest
+	jsr compareTest
 
 	TYPESTRCR "interpret test - exit!"
 	rts
@@ -153,6 +155,62 @@ word2:	.asciiz "                             you"
 word3:	.asciiz "read                            "
 word4:	.asciiz "                                "
 word5:	.asciiz " this                           "
+
+.proc compareTest
+	LDA #compare1
+	PUSH
+	LDA #.strlen("abcdef")
+	PUSH
+	lda #compare2
+	PUSH
+	lda #.strlen("bcdefg")
+	PUSH
+	jsr COMPARE_CODE
+	TYPESTR_DOT "compare abcdef bcdefg (expect -1) = "
+
+	LDA #compare2
+	PUSH
+	lda #.strlen("bcdefg")
+	PUSH
+	lda #compare1
+	PUSH
+	LDA #.strlen("abcdef")
+	PUSH
+	jsr COMPARE_CODE
+	TYPESTR_DOT "compare bcdefg abcdef (expect 1) = "
+
+	LDA #compare2
+	PUSH
+	lda #.strlen("bcdefg")
+	PUSH
+	lda #compare2
+	PUSH
+	lda #.strlen("bcdefg")
+	PUSH
+	jsr COMPARE_CODE
+	TYPESTR_DOT "compare bcdefg bcdefg (expect 0) = "
+
+	LDA #compare3
+	PUSH
+	lda #.strlen("cdefgh")
+	PUSH
+	lda #compare4
+	PUSH
+	lda #.strlen("xdefghi")
+	PUSH
+	jsr COMPARE_CODE
+	TYPESTR_DOT "compare cdefgh cdefghi (expect -1) = "
+
+	rts
+.endproc
+compare1:
+	.asciiz "abcdef"
+compare2:
+	.asciiz "bcdefg"
+compare3:
+	.asciiz "cdefgh"
+compare4:
+	.asciiz "cdefghi"
 
 .proc numberTest
 	;Decimal and hex conversion

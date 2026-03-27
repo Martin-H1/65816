@@ -124,6 +124,7 @@ F_LENMASK       = $1F
         .global BYE_CFA
 
 ; String/parse words
+        .global COMPARE_CFA
         .global WORD_CFA
         .global FIND_CFA
         .global NUMBER_CFA
