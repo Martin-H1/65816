@@ -259,6 +259,7 @@ compare4:
 	jsr CR_CODE
 
 	; Decimal and hex conversion
+	; Zero first
 	LPPUTS numsg1
 	lda #num1
 	PUSH
@@ -269,7 +270,96 @@ compare4:
 	LPPUTS numsg3
 	jsr DOT_CODE
 	jsr CR_CODE
-	;Negative numbers
+
+	; Negative numbers
+	LPPUTS numsg1
+	lda #num2
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
+
+	LPPUTS numsg1
+	lda #num3
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
+
+	phy
+	ldy #U_BASE
+	lda #16
+	sta (UP),y
+	ply
+
+	LPPUTS numsg1
+	lda #hex1
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
+
+	LPPUTS numsg1
+	lda #hex2
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
+
+	LPPUTS numsg1
+	lda #hex3
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS numsg1
+	lda #hex4
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS numsg1
+	lda #hex5
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	phy
+	ldy #U_BASE
+	lda #10
+	sta (UP),y
+	ply
 
 	;Boundary values like $7FFF and $8000
 	rts
@@ -284,8 +374,11 @@ error4:	PString "12G"
 num1:	PString "0"
 num2:	PString "-10"
 num3:	PString "500"
-num4:	PString "-7ff"
-hex1:	PString "DEAD"
+hex1:	PString "7FF"
+hex2:	PString "-7FF"
+hex3:	PString "DEAD"
+hex4:	PString "7FFF"
+hex5:	PString "8000"
 
 .proc findTest
 	;Word that exists in dictionary

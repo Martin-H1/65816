@@ -3273,7 +3273,7 @@ SQUOTE_CFA:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; NUMBER_IMPL
+; NUMBER_IMPL - separate for now in case I need to call this from interpret.
 ; Called via JSR, returns via RTS.
 ; Entry:  0,X = addr (counted string)
 ; Exit:   0,X = result or original addr, 2,X = TRUE or FALSE
@@ -3290,6 +3290,7 @@ SQUOTE_CFA:
         LOC_RESULT  = 9         ; hw stack offset for result
         LOC_PRODUCT = 11        ; hw stack offset for product
         LOC_SIZE = LOC_COUNT+LOC_PRODUCT
+
                 PHD                     ; Save DP
                 PHY                     ; Save IP
 
@@ -3313,8 +3314,9 @@ SQUOTE_CFA:
                 ;----------------------------------------------------------
                 ; Load address, read length byte, set up char pointer.
                 ;----------------------------------------------------------
-                LDA     0,X             ; addr (counted string)
+                LDA     a:0,X           ; addr (counted string)
                 STA     LOC_PTR
+
                 SEP     #$20            ; 8-bit for byte fetch
                 .a8
                 LDA     (LOC_PTR)       ; length byte
@@ -3340,8 +3342,7 @@ SQUOTE_CFA:
                 BNE     @digit_loop
 
                 ; Leading minus: set sign, advance pointer, decrement count
-                LDA     #$FFFF
-                STA     LOC_SIGN        ; sign = negative
+                DEC     LOC_SIGN        ; Was 0, now -1, sign = negative
                 INC     LOC_PTR         ; advance char pointer
                 DEC     LOC_COUNT       ; one fewer char to process
                 BEQ     @fail_return    ; '-' alone is not a valid number
@@ -3421,7 +3422,7 @@ SQUOTE_CFA:
 @positive:
                 ; Replace TOS (addr) with result, push TRUE flag
                 LDA     LOC_RESULT
-                STA     0,X             ; TOS = result
+                STA     a:0,X           ; TOS = result using absolute addressing
                 LDA     #$FFFF          ; TRUE
                 BRA     @return
 
@@ -3434,11 +3435,11 @@ SQUOTE_CFA:
 
 @return:        DEX
                 DEX
-                STA     0,X             ; Push status code
+                STA     a:0,X           ; Push status code
                 ; Tear down hw stack locals, restore IP and DP
                 TSC                     ; Drop locals
                 CLC
-                ADC    #LOC_SIZE
+                ADC     #LOC_SIZE
                 TCS
                 PLY                     ; Restore IP
                 PLD                     ; Restore DP
