@@ -30,7 +30,7 @@ allocations:
   A  = Working register
   S  = Return Stack Pointer (RSP) - use the hardware stack!
   D  = Direct Page base for Forth internals
-  DB = Data Bank for dictionary
+  DB = Data Bank currently zero through the interpreter.
 
 Current source files are located in GitHub and can be accessed with these URLs:
 https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/build.sh
@@ -91,7 +91,8 @@ this: "lda (OFFSET,S),Y". This technique is used in the WORD_CODE procedure.
 
 However, the 65816 supports moving the direct page pointer to the procedure's
 stack frame. This is useful for using direct page addressing modes with stack
-locals. This technique is used in the hal_cputs function.
+locals. This technique is used in the hal_cputs function and in the preferred
+coding style sample.
 
 Here are additional 65816 gotchas:
 
@@ -107,3 +108,19 @@ BEQ/BNE after INX/INX:
 INX/INX clobbers the zero flag, so you can't test the just-popped value with BEQ/BNE directly after. Save to a zero page variable or use CMP #0 after the pops.
 TODO items:
 STAR_CODE, UMSTAR_CODE, UMSLASHMOD_CODE, SLASHMOD_CODE, and MOD_CODE have known failures on edge cases and need replacing with verified implementations.
+
+
+Please use the following best coding practices:
+
+Use PHD/TCD to point the direct page register at the stack frame so locals can use direct page addressing modes including INC, DEC, and indirect (loc).
+
+Do not use SCRATCH0, SCRATCH1, TMPA, TMPB, or W — all temporaries must live in the stack frame.
+
+Since DP is relocated, all parameter stack accesses via X must use absolute forced addressing, e.g. LDA a:0,X.
+
+Reserve stack space with TSC / SEC / SBC #SIZE / TCS before TCD, and save/restore PHD/PLD around the frame.
+
+Use a single @return label with BRA from success and fall-through from failure, with stack teardown, PLY, and PLD done once.
+
+An example of these techniques is in the sample coding style module:
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/sample_coding_style.s
