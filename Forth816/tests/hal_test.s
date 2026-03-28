@@ -212,7 +212,6 @@ ENDPUBLIC
 ;   C - preserved
 PUBLIC hal_lpputs
 	STRPTR = 1
-	php
 	phy
 	phx
 	pha
@@ -230,7 +229,6 @@ PUBLIC hal_lpputs
 	pla			; Clean off stack and return
 	plx
 	ply
-	plp
 	rts
 ENDPUBLIC
 

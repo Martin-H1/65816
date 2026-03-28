@@ -31,12 +31,12 @@ PUBLIC MAIN
 
 	jsr wordTest
 	jsr compareTest
+	jsr numberTest
 
 	TYPESTRCR "interpret test - exit!"
 	rts
 
 	jsr findTest
-	jsr numberTest
 	jsr interpretTest
 
 ENDPUBLIC
@@ -213,28 +213,79 @@ compare4:
 	.asciiz "cdefghi"
 
 .proc numberTest
-	;Decimal and hex conversion
+	; Invalid input returning error flag
+	LPPUTS numsg1		; empty string test
+	lda #error1
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
+
+	LPPUTS numsg1		; two minus signs
+	lda #error2
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
+
+	LPPUTS numsg1		; not a number
+	lda #error3
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
+
+	LPPUTS numsg1		; a number with trailing junk
+	lda #error4
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
+
+	; Decimal and hex conversion
+	LPPUTS numsg1
+	lda #num1
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBER_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
 	;Negative numbers
-	;Invalid input returning error flag
+
 	;Boundary values like $7FFF and $8000
 	rts
 .endproc
-num1:	.byte 01
-	.asciiz "0"
-num2:	.byte 03
-	.asciiz "-10"
-num3:	.byte 03
-	.asciiz "500"
-num4:	.byte 03
-	.asciiz "fpp"
-hex1:	.byte 00
-	.asciiz "DEAD"
-nummsg1:
-	.asciiz "Size="
-nummsg2:
-	.asciiz ", WORD='"
-nummsg3:
-	.asciiz "'"
+numsg1:	PString "Number test input='"
+numsg2:	PString "', Status="
+numsg3:	PString ", Result="
+error1:	PString ""
+error2:	PString "--"
+error3:	PString "fpp"
+error4:	PString "12G"
+num1:	PString "0"
+num2:	PString "-10"
+num3:	PString "500"
+num4:	PString "-7ff"
+hex1:	PString "DEAD"
 
 .proc findTest
 	;Word that exists in dictionary

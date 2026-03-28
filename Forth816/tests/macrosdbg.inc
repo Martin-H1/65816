@@ -16,6 +16,11 @@
 ;
 ; Macros
 ;
+.macro LPPUTS str
+       lda #str
+       jsr hal_lpputs
+.endmacro
+
 .macro TYPESTR str
 .scope
 	lda #@localstr
@@ -50,4 +55,8 @@
 	TYPESTR str
 	jsr UDOT_CODE
 	jsr CR_CODE
+.endmacro
+
+.macro  PString Arg
+	.byte   .strlen(Arg), Arg
 .endmacro
