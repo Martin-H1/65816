@@ -2254,7 +2254,7 @@ QUIT_LOOP:
 
                 ; Store character in buffer at BUF[count]
                 ; Use Y as byte index; IP already saved in frame
-                TAY
+                LDY     LOC_COUNT
                 SEP     #$20            ; 8-bit stores
                 .a8
                 LDA     LOC_CHAR
@@ -2271,7 +2271,7 @@ QUIT_LOOP:
                 ; Backspace: erase last character if any
                 ;--------------------------------------------------------------
 @backspace:
-                LDA     LOC_COUNT
+                TAY
                 BEQ     @getchar        ; Nothing to delete
                 DEC     LOC_COUNT
                 LDA     #BKSP
@@ -2291,9 +2291,12 @@ QUIT_LOOP:
                 LDA     #L_FEED
                 JSR     hal_putch
 
-                LDA     LOC_COUNT       ; actual character count = result
-
 @return:
+                LDA     LOC_COUNT       ; actual character count = result
+                DEX                     ; Push result onto parameter stack
+                DEX
+                STA     a:0,X
+
                 ; Tear down frame, restore IP and DP
                 TSC
                 CLC
@@ -2302,10 +2305,6 @@ QUIT_LOOP:
                 PLY                     ; Restore IP
                 PLD                     ; Restore DP
 
-                ; Push result onto parameter stack
-                DEX
-                DEX
-                STA     a:0,X
                 NEXT
         ENDPUBLIC
 

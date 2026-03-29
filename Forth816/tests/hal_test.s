@@ -239,12 +239,19 @@ PUBLIC hal_cready
 ENDPUBLIC
 
 ; returns a character from the terminal input buffer.
+; Note: Resets DP to zero to allow monitor to work.
 PUBLIC hal_getch
+	phd
+	lda #$0000
+	tcd
+
 	OFF16MEM
 @loop1:	jsl GET_BYTE_FROM_PC
 	bcs @loop1
 	ON16MEM
 	and #$00ff
+
+	pld
 	rts
 ENDPUBLIC
 
@@ -254,6 +261,7 @@ PUBLIC hal_ungetch
 ENDPUBLIC
 
 ; puts a character in A to console.
+; Note: Resets DP to zero to allow monitor to work.
 PUBLIC hal_putch
 @loop:	jsl SEND_BYTE_TO_PC	; retry until buffer is ready
 	bcs @loop

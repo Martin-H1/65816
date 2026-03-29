@@ -32,9 +32,9 @@ PUBLIC MAIN
 	sta length
 	ON16MEM
 	TYPESTR "Chars returned="
-;	jsr DOT_CODE
+	jsr DOT_CODE
 	TYPESTR ", text='"
-	lda #buffer
+	lda #length
 	jsr hal_lpputs
 	TYPESTRCR "'"
 	TYPESTRCR "accept test - exit!"
