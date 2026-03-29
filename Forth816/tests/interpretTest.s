@@ -32,11 +32,11 @@ PUBLIC MAIN
 	jsr wordTest
 	jsr compareTest
 	jsr numberTest
+	jsr findTest
 
 	TYPESTRCR "interpret test - exit!"
 	rts
 
-	jsr findTest
 	jsr interpretTest
 
 ENDPUBLIC
@@ -381,14 +381,26 @@ hex4:	PString "7FFF"
 hex5:	PString "8000"
 
 .proc findTest
-	;Word that exists in dictionary
-	;Word that doesn't exist
-	;Immediate vs normal word flag returned correctly
-	;Case sensitivity
+	; Word that doesn't exist
+	lda find1
+	PUSH
+	jsr FIND_CODE
+	TYPESTR "Find test of "
+	lda find1
+	jsr hal_lpputs
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	TYPESTR ", addr="
+	JSR DOTHEX_CODE
+
+	; Word that exists in dictionary
+	; Immediate vs normal word flag returned correctly
+	; Case sensitivity
 	rts
 .endproc
-find1:	.asciiz "word = "
-find2:	.asciiz "."
+find1:	PString "foobar"
+find2:	PString "NUMBER"
+find3:	PString ";"
 
 .proc interpretTest
 	;Executing a known primitive by name

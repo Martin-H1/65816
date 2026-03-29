@@ -1380,9 +1380,9 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  CR_CODE
         .a16
         .i16
-                LDA     #$0D            ; Carriage return
+                LDA     #C_RETURN       ; Carriage return
                 JSR     hal_putch
-                LDA     #$0A            ; Line feed
+                LDA     #L_FEED         ; Line feed
                 JSR     hal_putch
                 NEXT
         ENDPUBLIC
@@ -1395,7 +1395,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  SPACE_CODE
         .a16
         .i16
-                LDA     #$20
+                LDA     #SPACE
                 JSR     hal_putch
                 NEXT
         ENDPUBLIC
@@ -1408,18 +1408,19 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  SPACES_CODE
         .a16
         .i16
+                PHY
                 LDA     0,X             ; n
-                STA     TMPA
                 INX
                 INX
-                LDA     TMPA            ; Test n directly (INX clobbers zero flag)
+                TAY
                 BEQ     @done           ; Zero = no-op
 @loop:
-                LDA     #$20
+                LDA     #SPACE
                 JSR     hal_putch
-                DEC     TMPA
+                DEY
                 BNE     @loop
-@done:          NEXT
+@done:          PLY
+                NEXT
         ENDPUBLIC
 
 ;==============================================================================
@@ -1830,21 +1831,16 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  SOURCE_CODE
         .a16
         .i16
+                PHY
                 ; Push TIB address
-                LDA     UP
-                CLC
-                ADC     #U_TIB
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
+                LDY     #U_TIB
+                LDA     (UP),Y
                 DEX
                 DEX
                 STA     0,X
                 ; Push source length
-                LDA     UP
-                CLC
-                ADC     #U_SOURCELEN
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
+                LDY     #U_SOURCELEN
+                LDA     (UP),Y
                 DEX
                 DEX
                 STA     0,X
@@ -2188,14 +2184,6 @@ QUIT_LOOP:
 ;
 ; Stack on exit:
 ;   0,X = actual (character count)
-;
-; Stack frame locals (DP points here after TCD):
-;   LOC_MAXLEN = 1   maximum character count
-;   LOC_BUF    = 3   buffer base address
-;   LOC_COUNT  = 5   current character count
-;   LOC_CHAR   = 7   last received character
-;   (saved IP  = 9,  pushed by PHY before frame reserved)
-;   (saved DP  = 11, pushed by PHD before PHY)
 ;------------------------------------------------------------------------------
         HEADER  "ACCEPT", ACCEPT_CFA, 0, TIB_CFA
         CODEPTR ACCEPT_CODE
@@ -2203,11 +2191,14 @@ QUIT_LOOP:
         .a16
         .i16
 
-        LOC_MAXLEN  = 1
-        LOC_BUF     = 3
-        LOC_COUNT   = 5
-        LOC_CHAR    = 7
+        ; Stack frame locals (DP points here after TCD):
+        LOC_MAXLEN  = 1                 ; maximum character count
+        LOC_BUF     = 3                 ; buffer base address
+        LOC_COUNT   = 5                 ; current character count
+        LOC_CHAR    = 7                 ; last received character
         LOC_SIZE    = LOC_CHAR + 1      ; = 8 bytes reserved
+        ;   (saved IP  = 9,  pushed by PHY before frame reserved)
+        ;   (saved DP  = 11, pushed by PHD before PHY)
 
                 PHD                     ; Save DP
                 PHY                     ; Save IP
@@ -3501,8 +3492,196 @@ SQUOTE_CFA:
                 RTS
         .endproc
 
+;------------------------------------------------------------------------------
+; FIND ( addr -- addr 0 | xt 1 | xt -1 )
+;
+; Search the dictionary for the counted string at addr.
+;
+; Returns:
+;   addr  0   word not found; addr is the original counted string address
+;   xt    1   word found, not immediate
+;   xt   -1   word found, immediate ($FFFF)
+;
+; Dictionary entry layout (produced by HEADER macro):
+;   +0  link field   (2 bytes) pointer to previous entry, 0 = end of chain
+;   +2  flags|len    (1 byte)  F_HIDDEN=$40, F_IMMEDIATE=$80, F_LENMASK=$1F
+;   +3  name chars   (len bytes)
+;       .align 2
+;       CFA:         code pointer (2 bytes) <- execution token
+;------------------------------------------------------------------------------
+        HEADER  "FIND", FIND_CFA, 0, NUMBER_CFA
+        CODEPTR FIND_CODE
+        PUBLIC  FIND_CODE
+        .a16
+        .i16
+
+        ; Stack frame locals (DP points here after TCD):
+        LOC_ADDR    = 1         ; input lp string addr (preserved for not-found)
+        LOC_LEN     = 3         ; name length from search string (cached)
+        LOC_ENTRY   = 5         ; current dictionary entry pointer
+        LOC_NAMEPTR = 7         ; pointer to name chars in current entry
+        LOC_FLAGS   = 9         ; flags|len byte of current entry
+        LOC_CFA     = 11        ; CFA of matched entry
+        LOC_RESULT  = 13        ; result flag (1 or -1)
+        LOC_SIZE    = LOC_RESULT + 1    ; = 14 bytes
+        ;   (saved IP at LOC_SIZE+1,S pushed by PHY)
+        ;   (saved DP at LOC_SIZE+3,S pushed by PHD)
+
+                PHD                     ; Save DP
+                PHY                     ; Save IP
+
+                TSC                     ; Reserve stack frame
+                SEC
+                SBC     #LOC_SIZE
+                TCS
+                TCD                     ; DP -> stack frame
+
+                ;--------------------------------------------------------------
+                ; Load LATEST to start dictionary walk
+                ;--------------------------------------------------------------
+                LDY     #UP
+                LDA     a:0,Y
+                STA     LOC_ADDR        ; Use LOC_ADDR before it is initialized
+                LDY     #U_LATEST
+                LDA     (LOC_ADDR),Y    ; LATEST -> first entry to check
+                STA     LOC_ENTRY
+
+                ;--------------------------------------------------------------
+                ; Load input addr from TOS, cache name length
+                ;--------------------------------------------------------------
+                LDA     a:0,X           ; addr (counted string)
+                STA     LOC_ADDR
+
+                SEP     #$20            ; 8-bit fetch
+                .a8
+                LDA     (LOC_ADDR)      ; length byte of search string
+                REP     #$20
+                .a16
+                AND     #$00FF
+                STA     LOC_LEN         ; cache search name length
+
+                ;--------------------------------------------------------------
+                ; Main dictionary walk loop
+                ;--------------------------------------------------------------
+@next_entry:
+                LDA     LOC_ENTRY
+                BEQ     @not_found      ; Link = 0 -> end of chain
+
+                ;--------------------------------------------------------------
+                ; Fetch flags|len byte at entry+2, check hidden
+                ;--------------------------------------------------------------
+                LDA     LOC_ENTRY
+                CLC
+                ADC     #2              ; Point to flags|len byte
+                STA     LOC_NAMEPTR     ; Temporarily use LOC_NAMEPTR as ptr
+
+                SEP     #$20
+                .a8
+                LDA     (LOC_NAMEPTR)   ; flags|len byte
+                REP     #$20
+                .a16
+                AND     #$00FF
+                STA     LOC_FLAGS       ; Save full flags|len
+
+                ; Check hidden flag
+                AND     #F_HIDDEN
+                BNE     @follow_link    ; Hidden -> skip this entry
+
+                ; Check name length match
+                LDA     LOC_FLAGS
+                AND     #F_LENMASK      ; Isolate length field
+                CMP     LOC_LEN         ; Compare with search length
+                BNE     @follow_link    ; Lengths differ -> no match
+
+                ;--------------------------------------------------------------
+                ; Lengths match: compare name bytes
+                ; LOC_NAMEPTR currently points to flags|len byte;
+                ; advance by 1 to point to first name character.
+                ; Search string chars start at LOC_ADDR+1.
+                ;--------------------------------------------------------------
+                INC     LOC_NAMEPTR     ; Now points to entry name chars
+
+                LDA     LOC_ADDR
+                INC     A               ; Point past length byte
+                STA     LOC_CFA         ; Borrow LOC_CFA as search char ptr
+
+                LDY     #0              ; Byte index
+@cmp_loop:
+                SEP     #$20
+                .a8
+                LDA     (LOC_NAMEPTR),Y ; Entry name byte
+                CMP     (LOC_CFA),Y     ; Search string byte
+                REP     #$20
+                .a16
+                BNE     @follow_link    ; Mismatch -> try next entry
+
+                INY
+                CPY     LOC_LEN         ; Compared all bytes?
+                BNE     @cmp_loop       ; No -> continue
+
+                ;--------------------------------------------------------------
+                ; Full name match. Compute CFA.
+                ; CFA = entry + 2 (link) + 1 (flags|len) + namelen, .align 2
+                ; i.e. (entry + 3 + namelen) rounded up to next even address.
+                ;--------------------------------------------------------------
+                LDA     LOC_ENTRY
+                CLC
+                ADC     #3              ; Skip link(2) + flags|len(1)
+                ADC     LOC_LEN         ; Skip name bytes
+                INC     A               ; Round up: if odd, +1 makes even;
+                AND     #$FFFE          ; if even, +1 then mask gives same even
+                STA     LOC_CFA         ; LOC_CFA = CFA (execution token)
+
+                ; Determine result flag from F_IMMEDIATE
+                LDA     LOC_FLAGS
+                AND     #F_IMMEDIATE
+                BEQ     @normal_word
+                LDA     #FORTH_TRUE     ; Immediate -> -1
+                BRA     @store_result
+@normal_word:
+                LDA     #1              ; Normal -> 1
+@store_result:
+                STA     LOC_RESULT
+
+                ; Push xt then flag
+                LDA     LOC_CFA
+                STA     a:0,X           ; Replace addr on TOS with xt
+                LDA     LOC_RESULT
+                BRA     @return
+
+                ;--------------------------------------------------------------
+                ; Follow link to next entry
+                ;--------------------------------------------------------------
+@follow_link:
+                LDA     (LOC_ENTRY)     ; Fetch link field (at offset 0)
+                STA     LOC_ENTRY
+                BRA     @next_entry
+
+                ;--------------------------------------------------------------
+                ; Not found: leave original addr on stack, push 0
+                ;--------------------------------------------------------------
+@not_found:
+                ; addr is still at a:0,X (untouched)
+                LDA     #FORTH_FALSE    ; 0
+
+                ;--------------------------------------------------------------
+                ; Single return path
+                ;--------------------------------------------------------------
+@return:
+                DEX                     ; Push flag onto parameter stack
+                DEX
+                STA     a:0,X
+                TSC                     ; Tear down frame
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY                     ; Restore IP
+                PLD                     ; Restore DP
+                NEXT
+        ENDPUBLIC
+
 ; ABORT" ( flag -- ) abort with message if flag non-zero
-        .word   NUMBER_CFA              ; Link field
+        .word   FIND_CFA               ; Link field
         .byte   F_IMMEDIATE | 6        ; Flags + length (6 chars)
         .byte   "ABORT", $22           ; 'A' 'B' 'O' 'R' 'T' '"'
         .align  2
