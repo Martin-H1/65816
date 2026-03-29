@@ -12,6 +12,23 @@ forced addressing, e.g. LDA a:0,X.
 Reserve stack space with TSC / SEC / SBC #SIZE / TCS before TCD, and
 save/restore PHD,PHY/PLY,PLD around the frame.
 
+Howerver, prefer the lightweight PHY/PLY only with Y as a counter for simple
+loops with no indirect memory access. SPACES_CODE is a good example.
+
+Reserve the full PHD/TCD stack frame pattern for routines that genuinely need
+indirect addressing through locals, multiple temporaries, or INC/DEC on local
+variables. Don't use a sledgehammer when a tack hammer will do.
+
+All zero page variables (UP, W, etc.) must be accessed before TCD, or via
+absolute forced addressing after TCD. Any indirect access through a zero page
+pointer after TCD must first load the pointer value into a stack frame local
+using absolute forced addressing, then use that local as the indirect base.
+
+A corollary is that frame setup should fetch any zero page values needed
+throughout the routine — like UP for user area access — into locals immediately
+after reserving the frame but before TCD, following the same pattern NUMBER
+uses for BASE.
+
 Use a single @return label with BRA from success and fall-through from failure,
 with stack teardown, PLY, and PLD done once. Specifically, the @return label
 must encompass the result push and all stack/register teardown; success and
