@@ -1,0 +1,46 @@
+Please use the following best coding practices:
+
+Use PHD/TCD to point the direct page register at the stack frame so locals can
+use direct page addressing modes including INC, DEC, and indirect (loc).
+
+Do not use SCRATCH0, SCRATCH1, TMPA, TMPB, or W — all temporaries must live in
+the stack frame.
+
+Since DP is relocated, all parameter stack accesses via X must use absolute
+forced addressing, e.g. LDA a:0,X.
+
+Reserve stack space with TSC / SEC / SBC #SIZE / TCS before TCD, and
+save/restore PHD,PHY/PLY,PLD around the frame.
+
+Use a single @return label with BRA from success and fall-through from failure,
+with stack teardown, PLY, and PLD done once. Specifically, the @return label
+must encompass the result push and all stack/register teardown; success and
+failure paths must BRA @return or fall through into it, not perform any work
+after the label.
+
+Note: The result must be pushed to the parameter stack before stack frame
+teardown, because TSC clobbers A. The order must always be:
+
+1. DEX / DEX — make room on parameter stack
+2. STA a:0,X — store result
+3. TSC / CLC / ADC / TCS — tear down frame
+4. PLY — restore IP
+5. PLD — restore DP
+6. NEXT
+
+A is not clobbered by SEP/REP transitions, so don't insert redundant reloads
+after mode switches.
+
+Y is available as a scratch register within a routine where IP is already saved
+in the stack frame, so the model doesn't add unnecessary PHY/PLY pairs around
+short Y usage.
+
+Do not use numeric literals for character codes; use named constants such as
+C_RETURN, BKSP, DEL, SPACE, L_FEED which are defined in constants.inc.
+
+Flags set by the last operation should be exploited where possible — e.g. "use
+TAY / BEQ rather than a separate load to test a value that is already available
+or can be transferred cheaply."
+
+An example of these techniques is in the sample coding style module:
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/sample_coding_style.s

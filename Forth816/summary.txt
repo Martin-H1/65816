@@ -44,12 +44,7 @@ https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/hal.i
 https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/hal_mench.s
 https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/forth.s
 
-In the source code you will notice the use of the macros PUBLIC and ENDPUBLIC.
-They are important as that allows the functions to be called by unit tests.
-The unit test are written in 65816 assembly and I don't have a testing
-framework.
-
-During our previous session we ran into a few issues with invalid 65816
+During our previous sessions we ran into a few issues with invalid 65816
 op codes, CA65 syntax, and 65816 best programming practices. I've retained a
 summary of some of those issues:
 
@@ -79,48 +74,41 @@ and wrote header bytes manually, including the quote character as a numeric
 byte value $22.
 
 Word defintions end in NEXT, so a word definition can't JSR directly to another
-word definition. That's beecause the JSR return. When this is required, this is
-worked around by refactoring the word code into a helper function.
-SLASHMOD_CODE and SLASHMOD_IMPL are an example of this pattern.
+word definition. That's beecause the JSR requires and RTS return. When this is
+required, this is worked around by refactoring the word code into a helper
+function. SLASHMOD_CODE and SLASHMOD_IMPL are an example of this pattern.
 
 The 65816 supports stack relative addressing which is used to create stack local
 variables within a procedure. This reduces the need for direct page space, and
 eases register starvation issues. A restriction is that the only indirect stack
 local addressing mode is indexed indirect addressing using the Y register like
-this: "lda (OFFSET,S),Y". This technique is used in the WORD_CODE procedure.
+this: "lda (OFFSET,S),Y".
 
-However, the 65816 supports moving the direct page pointer to the procedure's
-stack frame. This is useful for using direct page addressing modes with stack
-locals. This technique is used in the ACCEPT_CODE function and in the preferred
-coding style sample.
+In addition, the 65816 supports moving the direct page pointer to the
+procedure's stack frame. This is useful for using direct page addressing modes
+with stack locals. This technique is used in the ACCEPT_CODE function and in
+the preferred coding style sample. My coding prompts will contain detailed
+requirements around using this technique.
 
 Here are additional 65816 gotchas:
 
-STZ only supports direct page and absolute addressing — no indirect modes. Use LDA #0 / STA (addr) instead
-INC, DEC, LDY, LDX don't support stack-relative addressing — only LDA/STA do
-JSR indirect doesn't exist — use JMP indirect instead (safe since Forth words end in NEXT anyway)
-BGE, BLE, BLT, BGT don't exist — see the branch table in your summary
-PEA $0000 / PLB / PLB is a cleaner way to set the Data Bank Register than SEP / LDA #0 / PHA / PLB
+STZ only supports direct page and absolute addressing — no indirect modes.
+Use LDA #0 / STA (addr) instead.
+INC, DEC, LDY, LDX don't support stack-relative addressing — only LDA/STA do.
+JSR indirect doesn't exist — use JMP indirect instead (safe since Forth words
+end in NEXT anyway).
+BGE, BLE, BLT, BGT don't exist — see the branch table above in the summary.
+PEA $0000 / PLB / PLB is a cleaner way to set the Data Bank Register than
+SEP / LDA #0 / PHA / PLB
 
 PHY/PLY around loops:
-Any primitive that uses LDY #n or TAY as a loop counter must save and restore Y with PHY/PLY since Y holds the Forth instruction pointer (IP).
-BEQ/BNE after INX/INX:
-INX/INX clobbers the zero flag, so you can't test the just-popped value with BEQ/BNE directly after. Save to a zero page variable or use CMP #0 after the pops.
-TODO items:
-STAR_CODE, UMSTAR_CODE, UMSLASHMOD_CODE, SLASHMOD_CODE, and MOD_CODE have known failures on edge cases and need replacing with verified implementations.
+* Any primitive that uses LDY #n or TAY as a loop counter must save and restore
+Y with PHY/PLY since Y holds the Forth instruction pointer (IP). However, when
+Y is saved in the stackframe this can be omitted.
+* BEQ/BNE after INX/INX: INX/INX clobbers the zero flag, so you can't test the
+just-popped value with BEQ/BNE directly after. Save to a zero page variable,
+stack local, or use CMP #0 after the pops.
 
-
-Please use the following best coding practices:
-
-Use PHD/TCD to point the direct page register at the stack frame so locals can use direct page addressing modes including INC, DEC, and indirect (loc).
-
-Do not use SCRATCH0, SCRATCH1, TMPA, TMPB, or W — all temporaries must live in the stack frame.
-
-Since DP is relocated, all parameter stack accesses via X must use absolute forced addressing, e.g. LDA a:0,X.
-
-Reserve stack space with TSC / SEC / SBC #SIZE / TCS before TCD, and save/restore PHD/PLD around the frame.
-
-Use a single @return label with BRA from success and fall-through from failure, with stack teardown, PLY, and PLD done once.
-
-An example of these techniques is in the sample coding style module:
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/sample_coding_style.s
+TODO items: STAR_CODE, UMSTAR_CODE, UMSLASHMOD_CODE, SLASHMOD_CODE, and
+MOD_CODE have known failures on edge cases and need replacing with verified
+implementations.

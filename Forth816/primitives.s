@@ -3355,7 +3355,7 @@ SQUOTE_CFA:
                 TCS
 
                 ;----------------------------------------------------------
-                ; Fetch BASE using page zero pointer into LOC_BASE
+                ; Fetch BASE using UP page zero pointer into LOC_BASE
                 ;----------------------------------------------------------
                 LDY     #U_BASE
                 LDA     (UP),Y          ; BASE
