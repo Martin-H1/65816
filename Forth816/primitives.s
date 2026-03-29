@@ -2171,85 +2171,141 @@ QUIT_LOOP:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; ACCEPT ( addr len -- actual ) read a line from UART into buffer
+; ACCEPT ( addr maxlen -- actual )
+;
+; Read a line from the UART into the buffer at addr, up to maxlen characters.
+; Returns actual character count (not including the terminating CR).
+;
+; Supported control characters:
+;   CR  ($0D) - end of input
+;   BS  ($08) - backspace: erase last character if any
+;   DEL ($7F) - same as BS
+;   All other characters stored if buffer not full, echoed to terminal.
+;
+; Stack on entry (X = PSP):
+;   0,X = maxlen
+;   2,X = addr
+;
+; Stack on exit:
+;   0,X = actual (character count)
+;
+; Stack frame locals (DP points here after TCD):
+;   LOC_MAXLEN = 1   maximum character count
+;   LOC_BUF    = 3   buffer base address
+;   LOC_COUNT  = 5   current character count
+;   LOC_CHAR   = 7   last received character
+;   (saved IP  = 9,  pushed by PHY before frame reserved)
+;   (saved DP  = 11, pushed by PHD before PHY)
 ;------------------------------------------------------------------------------
         HEADER  "ACCEPT", ACCEPT_CFA, 0, TIB_CFA
         CODEPTR ACCEPT_CODE
         PUBLIC  ACCEPT_CODE
         .a16
         .i16
-                LDA     0,X             ; max len
-                STA     TMPA
-                INX
-                INX
-                LDA     0,X             ; addr
-                INX
-                INX
-                STA     SCRATCH0        ; Buffer pointer
-                STZ     SCRATCH1        ; Char count = 0
 
+        LOC_MAXLEN  = 1
+        LOC_BUF     = 3
+        LOC_COUNT   = 5
+        LOC_CHAR    = 7
+        LOC_SIZE    = LOC_CHAR + 1      ; = 8 bytes reserved
+
+                PHD                     ; Save DP
+                PHY                     ; Save IP
+
+                TSC                     ; Reserve stack frame
+                SEC
+                SBC     #LOC_SIZE
+                TCS
+                TCD                     ; DP -> stack frame
+
+                ; Pop arguments from parameter stack using absolute addressing
+                LDA     a:0,X           ; maxlen
+                STA     LOC_MAXLEN
+                LDA     a:2,X           ; addr
+                STA     LOC_BUF
+                ; Drop both cells from parameter stack
+                TXA
+                CLC
+                ADC     #4
+                TAX
+
+                STZ     LOC_COUNT       ; char count = 0
+
+                ;--------------------------------------------------------------
+                ; Main character receive loop
+                ;--------------------------------------------------------------
 @getchar:
-                JSR     hal_getch       ; Blocking receive, char in A
-                STA     TMPB            ; Save char for later use
+                JSR     hal_getch       ; Blocking receive; char returned in A
+                AND     #$00FF          ; Mask to byte
+                STA     LOC_CHAR        ; Save received character
 
-                ; Handle CR → end of line
-                CMP     #$0D
+                CMP     #C_RETURN       ; CR -> end of line
                 BEQ     @done
 
-                ; Handle backspace (BS or DEL)
-                CMP     #$08
+                CMP     #BKSP           ; BS -> backspace
                 BEQ     @backspace
-                CMP     #$7F
+                CMP     #DEL            ; DEL -> backspace
                 BEQ     @backspace
 
-                ; Check buffer full - ignore char if so
-                LDA     SCRATCH1
-                CMP     TMPA
-                BCS     @getchar
+                ; Normal character: store if buffer not full
+                LDA     LOC_COUNT
+                CMP     LOC_MAXLEN      ; count >= maxlen?
+                BCS     @getchar        ; Buffer full, discard char
 
-                ; Store char in buffer
-                PHY                     ; Save IP
-                LDY     SCRATCH1        ; Index = current count
-                SEP     #MEM16
-                .A8
-                LDA     TMPB            ; Restore char
-                STA     (SCRATCH0),Y    ; Store in buffer
-                REP     #MEM16
-                .A16
-                PLY                     ; Restore IP
+                ; Store character in buffer at BUF[count]
+                ; Use Y as byte index; IP already saved in frame
+                TAY
+                SEP     #$20            ; 8-bit stores
+                .a8
+                LDA     LOC_CHAR
+                STA     (LOC_BUF),Y     ; BUF[count] = char
+                REP     #$20
+                .a16
 
-                ; Echo char back
-                LDA     TMPB
-                JSR     hal_putch
+                JSR     hal_putch       ; Echo character
 
-                ; Increment count
-                INC     SCRATCH1
+                INC     LOC_COUNT
                 BRA     @getchar
 
+                ;--------------------------------------------------------------
+                ; Backspace: erase last character if any
+                ;--------------------------------------------------------------
 @backspace:
-                LDA     SCRATCH1
+                LDA     LOC_COUNT
                 BEQ     @getchar        ; Nothing to delete
-                DEC     SCRATCH1
-                ; Echo backspace-space-backspace to erase character on terminal
-                LDA     #$08
+                DEC     LOC_COUNT
+                LDA     #BKSP
                 JSR     hal_putch
-                LDA     #$20
+                LDA     #SPACE          ; Space (erase on terminal)
                 JSR     hal_putch
-                LDA     #$08
+                LDA     #BKSP           ; BS again (reposition cursor)
                 JSR     hal_putch
                 BRA     @getchar
 
+                ;--------------------------------------------------------------
+                ; CR received: echo CR+LF, push count, tear down and return
+                ;--------------------------------------------------------------
 @done:
-                ; Echo CR+LF
-                LDA     #$0D
+                LDA     #C_RETURN
                 JSR     hal_putch
-                LDA     #$0A
+                LDA     #L_FEED
                 JSR     hal_putch
-                ; Push actual char count
-                LDA     SCRATCH1
+
+                LDA     LOC_COUNT       ; actual character count = result
+
+@return:
+                ; Tear down frame, restore IP and DP
+                TSC
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY                     ; Restore IP
+                PLD                     ; Restore DP
+
+                ; Push result onto parameter stack
                 DEX
                 DEX
-                STA     0,X
+                STA     a:0,X
                 NEXT
         ENDPUBLIC
 

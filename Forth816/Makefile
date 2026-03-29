@@ -7,8 +7,13 @@ release: bin bin/forth816.rom
 bin/forth816.rom: obj/forth.o obj/hal_mench.o obj/primitives.o
 	$(LD65) -C forth.cfg -o bin/forth816.rom -m bin/forth816.map $^
 
-tests: tests/bin/compareTest.srec tests/bin/interpretTest.srec tests/bin/ioTest.srec \
-	tests/bin/mathTest.srec tests/bin/memoryTest.srec tests/bin/stackTest.srec
+tests: tests/bin/acceptTest.srec tests/bin/compareTest.srec \
+	tests/bin/interpretTest.srec tests/bin/ioTest.srec \
+	tests/bin/mathTest.srec tests/bin/memoryTest.srec \
+	tests/bin/stackTest.srec
+
+tests/bin/acceptTest.bin: tests/obj/hal_test.o tests/obj/acceptTest.o obj/primitives.o
+	$(LD65) -C tests/test.cfg -o tests/bin/acceptTest.bin -m tests/bin/acceptTest.map $^
 
 tests/bin/compareTest.bin: tests/obj/hal_test.o tests/obj/compareTest.o obj/primitives.o
 	$(LD65) -C tests/test.cfg -o tests/bin/compareTest.bin -m tests/bin/compareTest.map $^

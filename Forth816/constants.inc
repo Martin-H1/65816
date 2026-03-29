@@ -70,6 +70,7 @@ GS              = $1D           ; group separator
 RS              = $1E           ; record separator
 US              = $1F           ; unit separator
 SPACE           = $20           ; space
+DEL             = $7F           ; Delete
 
 XON             = DC1           ; puunch (send) ON
 XOFF            = DC3           ; punch (send) OFF
