@@ -91,7 +91,7 @@ this: "lda (OFFSET,S),Y". This technique is used in the WORD_CODE procedure.
 
 However, the 65816 supports moving the direct page pointer to the procedure's
 stack frame. This is useful for using direct page addressing modes with stack
-locals. This technique is used in the hal_cputs function and in the preferred
+locals. This technique is used in the ACCEPT_CODE function and in the preferred
 coding style sample.
 
 Here are additional 65816 gotchas:
