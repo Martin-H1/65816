@@ -188,8 +188,9 @@ Common UART chips:
 sudo apt install cc65
 
 # Build
-chmod +x build.sh
-./build.sh
+make all
+make debug
+make tests
 
 # Output: build/forth.bin (64KB ROM image)
 ```
@@ -199,11 +200,14 @@ chmod +x build.sh
 ### What is complete
 - Full inner interpreter (NEXT, DOCOL, DOVAR, DOCON, DODOES)
 - All primitive words assembled and linked
-- UART I/O with polling
+- UART I/O with polling via HAL
 - QUIT outer interpreter loop skeleton
 - ACCEPT line editor with backspace support
+- NUMBER conversion routine.
+- WORD parser is complete.
 - Dictionary search (FIND)
 - System initialization and hardware vectors
+- Extensive unit tests for primitive verification
 
 ### What needs completion
 The following words have stubs and need full implementation:
@@ -213,26 +217,12 @@ The following words have stubs and need full implementation:
 
 2. **`CONSTANT VARIABLE CREATE DOES>`** - Defining words
 
-3. **`WORD`** - Parser is sketched but register allocation needs
-   additional ZP variables (add PARSE_PTR, PARSE_LEN, PARSE_BASE
-   to the zero page segment)
+3. **`." S"`** - String literal compilation
 
-4. **`NUMBER`** - Number conversion is sketched; needs clean
-   re-implementation with dedicated ZP scratch space
-
-5. **`." S"`** - String literal compilation
-
-### Suggested next ZP variables to add
-```asm
-; In ZEROPAGE segment, add:
-PARSE_ADDR:   .res 2   ; Current parse buffer address
-PARSE_LEN:    .res 2   ; Parse buffer length  
-PARSE_IDX:    .res 2   ; Current parse index
-DIGIT_BUF:    .res 8   ; Number digit output buffer
-```
+4. **INTERPRET needs a rework
 
 ### Extending for your SBC
-- Change UART constants for your UART chip
+- Change HAL code for your UART chip
 - Adjust DICT_TOP if you have more/less RAM
 - Add IRQ handler if you want interrupt-driven I/O
 - Add NMI handler for a hardware reset button
