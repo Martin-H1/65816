@@ -394,13 +394,47 @@ hex5:	PString "8000"
 	JSR DOTHEX_CODE
 
 	; Word that exists in dictionary
+	lda find2
+	PUSH
+	jsr FIND_CODE
+	TYPESTR "Find test of "
+	lda find2
+	jsr hal_lpputs
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	TYPESTR ", addr="
+	JSR DOTHEX_CODE
+
 	; Immediate vs normal word flag returned correctly
+	lda find3
+	PUSH
+	jsr FIND_CODE
+	TYPESTR "Find test of "
+	lda find3
+	jsr hal_lpputs
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	TYPESTR ", addr="
+	JSR DOTHEX_CODE
+
 	; Case sensitivity
+	lda find4
+	PUSH
+	jsr FIND_CODE
+	TYPESTR "Find test of "
+	lda find4
+	jsr hal_lpputs
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	TYPESTR ", addr="
+	JSR DOTHEX_CODE
+
 	rts
 .endproc
 find1:	PString "foobar"
 find2:	PString "NUMBER"
 find3:	PString ";"
+find4:	PString "number"
 
 .proc interpretTest
 	;Executing a known primitive by name

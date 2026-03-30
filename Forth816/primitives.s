@@ -1341,6 +1341,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 
 ;------------------------------------------------------------------------------
 ; TYPE ( addr u -- ) transmit u characters from addr via HAL
+; TODO - rework this to use PHY, PHX and X and Y reg for counters.
 ;------------------------------------------------------------------------------
         HEADER  "TYPE", TYPE_CFA, 0, KEYQ_CFA
         CODEPTR TYPE_CODE
