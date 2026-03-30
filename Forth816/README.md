@@ -18,12 +18,19 @@ targeting a single-board computer with UART serial I/O.
 ## File Structure
 
 ```
+Makefile        Makefile build file (requires cc65 suite)
+build.sh        Build script (requires cc65 suite)
+constants.inc   Project wide constants to avoid magic numbers
+dictionary.inc  Forward declarations for all CFA labels
 forth.cfg       Linker memory map configuration
 forth.s         Main kernel: init, inner interpreter, vectors
-primitives.s    All assembly-coded primitive words
+hal.inc         Hardware Abstraction Layer interface
+hal_mench.s     HAL implementation for w65c265 Mench Reloaded SBC
 macros.inc      ca65 macros (NEXT, PUSH, POP, HEADER, CODEPTR)
-dictionary.inc  Forward declarations for all CFA labels
-build.sh        Build script (requires cc65 suite)
+primitives.s    All assembly-coded primitive words
+prompt.txt      The following three files are Claude prompts and coding styles.
+sample_coding_style.s
+summary.txt
 ```
 
 ## Memory Map

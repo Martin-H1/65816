@@ -33,16 +33,16 @@ allocations:
   DB = Data Bank currently zero through the interpreter.
 
 Current source files are located in GitHub and can be accessed with these URLs:
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/build.sh
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/macros.inc
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/constants.inc
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/forth.cfg
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/Makefile
 https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/README.md
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/primitives.s
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/constants.inc
 https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/dictionary.inc
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/forth.cfg
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/forth.s
 https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/hal.inc
 https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/hal_mench.s
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/forth.s
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/macros.inc
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/primitives.s
 
 During our previous sessions we ran into a few issues with invalid 65816
 op codes, CA65 syntax, and 65816 best programming practices. I've retained a
