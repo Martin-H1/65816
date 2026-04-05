@@ -1,7 +1,22 @@
-Please use the following best coding practices:
+We have identified three classes of routines and each class has it own best
+coding practices:
 
-Use PHD/TCD to point the direct page register at the stack frame so locals can
-use direct page addressing modes including INC, DEC, and indirect (loc).
+1. Simple loops needing only a single scratch PHY/PLY with Y as counter.
+2. Simple buffer walks with addr and count, use (offset,S),Y with X as counter.
+3. Complex routines needing indirect addressing through locals, multiple
+temporaries, or INC/DEC on locals. Use a full PHD/TCD stack frame.
+
+Prefer the lightweight PHY/PLY only with Y as a counter for simple loops with
+no indirect memory access. See SPACES_CODE for a good example.
+
+For simple buffer iteration with an address and count, prefer pushing addr and
+count onto the hardware stack and using (offset,S),Y with Y as the byte index
+and X as a decrement counter, avoiding a full stack frame entirely. See the
+routine TYPE_CODE for a good example of this pattern.
+
+For case 3, use PHD/TCD to point the direct page register at the stack frame
+so locals can use direct page addressing modes including INC, DEC, and indirect
+(loc).
 
 Do not use SCRATCH0, SCRATCH1, TMPA, TMPB, or W — all temporaries must live in
 the stack frame.
@@ -11,9 +26,6 @@ forced addressing, e.g. LDA a:0,X.
 
 Reserve stack space with TSC / SEC / SBC #SIZE / TCS before TCD, and
 save/restore PHD,PHY/PLY,PLD around the frame.
-
-Howerver, prefer the lightweight PHY/PLY only with Y as a counter for simple
-loops with no indirect memory access. SPACES_CODE is a good example.
 
 Reserve the full PHD/TCD stack frame pattern for routines that genuinely need
 indirect addressing through locals, multiple temporaries, or INC/DEC on local
@@ -26,8 +38,8 @@ using absolute forced addressing, then use that local as the indirect base.
 
 A corollary is that frame setup should fetch any zero page values needed
 throughout the routine — like UP for user area access — into locals immediately
-after reserving the frame but before TCD, following the same pattern NUMBER
-uses for BASE.
+after reserving the frame but before TCD, following the same pattern
+NUMBER_CODE uses for BASE.
 
 Use a single @return label with BRA from success and fall-through from failure,
 with stack teardown, PLY, and PLD done once. Specifically, the @return label
