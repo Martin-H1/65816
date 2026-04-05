@@ -1341,35 +1341,39 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 
 ;------------------------------------------------------------------------------
 ; TYPE ( addr u -- ) transmit u characters from addr via HAL
-; TODO - rework this to use PHY, PHX and X and Y reg for counters.
+; TODO - unit test this rework.
 ;------------------------------------------------------------------------------
         HEADER  "TYPE", TYPE_CFA, 0, KEYQ_CFA
         CODEPTR TYPE_CODE
         PUBLIC  TYPE_CODE
         .a16
         .i16
-                LDA     0,X             ; u
-                STA     TMPA
+                PHY
+                LDY     0,X             ; u
                 INX
                 INX
                 LDA     0,X             ; addr
-                STA     SCRATCH0
                 INX
                 INX
-                LDA     TMPA            ; Zero count = no-op (test TMPA directly,
-                BEQ     @done           ; not after INX which clobbers zero flag)
+                PHX
+                PHA
+                TYX                     ; Zero count = no-op
+                BEQ     @done           ; not after INX which clobbers z flag)
+                LDY     #0000
 @loop:
                 SEP     #MEM16
                 .A8
-                LDA     (SCRATCH0)      ; Fetch byte
+                LDA     (1,S),Y         ; Fetch byte
                 REP     #MEM16
                 .A16
                 AND     #$00FF
                 JSR     hal_putch
-                INC     SCRATCH0        ; Advance pointer
-                DEC     TMPA
+                INY                     ; Advance pointer
+                DEX
                 BNE     @loop
-@done:
+@done:          PLA                     ; Clean up stack frame
+                PLX
+                PLY
                 NEXT
         ENDPUBLIC
 
