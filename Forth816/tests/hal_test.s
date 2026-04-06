@@ -141,7 +141,7 @@ TMPB:           .res 2          ; Temp for multiply/divide
 ; CFA used to handle the NEXT at the end of code were testing.
 CFA_LIST:
 	.word RTS_CFA
-HEADER "RTS", RTS_CFA, 0, 0
+HEADER "RTS", RTS_ENTRY, RTS_CFA, 0, 0
 CODEPTR RTS_CODE
 PUBLIC  RTS_CODE
 	ldy #CFA_LIST

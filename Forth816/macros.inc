@@ -80,7 +80,8 @@ MACROS_INC = 1
 ;   lbl:                 ; <- CFA label (this is the execution token)
 ;   .word  code_ptr      ; Code field  (2 bytes, filled by CODEPTR macro)
 ;------------------------------------------------------------------------------
-.macro  HEADER  str_name, lbl, flags, prev
+.macro  HEADER  str_name, entry_lbl, cfa_lbl, flags, prev
+entry_lbl:
         .ifnblank prev
           .word prev
         .else
@@ -89,7 +90,7 @@ MACROS_INC = 1
         .byte (flags | .strlen(str_name))
         .byte str_name
         .align 2
-lbl:
+cfa_lbl:
 .endmacro
 
 ;------------------------------------------------------------------------------

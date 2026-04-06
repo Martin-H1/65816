@@ -252,7 +252,7 @@ ENDPUBLIC
 ; CFA used to handle the NEXT at the end of code were testing.
 TORTESTCFA_LIST:
 	.word RTEST_CFA
-HEADER "RTS", RTEST_CFA, 0, 0
+HEADER "RTS", RTEST_ENTRY, RTEST_CFA, 0, 0
 CODEPTR RTEST_CODE
 PUBLIC  RTEST_CODE
 	pla			; pull the item pushed by the pimitive

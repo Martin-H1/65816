@@ -7,7 +7,7 @@
 ;
 ; Pattern for each primitive word:
 ;
-;   HEADER  "NAME", NAME_CFA, flags, PREV_CFA
+;   HEADER  "NAME", NAME_ENTRY, NAME_CFA, flags, PREV_ENTRY
 ;   CODEPTR NAME_CODE
 ;   .proc   NAME_CODE
 ;           ... machine code ...
@@ -45,7 +45,7 @@
 ;------------------------------------------------------------------------------
 ; DUP ( a -- a a )
 ;------------------------------------------------------------------------------
-        HEADER  "DUP", DUP_CFA, 0, 0
+        HEADER  "DUP", DUP_ENTRY, DUP_CFA, 0, 0
         CODEPTR DUP_CODE
         PUBLIC  DUP_CODE
         .a16
@@ -60,7 +60,7 @@
 ;------------------------------------------------------------------------------
 ; DROP ( a -- )
 ;------------------------------------------------------------------------------
-        HEADER  "DROP", DROP_CFA, 0, DUP_CFA
+        HEADER  "DROP", DROP_ENTRY, DROP_CFA, 0, DUP_ENTRY
         CODEPTR DROP_CODE
         PUBLIC  DROP_CODE
         .a16
@@ -73,7 +73,7 @@
 ;------------------------------------------------------------------------------
 ; SWAP ( a b -- b a )
 ;------------------------------------------------------------------------------
-        HEADER  "SWAP", SWAP_CFA, 0, DROP_CFA
+        HEADER  "SWAP", SWAP_ENTRY, SWAP_CFA, 0, DROP_ENTRY
         CODEPTR SWAP_CODE
         PUBLIC  SWAP_CODE
         .a16
@@ -90,7 +90,7 @@
 ;------------------------------------------------------------------------------
 ; OVER ( a b -- a b a )
 ;------------------------------------------------------------------------------
-        HEADER  "OVER", OVER_CFA, 0, SWAP_CFA
+        HEADER  "OVER", OVER_ENTRY, OVER_CFA, 0, SWAP_ENTRY
         CODEPTR OVER_CODE
         PUBLIC  OVER_CODE
         .a16
@@ -105,7 +105,7 @@
 ;------------------------------------------------------------------------------
 ; ROT ( a b c -- b c a )
 ;------------------------------------------------------------------------------
-        HEADER  "ROT", ROT_CFA, 0, OVER_CFA
+        HEADER  "ROT", ROT_ENTRY, ROT_CFA, 0, OVER_ENTRY
         CODEPTR ROT_CODE
         PUBLIC  ROT_CODE
         .a16
@@ -124,7 +124,7 @@
 ;------------------------------------------------------------------------------
 ; NIP ( a b -- b )
 ;------------------------------------------------------------------------------
-        HEADER  "NIP", NIP_CFA, 0, ROT_CFA
+        HEADER  "NIP", NIP_ENTRY, NIP_CFA, 0, ROT_ENTRY
         CODEPTR NIP_CODE
         PUBLIC  NIP_CODE
         .a16
@@ -139,7 +139,7 @@
 ;------------------------------------------------------------------------------
 ; TUCK ( a b -- b a b )
 ;------------------------------------------------------------------------------
-        HEADER  "TUCK", TUCK_CFA, 0, NIP_CFA
+        HEADER  "TUCK", TUCK_ENTRY, TUCK_CFA, 0, NIP_ENTRY
         CODEPTR TUCK_CODE
         PUBLIC  TUCK_CODE
         .a16
@@ -160,7 +160,7 @@
 ;------------------------------------------------------------------------------
 ; 2DROP ( a b -- )
 ;------------------------------------------------------------------------------
-        HEADER  "2DROP", TWODROP_CFA, 0, TUCK_CFA
+        HEADER  "2DROP", TWODROP_ENTRY, TWODROP_CFA, 0, TUCK_ENTRY
         CODEPTR TWODROP_CODE
         PUBLIC  TWODROP_CODE
         .a16
@@ -175,7 +175,7 @@
 ;------------------------------------------------------------------------------
 ; 2DUP ( a b -- a b a b )
 ;------------------------------------------------------------------------------
-        HEADER  "2DUP", TWODUP_CFA, 0, TWODROP_CFA
+        HEADER  "2DUP", TWODUP_ENTRY, TWODUP_CFA, 0, TWODROP_ENTRY
         CODEPTR TWODUP_CODE
         PUBLIC  TWODUP_CODE
         .a16
@@ -196,7 +196,7 @@
 ;------------------------------------------------------------------------------
 ; 2SWAP ( a b c d -- c d a b )
 ;------------------------------------------------------------------------------
-        HEADER  "2SWAP", TWOSWAP_CFA, 0, TWODUP_CFA
+        HEADER  "2SWAP", TWOSWAP_ENTRY, TWOSWAP_CFA, 0, TWODUP_ENTRY
         CODEPTR TWOSWAP_CODE
         PUBLIC  TWOSWAP_CODE
         .a16
@@ -219,7 +219,7 @@
 ;------------------------------------------------------------------------------
 ; 2OVER ( a b c d -- a b c d a b )
 ;------------------------------------------------------------------------------
-        HEADER  "2OVER", TWOOVER_CFA, 0, TWOSWAP_CFA
+        HEADER  "2OVER", TWOOVER_ENTRY, TWOOVER_CFA, 0, TWOSWAP_ENTRY
         CODEPTR TWOOVER_CODE
         PUBLIC  TWOOVER_CODE
         .a16
@@ -240,7 +240,7 @@
 ;------------------------------------------------------------------------------
 ; DEPTH ( -- n ) number of items on parameter stack
 ;------------------------------------------------------------------------------
-        HEADER  "DEPTH", DEPTH_CFA, 0, TWOOVER_CFA
+        HEADER  "DEPTH", DEPTH_ENTRY, DEPTH_CFA, 0, TWOOVER_ENTRY
         CODEPTR DEPTH_CODE
         PUBLIC  DEPTH_CODE
         .a16
@@ -260,7 +260,7 @@
 ;------------------------------------------------------------------------------
 ; PICK ( xu...x1 x0 u -- xu...x1 x0 xu )
 ;------------------------------------------------------------------------------
-        HEADER  "PICK", PICK_CFA, 0, DEPTH_CFA
+        HEADER  "PICK", PICK_ENTRY, PICK_CFA, 0, DEPTH_ENTRY
         CODEPTR PICK_CODE
         PUBLIC  PICK_CODE
         .a16
@@ -284,7 +284,7 @@
 ;------------------------------------------------------------------------------
 ; >R ( a -- ) (R: -- a)
 ;------------------------------------------------------------------------------
-        HEADER  ">R", TOR_CFA, 0, PICK_CFA
+        HEADER  ">R", TOR_ENTRY, TOR_CFA, 0, PICK_ENTRY
         CODEPTR TOR_CODE
         PUBLIC  TOR_CODE
         .a16
@@ -299,7 +299,7 @@
 ;------------------------------------------------------------------------------
 ; R> ( -- a ) (R: a -- )
 ;------------------------------------------------------------------------------
-        HEADER  "R>", RFROM_CFA, 0, TOR_CFA
+        HEADER  "R>", RFROM_ENTRY, RFROM_CFA, 0, TOR_ENTRY
         CODEPTR RFROM_CODE
         PUBLIC  RFROM_CODE
         .a16
@@ -314,7 +314,7 @@
 ;------------------------------------------------------------------------------
 ; R@ ( -- a ) (R: a -- a)
 ;------------------------------------------------------------------------------
-        HEADER  "R@", RFETCH_CFA, 0, RFROM_CFA
+        HEADER  "R@", RFETCH_ENTRY, RFETCH_CFA, 0, RFROM_ENTRY
         CODEPTR RFETCH_CODE
         PUBLIC  RFETCH_CODE
         .a16
@@ -337,7 +337,7 @@
 ;------------------------------------------------------------------------------
 ; + ( a b -- a+b )
 ;------------------------------------------------------------------------------
-        HEADER  "+", PLUS_CFA, 0, RFETCH_CFA
+        HEADER  "+", PLUS_ENTRY, PLUS_CFA, 0, RFETCH_ENTRY
         CODEPTR PLUS_CODE
         PUBLIC  PLUS_CODE
         .a16
@@ -354,7 +354,7 @@
 ;------------------------------------------------------------------------------
 ; - ( a b -- a-b )
 ;------------------------------------------------------------------------------
-        HEADER  "-", MINUS_CFA, 0, PLUS_CFA
+        HEADER  "-", MINUS_ENTRY, MINUS_CFA, 0, PLUS_ENTRY
         CODEPTR MINUS_CODE
         PUBLIC  MINUS_CODE
         .a16
@@ -373,7 +373,7 @@
 ; TODO: Failing unit tests on edge cases (negative/large numbers).
 ;       Replace with a verified implementation.
 ;------------------------------------------------------------------------------
-        HEADER  "*", STAR_CFA, 0, MINUS_CFA
+        HEADER  "*", STAR_ENTRY, STAR_CFA, 0, MINUS_ENTRY
         CODEPTR STAR_CODE
         PUBLIC  STAR_CODE
         .a16
@@ -407,7 +407,7 @@
 ; TODO: Failing unit tests on edge cases (negative/large numbers).
 ;       Replace with a verified implementation.
 ;------------------------------------------------------------------------------
-        HEADER  "UM*", UMSTAR_CFA, 0, STAR_CFA
+        HEADER  "UM*", UMSTAR_ENTRY, UMSTAR_CFA, 0, STAR_ENTRY
         CODEPTR UMSTAR_CODE
         PUBLIC  UMSTAR_CODE
         .a16
@@ -452,7 +452,7 @@
 ; TODO: Failing unit tests on edge cases (negative/large numbers).
 ;       Replace with a verified implementation.
 ;------------------------------------------------------------------------------
-        HEADER  "UM/MOD", UMSLASHMOD_CFA, 0, UMSTAR_CFA
+        HEADER  "UM/MOD", UMSLASHMOD_ENTRY, UMSLASHMOD_CFA, 0, UMSTAR_ENTRY
         CODEPTR UMSLASHMOD_CODE
         PUBLIC  UMSLASHMOD_CODE
         .a16
@@ -525,7 +525,7 @@
 ; TODO: Failing unit tests on edge cases (negative/large numbers).
 ;       Replace with a verified implementation.
 ;------------------------------------------------------------------------------
-        HEADER  "/MOD", SLASHMOD_CFA, 0, UMSLASHMOD_CFA
+        HEADER  "/MOD", SLASHMOD_ENTRY, SLASHMOD_CFA, 0, UMSLASHMOD_ENTRY
         CODEPTR SLASHMOD_CODE
         PUBLIC  SLASHMOD_CODE
         .a16
@@ -625,7 +625,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; / ( n1 n2 -- quot ) signed division
 ;------------------------------------------------------------------------------
-        HEADER  "/", SLASH_CFA, 0, SLASHMOD_CFA
+        HEADER  "/", SLASH_ENTRY, SLASH_CFA, 0, SLASHMOD_ENTRY
         CODEPTR SLASH_CODE
         PUBLIC  SLASH_CODE
         .a16
@@ -644,7 +644,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ; TODO: Failing unit tests on edge cases (negative/large numbers).
 ;       Depends on SLASHMOD_IMPL - replace both with verified implementations.
 ;------------------------------------------------------------------------------
-        HEADER  "MOD", MOD_CFA, 0, SLASH_CFA
+        HEADER  "MOD", MOD_ENTRY, MOD_CFA, 0, SLASH_ENTRY
         CODEPTR MOD_CODE
         PUBLIC  MOD_CODE
         .a16
@@ -659,7 +659,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; NEGATE ( n -- -n )
 ;------------------------------------------------------------------------------
-        HEADER  "NEGATE", NEGATE_CFA, 0, MOD_CFA
+        HEADER  "NEGATE", NEGATE_ENTRY, NEGATE_CFA, 0, MOD_ENTRY
         CODEPTR NEGATE_CODE
         PUBLIC  NEGATE_CODE
         .a16
@@ -674,7 +674,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; ABS ( n -- |n| )
 ;------------------------------------------------------------------------------
-        HEADER  "ABS", ABS_CFA, 0, NEGATE_CFA
+        HEADER  "ABS", ABS_ENTRY, ABS_CFA, 0, NEGATE_ENTRY
         CODEPTR ABS_CODE
         PUBLIC  ABS_CODE
         .a16
@@ -690,7 +690,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; MAX ( a b -- max )
 ;------------------------------------------------------------------------------
-        HEADER  "MAX", MAX_CFA, 0, ABS_CFA
+        HEADER  "MAX", MAX_ENTRY, MAX_CFA, 0, ABS_ENTRY
         CODEPTR MAX_CODE
         PUBLIC  MAX_CODE
         .a16
@@ -708,7 +708,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; MIN ( a b -- min )
 ;------------------------------------------------------------------------------
-        HEADER  "MIN", MIN_CFA, 0, MAX_CFA
+        HEADER  "MIN", MIN_ENTRY, MIN_CFA, 0, MAX_ENTRY
         CODEPTR MIN_CODE
         PUBLIC  MIN_CODE
         .a16
@@ -726,7 +726,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 1+ ( n -- n+1 )
 ;------------------------------------------------------------------------------
-        HEADER  "1+", ONEPLUS_CFA, 0, MIN_CFA
+        HEADER  "1+", ONEPLUS_ENTRY, ONEPLUS_CFA, 0, MIN_ENTRY
         CODEPTR ONEPLUS_CODE
         PUBLIC  ONEPLUS_CODE
         .a16
@@ -738,7 +738,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 1- ( n -- n-1 )
 ;------------------------------------------------------------------------------
-        HEADER  "1-", ONEMINUS_CFA, 0, ONEPLUS_CFA
+        HEADER  "1-", ONEMINUS_ENTRY, ONEMINUS_CFA, 0, ONEPLUS_ENTRY
         CODEPTR ONEMINUS_CODE
         PUBLIC  ONEMINUS_CODE
         .a16
@@ -750,7 +750,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 2* ( n -- n*2 )
 ;------------------------------------------------------------------------------
-        HEADER  "2*", TWOSTAR_CFA, 0, ONEMINUS_CFA
+        HEADER  "2*", TWOSTAR_ENTRY, TWOSTAR_CFA, 0, ONEMINUS_ENTRY
         CODEPTR TWOSTAR_CODE
         PUBLIC  TWOSTAR_CODE
         .a16
@@ -762,7 +762,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 2/ ( n -- n/2 ) arithmetic shift right
 ;------------------------------------------------------------------------------
-        HEADER  "2/", TWOSLASH_CFA, 0, TWOSTAR_CFA
+        HEADER  "2/", TWOSLASH_ENTRY, TWOSLASH_CFA, 0, TWOSTAR_ENTRY
         CODEPTR TWOSLASH_CODE
         PUBLIC  TWOSLASH_CODE
         .a16
@@ -783,7 +783,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; = ( a b -- flag )
 ;------------------------------------------------------------------------------
-        HEADER  "=", EQUAL_CFA, 0, TWOSLASH_CFA
+        HEADER  "=", EQUAL_ENTRY, EQUAL_CFA, 0, TWOSLASH_ENTRY
         CODEPTR EQUAL_CODE
         PUBLIC  EQUAL_CODE
         .a16
@@ -803,7 +803,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; <> ( a b -- flag )
 ;------------------------------------------------------------------------------
-        HEADER  "<>", NOTEQUAL_CFA, 0, EQUAL_CFA
+        HEADER  "<>", NOTEQUAL_ENTRY, NOTEQUAL_CFA, 0, EQUAL_ENTRY
         CODEPTR NOTEQUAL_CODE
         PUBLIC  NOTEQUAL_CODE
         .a16
@@ -823,7 +823,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; < ( a b -- flag ) signed
 ;------------------------------------------------------------------------------
-        HEADER  "<", LESS_CFA, 0, NOTEQUAL_CFA
+        HEADER  "<", LESS_ENTRY, LESS_CFA, 0, NOTEQUAL_ENTRY
         CODEPTR LESS_CODE
         PUBLIC  LESS_CODE
         .a16
@@ -850,7 +850,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; > ( a b -- flag ) signed
 ;------------------------------------------------------------------------------
-        HEADER  ">", GREATER_CFA, 0, LESS_CFA
+        HEADER  ">", GREATER_ENTRY, GREATER_CFA, 0, LESS_ENTRY
         CODEPTR GREATER_CODE
         PUBLIC  GREATER_CODE
         .a16
@@ -877,7 +877,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; U< ( u1 u2 -- flag ) unsigned less than
 ;------------------------------------------------------------------------------
-        HEADER  "U<", ULESS_CFA, 0, GREATER_CFA
+        HEADER  "U<", ULESS_ENTRY, ULESS_CFA, 0, GREATER_ENTRY
         CODEPTR ULESS_CODE
         PUBLIC  ULESS_CODE
         .a16
@@ -897,7 +897,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; U> ( u1 u2 -- flag ) unsigned greater than
 ;------------------------------------------------------------------------------
-        HEADER  "U>", UGREATER_CFA, 0, ULESS_CFA
+        HEADER  "U>", UGREATER_ENTRY, UGREATER_CFA, 0, ULESS_ENTRY
         CODEPTR UGREATER_CODE
         PUBLIC  UGREATER_CODE
         .a16
@@ -917,7 +917,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 0= ( a -- flag )
 ;------------------------------------------------------------------------------
-        HEADER  "0=", ZEROEQ_CFA, 0, UGREATER_CFA
+        HEADER  "0=", ZEROEQ_ENTRY, ZEROEQ_CFA, 0, UGREATER_ENTRY
         CODEPTR ZEROEQ_CODE
         PUBLIC  ZEROEQ_CODE
         .a16
@@ -934,7 +934,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 0< ( a -- flag )
 ;------------------------------------------------------------------------------
-        HEADER  "0<", ZEROLESS_CFA, 0, ZEROEQ_CFA
+        HEADER  "0<", ZEROLESS_ENTRY, ZEROLESS_CFA, 0, ZEROEQ_ENTRY
         CODEPTR ZEROLESS_CODE
         PUBLIC  ZEROLESS_CODE
         .a16
@@ -951,7 +951,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 0> ( a -- flag )
 ;------------------------------------------------------------------------------
-        HEADER  "0>", ZEROGT_CFA, 0, ZEROLESS_CFA
+        HEADER  "0>", ZEROGT_ENTRY, ZEROGT_CFA, 0, ZEROLESS_ENTRY
         CODEPTR ZEROGT_CODE
         PUBLIC  ZEROGT_CODE
         .a16
@@ -973,7 +973,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; AND ( a b -- a&b )
 ;------------------------------------------------------------------------------
-        HEADER  "AND", AND_CFA, 0, ZEROGT_CFA
+        HEADER  "AND", AND_ENTRY, AND_CFA, 0, ZEROGT_ENTRY
         CODEPTR AND_CODE
         PUBLIC  AND_CODE
         .a16
@@ -989,7 +989,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; OR ( a b -- a|b )
 ;------------------------------------------------------------------------------
-        HEADER  "OR", OR_CFA, 0, AND_CFA
+        HEADER  "OR", OR_ENTRY, OR_CFA, 0, AND_ENTRY
         CODEPTR OR_CODE
         PUBLIC  OR_CODE
         .a16
@@ -1005,7 +1005,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; XOR ( a b -- a^b )
 ;------------------------------------------------------------------------------
-        HEADER  "XOR", XOR_CFA, 0, OR_CFA
+        HEADER  "XOR", XOR_ENTRY, XOR_CFA, 0, OR_ENTRY
         CODEPTR XOR_CODE
         PUBLIC  XOR_CODE
         .a16
@@ -1021,7 +1021,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; INVERT ( a -- ~a )
 ;------------------------------------------------------------------------------
-        HEADER  "INVERT", INVERT_CFA, 0, XOR_CFA
+        HEADER  "INVERT", INVERT_ENTRY, INVERT_CFA, 0, XOR_ENTRY
         CODEPTR INVERT_CODE
         PUBLIC  INVERT_CODE
         .a16
@@ -1035,7 +1035,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; LSHIFT ( a u -- a<<u )
 ;------------------------------------------------------------------------------
-        HEADER  "LSHIFT", LSHIFT_CFA, 0, INVERT_CFA
+        HEADER  "LSHIFT", LSHIFT_ENTRY, LSHIFT_CFA, 0, INVERT_ENTRY
         CODEPTR LSHIFT_CODE
         PUBLIC  LSHIFT_CODE
         .a16
@@ -1058,7 +1058,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; RSHIFT ( a u -- a>>u ) logical shift right
 ;------------------------------------------------------------------------------
-        HEADER  "RSHIFT", RSHIFT_CFA, 0, LSHIFT_CFA
+        HEADER  "RSHIFT", RSHIFT_ENTRY, RSHIFT_CFA, 0, LSHIFT_ENTRY
         CODEPTR RSHIFT_CODE
         PUBLIC  RSHIFT_CODE
         .a16
@@ -1085,7 +1085,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; @ ( addr -- val ) fetch cell
 ;------------------------------------------------------------------------------
-        HEADER  "@", FETCH_CFA, 0, RSHIFT_CFA
+        HEADER  "@", FETCH_ENTRY, FETCH_CFA, 0, RSHIFT_ENTRY
         CODEPTR FETCH_CODE
         PUBLIC  FETCH_CODE
         .a16
@@ -1100,7 +1100,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; ! ( val addr -- ) store cell
 ;------------------------------------------------------------------------------
-        HEADER  "!", STORE_CFA, 0, FETCH_CFA
+        HEADER  "!", STORE_ENTRY, STORE_CFA, 0, FETCH_ENTRY
         CODEPTR STORE_CODE
         PUBLIC  STORE_CODE
         .a16
@@ -1119,7 +1119,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; C@ ( addr -- byte ) fetch byte
 ;------------------------------------------------------------------------------
-        HEADER  "C@", CFETCH_CFA, 0, STORE_CFA
+        HEADER  "C@", CFETCH_ENTRY, CFETCH_CFA, 0, STORE_ENTRY
         CODEPTR CFETCH_CODE
         PUBLIC  CFETCH_CODE
         .a16
@@ -1139,7 +1139,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; C! ( byte addr -- ) store byte
 ;------------------------------------------------------------------------------
-        HEADER  "C!", CSTORE_CFA, 0, CFETCH_CFA
+        HEADER  "C!", CSTORE_ENTRY, CSTORE_CFA, 0, CFETCH_ENTRY
         CODEPTR CSTORE_CODE
         PUBLIC  CSTORE_CODE
         .a16
@@ -1162,7 +1162,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 2@ ( addr -- d ) fetch double cell (low at addr, high at addr+2)
 ;------------------------------------------------------------------------------
-        HEADER  "2@", TWOFETCH_CFA, 0, CSTORE_CFA
+        HEADER  "2@", TWOFETCH_ENTRY, TWOFETCH_CFA, 0, CSTORE_ENTRY
         CODEPTR TWOFETCH_CODE
         PUBLIC  TWOFETCH_CODE
         .a16
@@ -1187,7 +1187,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 2! ( d addr -- ) store double cell
 ;------------------------------------------------------------------------------
-        HEADER  "2!", TWOSTORE_CFA, 0, TWOFETCH_CFA
+        HEADER  "2!", TWOSTORE_ENTRY, TWOSTORE_CFA, 0, TWOFETCH_ENTRY
         CODEPTR TWOSTORE_CODE
         PUBLIC  TWOSTORE_CODE
         .a16
@@ -1210,7 +1210,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; MOVE ( src dst u -- ) copy u bytes from src to dst
 ;------------------------------------------------------------------------------
-        HEADER  "MOVE", MOVE_CFA, 0, TWOSTORE_CFA
+        HEADER  "MOVE", MOVE_ENTRY, MOVE_CFA, 0, TWOSTORE_ENTRY
         CODEPTR MOVE_CODE
         PUBLIC  MOVE_CODE
         .a16
@@ -1251,7 +1251,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; FILL ( addr u byte -- ) fill u bytes starting at addr with byte
 ;------------------------------------------------------------------------------
-        HEADER  "FILL", FILL_CFA, 0, MOVE_CFA
+        HEADER  "FILL", FILL_ENTRY, FILL_CFA, 0, MOVE_ENTRY
         CODEPTR FILL_CODE
         PUBLIC  FILL_CODE
         .a16
@@ -1296,7 +1296,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; EMIT ( char -- ) transmit character via HAL
 ;------------------------------------------------------------------------------
-        HEADER  "EMIT", EMIT_CFA, 0, FILL_CFA
+        HEADER  "EMIT", EMIT_ENTRY, EMIT_CFA, 0, FILL_ENTRY
         CODEPTR EMIT_CODE
         PUBLIC  EMIT_CODE
         .a16
@@ -1311,7 +1311,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; KEY ( -- char ) receive character (blocking) via HAL
 ;------------------------------------------------------------------------------
-        HEADER  "KEY", KEY_CFA, 0, EMIT_CFA
+        HEADER  "KEY", KEY_ENTRY, KEY_CFA, 0, EMIT_ENTRY
         CODEPTR KEY_CODE
         PUBLIC  KEY_CODE
         .a16
@@ -1326,7 +1326,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; KEY? ( -- flag ) non-blocking check for available input via HAL
 ;------------------------------------------------------------------------------
-        HEADER  "KEY?", KEYQ_CFA, 0, KEY_CFA
+        HEADER  "KEY?", KEYQ_ENTRY, KEYQ_CFA, 0, KEY_ENTRY
         CODEPTR KEYQ_CODE
         PUBLIC  KEYQ_CODE
         .a16
@@ -1343,7 +1343,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ; TYPE ( addr u -- ) transmit u characters from addr via HAL
 ; TODO - unit test this rework.
 ;------------------------------------------------------------------------------
-        HEADER  "TYPE", TYPE_CFA, 0, KEYQ_CFA
+        HEADER  "TYPE", TYPE_ENTRY, TYPE_CFA, 0, KEYQ_ENTRY
         CODEPTR TYPE_CODE
         PUBLIC  TYPE_CODE
         .a16
@@ -1380,7 +1380,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; CR ( -- ) emit carriage return + line feed via HAL
 ;------------------------------------------------------------------------------
-        HEADER  "CR", CR_CFA, 0, TYPE_CFA
+        HEADER  "CR", CR_ENTRY, CR_CFA, 0, TYPE_ENTRY
         CODEPTR CR_CODE
         PUBLIC  CR_CODE
         .a16
@@ -1395,7 +1395,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; SPACE ( -- ) emit a single space via HAL
 ;------------------------------------------------------------------------------
-        HEADER  "SPACE", SPACE_CFA, 0, CR_CFA
+        HEADER  "SPACE", SPACE_ENTRY, SPACE_CFA, 0, CR_ENTRY
         CODEPTR SPACE_CODE
         PUBLIC  SPACE_CODE
         .a16
@@ -1408,7 +1408,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; SPACES ( n -- ) emit n spaces via HAL
 ;------------------------------------------------------------------------------
-        HEADER  "SPACES", SPACES_CFA, 0, SPACE_CFA
+        HEADER  "SPACES", SPACES_ENTRY, SPACES_CFA, 0, SPACE_ENTRY
         CODEPTR SPACES_CODE
         PUBLIC  SPACES_CODE
         .a16
@@ -1435,7 +1435,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; EXIT ( -- ) return from current colon definition
 ;------------------------------------------------------------------------------
-        HEADER  "EXIT", EXIT_CFA, 0, SPACES_CFA
+        HEADER  "EXIT", EXIT_ENTRY, EXIT_CFA, 0, SPACES_ENTRY
         CODEPTR EXIT_CODE
         PUBLIC  EXIT_CODE
         .a16
@@ -1447,7 +1447,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; EXECUTE ( xt -- ) execute word by execution token
 ;------------------------------------------------------------------------------
-        HEADER  "EXECUTE", EXECUTE_CFA, 0, EXIT_CFA
+        HEADER  "EXECUTE", EXECUTE_ENTRY, EXECUTE_CFA, 0, EXIT_ENTRY
         CODEPTR EXECUTE_CODE
         PUBLIC  EXECUTE_CODE
         .a16
@@ -1464,7 +1464,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; LIT ( -- n ) push inline literal (compiled word, not user-callable)
 ;------------------------------------------------------------------------------
-        HEADER  "LIT", LIT_CFA, F_HIDDEN, EXECUTE_CFA
+        HEADER  "LIT", LIT_ENTRY, LIT_CFA, F_HIDDEN, EXECUTE_ENTRY
         CODEPTR LIT_CODE
         PUBLIC  LIT_CODE
         .a16
@@ -1482,7 +1482,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ; BRANCH ( -- ) unconditional branch (compiled word)
 ; The cell following BRANCH contains the branch offset (signed)
 ;------------------------------------------------------------------------------
-        HEADER  "BRANCH", BRANCH_CFA, F_HIDDEN, LIT_CFA
+        HEADER  "BRANCH", BRANCH_ENTRY, BRANCH_CFA, F_HIDDEN, LIT_ENTRY
         CODEPTR BRANCH_CODE
         PUBLIC  BRANCH_CODE
         .a16
@@ -1498,7 +1498,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; 0BRANCH ( flag -- ) branch if flag is zero (compiled word)
 ;------------------------------------------------------------------------------
-        HEADER  "0BRANCH", ZBRANCH_CFA, F_HIDDEN, BRANCH_CFA
+        HEADER  "0BRANCH", ZBRANCH_ENTRY, ZBRANCH_CFA, F_HIDDEN, BRANCH_ENTRY
         CODEPTR ZBRANCH_CODE
         PUBLIC  ZBRANCH_CODE
         .a16
@@ -1520,7 +1520,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; (DO) ( limit index -- ) (R: -- limit index) runtime for DO
 ;------------------------------------------------------------------------------
-        HEADER  "(DO)", DODO_CFA, F_HIDDEN, ZBRANCH_CFA
+        HEADER  "(DO)", DODO_ENTRY, DODO_CFA, F_HIDDEN, ZBRANCH_ENTRY
         CODEPTR DODO_CODE
         PUBLIC  DODO_CODE
         .a16
@@ -1540,7 +1540,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ; (LOOP) ( -- ) (R: limit index -- | limit index+1)
 ; runtime for LOOP - increments index, branches back if not done
 ;------------------------------------------------------------------------------
-        HEADER  "(LOOP)", DOLOOP_CFA, F_HIDDEN, DODO_CFA
+        HEADER  "(LOOP)", DOLOOP_ENTRY, DOLOOP_CFA, F_HIDDEN, DODO_ENTRY
         CODEPTR DOLOOP_CODE
         PUBLIC  DOLOOP_CODE
         .a16
@@ -1567,7 +1567,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ; (+LOOP) ( n -- ) (R: limit index -- | limit index+n)
 ; runtime for +LOOP
 ;------------------------------------------------------------------------------
-        HEADER  "(+LOOP)", DOPLUSLOOP_CFA, F_HIDDEN, DOLOOP_CFA
+        HEADER  "(+LOOP)", DOPLUSLOOP_ENTRY, DOPLUSLOOP_CFA, F_HIDDEN, DOLOOP_ENTRY
         CODEPTR DOPLUSLOOP_CODE
         PUBLIC  DOPLUSLOOP_CODE
         .a16
@@ -1602,7 +1602,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; UNLOOP ( -- ) (R: limit index -- ) discard DO loop parameters
 ;------------------------------------------------------------------------------
-        HEADER  "UNLOOP", UNLOOP_CFA, 0, DOPLUSLOOP_CFA
+        HEADER  "UNLOOP", UNLOOP_ENTRY, UNLOOP_CFA, 0, DOPLUSLOOP_ENTRY
         CODEPTR UNLOOP_CODE
         PUBLIC  UNLOOP_CODE
         .a16
@@ -1615,7 +1615,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; I ( -- n ) (R: limit index -- limit index) copy loop index
 ;------------------------------------------------------------------------------
-        HEADER  "I", I_CFA, 0, UNLOOP_CFA
+        HEADER  "I", I_ENTRY, I_CFA, 0, UNLOOP_ENTRY
         CODEPTR I_CODE
         PUBLIC  I_CODE
         .a16
@@ -1633,7 +1633,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; J ( -- n ) copy outer loop index
 ;------------------------------------------------------------------------------
-        HEADER  "J", J_CFA, 0, I_CFA
+        HEADER  "J", J_ENTRY, J_CFA, 0, I_ENTRY
         CODEPTR J_CODE
         PUBLIC  J_CODE
         .a16
@@ -1672,7 +1672,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; HERE ( -- addr ) current dictionary pointer
 ;------------------------------------------------------------------------------
-        HEADER  "HERE", HERE_CFA, 0, J_CFA
+        HEADER  "HERE", HERE_ENTRY, HERE_CFA, 0, J_ENTRY
         CODEPTR HERE_CODE
         PUBLIC  HERE_CODE
         .a16
@@ -1690,7 +1690,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; ALLOT ( n -- ) advance dictionary pointer by n bytes
 ;------------------------------------------------------------------------------
-        HEADER  "ALLOT", ALLOT_CFA, 0, HERE_CFA
+        HEADER  "ALLOT", ALLOT_ENTRY, ALLOT_CFA, 0, HERE_ENTRY
         CODEPTR ALLOT_CODE
         PUBLIC  ALLOT_CODE
         .a16
@@ -1710,7 +1710,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; , ( val -- ) compile cell into dictionary
 ;------------------------------------------------------------------------------
-        HEADER  ",", COMMA_CFA, 0, ALLOT_CFA
+        HEADER  ",", COMMA_ENTRY, COMMA_CFA, 0, ALLOT_ENTRY
         CODEPTR COMMA_CODE
         PUBLIC  COMMA_CODE
         .a16
@@ -1733,7 +1733,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; C, ( byte -- ) compile byte into dictionary
 ;------------------------------------------------------------------------------
-        HEADER  "C,", CCOMMA_CFA, 0, COMMA_CFA
+        HEADER  "C,", CCOMMA_ENTRY, CCOMMA_CFA, 0, COMMA_ENTRY
         CODEPTR CCOMMA_CODE
         PUBLIC  CCOMMA_CODE
         .a16
@@ -1759,7 +1759,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; LATEST ( -- addr ) address of LATEST variable in user area
 ;------------------------------------------------------------------------------
-        HEADER  "LATEST", LATEST_CFA, 0, CCOMMA_CFA
+        HEADER  "LATEST", LATEST_ENTRY, LATEST_CFA, 0, CCOMMA_ENTRY
         CODEPTR LATEST_CODE
         PUBLIC  LATEST_CODE
         .a16
@@ -1780,7 +1780,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; BASE ( -- addr ) address of BASE variable
 ;------------------------------------------------------------------------------
-        HEADER  "BASE", BASE_CFA, 0, LATEST_CFA
+        HEADER  "BASE", BASE_ENTRY, BASE_CFA, 0, LATEST_ENTRY
         CODEPTR BASE_CODE
         PUBLIC  BASE_CODE
         .a16
@@ -1797,7 +1797,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; STATE ( -- addr ) address of STATE variable
 ;------------------------------------------------------------------------------
-        HEADER  "STATE", STATE_CFA, 0, BASE_CFA
+        HEADER  "STATE", STATE_ENTRY, STATE_CFA, 0, BASE_ENTRY
         CODEPTR STATE_CODE
         PUBLIC  STATE_CODE
         .a16
@@ -1814,7 +1814,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; >IN ( -- addr ) address of >IN variable
 ;------------------------------------------------------------------------------
-        HEADER  ">IN", TOIN_CFA, 0, STATE_CFA
+        HEADER  ">IN", TOIN_ENTRY, TOIN_CFA, 0, STATE_ENTRY
         CODEPTR TOIN_CODE
         PUBLIC  TOIN_CODE
         .a16
@@ -1831,7 +1831,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; SOURCE ( -- addr len ) current input source
 ;------------------------------------------------------------------------------
-        HEADER  "SOURCE", SOURCE_CFA, 0, TOIN_CFA
+        HEADER  "SOURCE", SOURCE_ENTRY, SOURCE_CFA, 0, TOIN_ENTRY
         CODEPTR SOURCE_CODE
         PUBLIC  SOURCE_CODE
         .a16
@@ -1859,7 +1859,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; COUNT ( addr -- addr+1 len ) counted string to addr/len
 ;------------------------------------------------------------------------------
-        HEADER  "COUNT", COUNT_CFA, 0, SOURCE_CFA
+        HEADER  "COUNT", COUNT_ENTRY, COUNT_CFA, 0, SOURCE_ENTRY
         CODEPTR COUNT_CODE
         PUBLIC  COUNT_CODE
         .a16
@@ -1891,7 +1891,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;   LOC_DELIM = 9,S   delimiter char
 ;   (saved IP at 11,S, pushed first by PHY)
 ;------------------------------------------------------------------------------
-        HEADER  "WORD", WORD_CFA, 0, COUNT_CFA
+        HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, COUNT_ENTRY
         CODEPTR WORD_CODE
         PUBLIC  WORD_CODE
         .a16
@@ -2045,7 +2045,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;------------------------------------------------------------------------------
 ; BYE ( -- ) halt the system
 ;------------------------------------------------------------------------------
-        HEADER  "BYE", BYE_CFA, 0, WORD_CFA
+        HEADER  "BYE", BYE_ENTRY, BYE_CFA, 0, WORD_ENTRY
         CODEPTR BYE_CODE
         PUBLIC  BYE_CODE
         .a16
@@ -2067,7 +2067,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;   "Empty the data stack and perform the function of QUIT,
 ;    which includes emptying the return stack."
 ;------------------------------------------------------------------------------
-        HEADER  "ABORT", ABORT_CFA, 0, BYE_CFA
+        HEADER  "ABORT", ABORT_ENTRY, ABORT_CFA, 0, BYE_ENTRY
         CODEPTR ABORT_CODE
         PUBLIC  ABORT_CODE
         .a16
@@ -2101,7 +2101,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ; QUIT ( -- ) outer interpreter loop
 ; Resets return stack, reads and interprets input forever
 ;------------------------------------------------------------------------------
-        HEADER  "QUIT", QUIT_CFA, 0, ABORT_CFA
+        HEADER  "QUIT", QUIT_ENTRY, QUIT_CFA, 0, ABORT_ENTRY
         CODEPTR DOCOL
 
         .export QUIT_BODY
@@ -2144,7 +2144,7 @@ QUIT_LOOP:
 ;------------------------------------------------------------------------------
 
 ; RSP-RESET - reset the hardware (return) stack pointer
-        HEADER  "RSP-RESET", RSP_RESET_CFA, F_HIDDEN, QUIT_CFA
+        HEADER  "RSP-RESET", RSP_RESET_ENTRY, RSP_RESET_CFA, F_HIDDEN, QUIT_ENTRY
         CODEPTR RSP_RESET_CODE
         PUBLIC  RSP_RESET_CODE
         .a16
@@ -2155,7 +2155,7 @@ QUIT_LOOP:
         ENDPUBLIC
 
 ; TIB - push TIB base address
-        HEADER  "TIB", TIB_CFA, 0, RSP_RESET_CFA
+        HEADER  "TIB", TIB_ENTRY, TIB_CFA, 0, RSP_RESET_ENTRY
         CODEPTR TIB_PRIM_CODE
         PUBLIC  TIB_PRIM_CODE
         .a16
@@ -2190,7 +2190,7 @@ QUIT_LOOP:
 ; Stack on exit:
 ;   0,X = actual (character count)
 ;------------------------------------------------------------------------------
-        HEADER  "ACCEPT", ACCEPT_CFA, 0, TIB_CFA
+        HEADER  "ACCEPT", ACCEPT_ENTRY, ACCEPT_CFA, 0, TIB_ENTRY
         CODEPTR ACCEPT_CODE
         PUBLIC  ACCEPT_CODE
         .a16
@@ -2307,7 +2307,7 @@ QUIT_LOOP:
 ;------------------------------------------------------------------------------
 ; INTERPRET ( -- ) parse and execute/compile words from input
 ;------------------------------------------------------------------------------
-        HEADER  "INTERPRET", INTERPRET_CFA, 0, ACCEPT_CFA
+        HEADER  "INTERPRET", INTERPRET_ENTRY, INTERPRET_CFA, 0, ACCEPT_ENTRY
         CODEPTR INTERPRET_CODE
         PUBLIC  INTERPRET_CODE
         .a16
@@ -2784,7 +2784,7 @@ print_error:
 ;------------------------------------------------------------------------------
 ; . (DOT) ( n -- ) print signed number
 ;------------------------------------------------------------------------------
-        HEADER  ".", DOT_CFA, 0, INTERPRET_CFA
+        HEADER  ".", DOT_ENTRY, DOT_CFA, 0, INTERPRET_ENTRY
         CODEPTR DOT_CODE
         PUBLIC  DOT_CODE
         .a16
@@ -2875,7 +2875,7 @@ print_udec:
 ;------------------------------------------------------------------------------
 ; .S ( -- ) print stack contents non-destructively
 ;------------------------------------------------------------------------------
-        HEADER  ".S", DOTS_CFA, 0, DOT_CFA
+        HEADER  ".S", DOTS_ENTRY, DOTS_CFA, 0, DOT_ENTRY
         CODEPTR DOTS_CODE
         PUBLIC  DOTS_CODE
         .a16
@@ -2900,7 +2900,7 @@ print_udec:
 ;------------------------------------------------------------------------------
 ; DOT-PROMPT - print " ok" prompt (hidden, used by QUIT)
 ;------------------------------------------------------------------------------
-        HEADER  "DOT-PROMPT", DOT_PROMPT_CFA, F_HIDDEN, DOTS_CFA
+        HEADER  "DOT-PROMPT", DOT_PROMPT_ENTRY, DOT_PROMPT_CFA, F_HIDDEN, DOTS_ENTRY
         CODEPTR DOT_PROMPT_CODE
         PUBLIC  DOT_PROMPT_CODE
         .a16
@@ -2917,7 +2917,7 @@ print_udec:
 ; On exit:   PSP (X) has 1 cell:  result
 ; see: https://forth-standard.org/standard/string/COMPARE
 ;------------------------------------------------------------------------------
-        HEADER  "COMPARE", COMPARE_CFA, 0, DOT_PROMPT_CFA
+        HEADER  "COMPARE", COMPARE_ENTRY, COMPARE_CFA, 0, DOT_PROMPT_ENTRY
         CODEPTR COMPARE_CODE
         PUBLIC  COMPARE_CODE
         .a16
@@ -3058,7 +3058,7 @@ LAST_WORD = DOABORTQ_CFA
 ; These allow the project to assemble; implement fully in a later pass.
 ;==============================================================================
 
-        HEADER  "WORDS", WORDS_CFA, 0, COMPARE_CFA
+        HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, COMPARE_ENTRY
         CODEPTR WORDS_CODE
         PUBLIC  WORDS_CODE
         .a16
@@ -3119,7 +3119,7 @@ LAST_WORD = DOABORTQ_CFA
         ENDPUBLIC
 
 ; Stub defining words - to be fully implemented
-        HEADER  ":", COLON_CFA, 0, WORDS_CFA
+        HEADER  ":", COLON_ENTRY, COLON_CFA, 0, WORDS_ENTRY
         CODEPTR COLON_CODE
         PUBLIC  COLON_CODE
         .a16
@@ -3135,7 +3135,7 @@ LAST_WORD = DOABORTQ_CFA
                 NEXT
         ENDPUBLIC
 
-        HEADER  ";", SEMICOLON_CFA, F_IMMEDIATE, COLON_CFA
+        HEADER  ";", SEMICOLON_ENTRY, SEMICOLON_CFA, F_IMMEDIATE, COLON_ENTRY
         CODEPTR SEMICOLON_CODE
         PUBLIC  SEMICOLON_CODE
         .a16
@@ -3150,7 +3150,7 @@ LAST_WORD = DOABORTQ_CFA
                 NEXT
         ENDPUBLIC
 
-        HEADER  "CONSTANT", CONSTANT_CFA, 0, SEMICOLON_CFA
+        HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, SEMICOLON_ENTRY
         CODEPTR CONSTANT_CODE
         PUBLIC  CONSTANT_CODE
         .a16
@@ -3159,7 +3159,7 @@ LAST_WORD = DOABORTQ_CFA
                 NEXT
         ENDPUBLIC
 
-        HEADER  "VARIABLE", VARIABLE_CFA, 0, CONSTANT_CFA
+        HEADER  "VARIABLE", VARIABLE_ENTRY, VARIABLE_CFA, 0, CONSTANT_ENTRY
         CODEPTR VARIABLE_CODE
         PUBLIC  VARIABLE_CODE
         .a16
@@ -3168,7 +3168,7 @@ LAST_WORD = DOABORTQ_CFA
                 NEXT
         ENDPUBLIC
 
-        HEADER  "CREATE", CREATE_CFA, 0, VARIABLE_CFA
+        HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, VARIABLE_ENTRY
         CODEPTR CREATE_CODE
         PUBLIC  CREATE_CODE
         .a16
@@ -3177,7 +3177,7 @@ LAST_WORD = DOABORTQ_CFA
                 NEXT
         ENDPUBLIC
 
-        HEADER  "DOES>", DOES_CFA, F_IMMEDIATE, CREATE_CFA
+        HEADER  "DOES>", DOES_ENTRY, DOES_CFA, F_IMMEDIATE, CREATE_ENTRY
         CODEPTR DOES_CODE
         PUBLIC  DOES_CODE
         .a16
@@ -3187,7 +3187,7 @@ LAST_WORD = DOABORTQ_CFA
         ENDPUBLIC
 
 ; Output formatting stubs
-        HEADER  "U.", UDOT_CFA, 0, DOES_CFA
+        HEADER  "U.", UDOT_ENTRY, UDOT_CFA, 0, DOES_ENTRY
         CODEPTR UDOT_CODE
         PUBLIC  UDOT_CODE
         .a16
@@ -3200,7 +3200,7 @@ LAST_WORD = DOABORTQ_CFA
                 NEXT
         ENDPUBLIC
 
-        HEADER  ".HEX", DOTHEX_CFA, 0, UDOT_CFA
+        HEADER  ".HEX", DOTHEX_ENTRY, DOTHEX_CFA, 0, UDOT_ENTRY
         CODEPTR DOTHEX_CODE
         PUBLIC  DOTHEX_CODE
         .a16
@@ -3261,7 +3261,8 @@ LAST_WORD = DOABORTQ_CFA
 ; String literal words - stubs
 ; Note: HEADER macro can't handle quote chars in names - written manually
 ; ." ( -- ) output string literal
-        .word   DOTHEX_CFA              ; Link field
+DOTQUOTE_ENTRY:
+        .word   DOTHEX_ENTRY           ; Link field
         .byte   F_IMMEDIATE | 2        ; Flags + length (2 chars)
         .byte   $2E, $22               ; '.' '"'
         .align  2
@@ -3275,7 +3276,8 @@ DOTQUOTE_CFA:
         ENDPUBLIC
 
 ; S" ( -- addr len ) string literal
-        .word   DOTQUOTE_CFA            ; Link field
+SQUOTE_ENTRY:
+        .word   DOTQUOTE_ENTRY         ; Link field
         .byte   F_IMMEDIATE | 2        ; Flags + length (2 chars)
         .byte   $53, $22               ; 'S' '"'
         .align  2
@@ -3314,7 +3316,7 @@ SQUOTE_CFA:
 ;               ( addr -- addr FALSE ) on failure [addr preserved for error msg]
 ;==============================================================================
 
-        HEADER  "NUMBER", NUMBER_CFA, 0, SQUOTE_CFA
+        HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, SQUOTE_ENTRY
         CODEPTR NUMBER_CODE
         PUBLIC  NUMBER_CODE
         .a16
@@ -3514,7 +3516,7 @@ SQUOTE_CFA:
 ;       .align 2
 ;       CFA:         code pointer (2 bytes) <- execution token
 ;------------------------------------------------------------------------------
-        HEADER  "FIND", FIND_CFA, 0, NUMBER_CFA
+        HEADER  "FIND", FIND_ENTRY, FIND_CFA, 0, NUMBER_ENTRY
         CODEPTR FIND_CODE
         PUBLIC  FIND_CODE
         .a16
@@ -3686,7 +3688,8 @@ SQUOTE_CFA:
         ENDPUBLIC
 
 ; ABORT" ( flag -- ) abort with message if flag non-zero
-        .word   FIND_CFA               ; Link field
+ABORTQ_ENTRY:
+	.word   FIND_ENTRY             ; Link field
         .byte   F_IMMEDIATE | 6        ; Flags + length (6 chars)
         .byte   "ABORT", $22           ; 'A' 'B' 'O' 'R' 'T' '"'
         .align  2
@@ -3942,7 +3945,8 @@ ABORTQ_CFA:
 ; If zero, skips over the inline string and continues.
 ;------------------------------------------------------------------------------
 ; (ABORT") ( flag -- ) runtime helper compiled by ABORT"
-        .word   ABORTQ_CFA              ; Link field
+DOABORTQ_ENTRY:
+        .word   ABORTQ_ENTRY           ; Link field
         .byte   F_HIDDEN | 8           ; Flags + length (8 chars)
         .byte   "(ABORT", $22, ")"     ; '(' 'A' 'B' 'O' 'R' 'T' '"' ')'
         .align  2
