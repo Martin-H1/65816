@@ -382,52 +382,56 @@ hex5:	PString "8000"
 
 .proc findTest
 	; Word that doesn't exist
-	lda find1
+	TYPESTR "Find test of "
+	lda #find1
+	jsr hal_lpputs
+	lda #find1
 	PUSH
 	jsr FIND_CODE
-	TYPESTR "Find test of "
-	lda find1
-	jsr hal_lpputs
 	TYPESTR ", Status="
 	JSR DOT_CODE
 	TYPESTR ", addr="
 	JSR DOTHEX_CODE
+	JSR CR_CODE
 
 	; Word that exists in dictionary
-	lda find2
+	TYPESTR "Find test of "
+	lda #find2
+	jsr hal_lpputs
+	lda #find2
 	PUSH
 	jsr FIND_CODE
-	TYPESTR "Find test of "
-	lda find2
-	jsr hal_lpputs
 	TYPESTR ", Status="
 	JSR DOT_CODE
 	TYPESTR ", addr="
 	JSR DOTHEX_CODE
+	JSR CR_CODE
 
 	; Immediate vs normal word flag returned correctly
-	lda find3
+	TYPESTR "Find test of "
+	lda #find3
+	jsr hal_lpputs
+	lda #find3
 	PUSH
 	jsr FIND_CODE
-	TYPESTR "Find test of "
-	lda find3
-	jsr hal_lpputs
 	TYPESTR ", Status="
 	JSR DOT_CODE
 	TYPESTR ", addr="
 	JSR DOTHEX_CODE
+	JSR CR_CODE
 
 	; Case sensitivity
-	lda find4
+	TYPESTR "Find test of "
+	lda #find4
+	jsr hal_lpputs
+	lda #find4
 	PUSH
 	jsr FIND_CODE
-	TYPESTR "Find test of "
-	lda find4
-	jsr hal_lpputs
 	TYPESTR ", Status="
 	JSR DOT_CODE
 	TYPESTR ", addr="
 	JSR DOTHEX_CODE
+	JSR CR_CODE
 
 	rts
 .endproc

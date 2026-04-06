@@ -3047,12 +3047,6 @@ print_udec:
         ENDPUBLIC
 
 ;==============================================================================
-; LAST_WORD - must be the CFA of the final word defined above
-; Used by FORTH_INIT to seed LATEST
-;==============================================================================
-LAST_WORD = DOABORTQ_CFA
-
-;==============================================================================
 ; Stub declarations for words referenced in QUIT_BODY colon definition
 ; that are not yet implemented (WORDS, defining words etc.)
 ; These allow the project to assemble; implement fully in a later pass.
@@ -4013,3 +4007,9 @@ DOABORTQ_CFA:
 @aligned:       TAY                     ; IP = past the string
                 NEXT
         ENDPUBLIC
+
+;==============================================================================
+; LAST_WORD - must be the ENTRY of the final word defined above
+; Used by FORTH_INIT to seed LATEST
+;==============================================================================
+LAST_WORD = DOABORTQ_ENTRY
