@@ -249,7 +249,7 @@
                 EOR     #$FFFF          ; Two's complement
                 INC     A
                 CLC
-                ADC     #$03FF          ; PSP_INIT - result / 2
+                ADC     #PSP_INIT       ; PSP_INIT - result / 2
                 LSR     A               ; Divide by 2 (cells)
                 DEX
                 DEX
@@ -1889,51 +1889,54 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 LOC_UP    = 11
                 LOC_SIZE  = LOC_UP+LOC_IDX
 
-                ; --- Save IP and set up stack frame ---
-                PHY                     ; Save IP (will be at 11,S after frame built)
+                ; --- Save DP, IP, and set up stack frame ---
+                PHD                     ; Save DP (at 13,S after frame built)
+                PHY                     ; Save IP (at 11,S after frame built)
                 TSC
                 SEC
                 SBC     #LOC_SIZE
                 TCS
+                TCD                     ; Set Direct Page to stack frame
 
                 ; Push delimiter (popped from parameter stack)
-                LDA     0,X             ; Peek TOS to get delimiter
-                STA     LOC_DELIM,S
+                LDA     a:0,X           ; Peek TOS to get delimiter
+                STA     LOC_DELIM
 
-                LDA     UP              ; Initialize pointer to user area
-                STA     LOC_UP,S
+                LDY     #UP
+                LDA     a:0,Y           ; Initialize pointer to user area
+                STA     LOC_UP
 
                 ; Push HERE
                 LDY     #U_DP
-                LDA     (LOC_UP,S),Y    ; HERE
-                STA     LOC_HERE,S
+                LDA     (LOC_UP),Y      ; HERE
+                STA     LOC_HERE
 
                 ; Push TIB base
                 LDY     #U_TIB
-                LDA     (LOC_UP,S),Y    ; TIB base
-                STA     LOC_TIB,S
+                LDA     (LOC_UP),Y      ; TIB base
+                STA     LOC_TIB
 
                 ; Push source length
                 LDY     #U_SOURCELEN
-                LDA     (LOC_UP,S),Y    ; source length
-                STA     LOC_LEN,S
+                LDA     (LOC_UP),Y      ; source length
+                STA     LOC_LEN
 
                 ; Push parse index (>IN)
                 LDY     #U_TOIN
-                LDA     (LOC_UP,S),Y    ; >IN
-                STA     LOC_IDX,S
+                LDA     (LOC_UP),Y      ; >IN
+                STA     LOC_IDX
                 TAY                     ; Use Y as the parse index during loops
 
                 ; --- Skip leading delimiters ---
 @skip_loop:
-                CMP     LOC_LEN,S       ; If A >= source length then end of input
+                CPY     LOC_LEN         ; If Y >= source length then input end
                 BCC     @otherwise
 
                 SEP     #$20            ; Return HERE with zero-length counted string
                 .a8
                 LDA     #0
                 LDY     #0
-                STA     (LOC_HERE,S),Y  ; Zero count byte at HERE
+                STA     (LOC_HERE),Y    ; Zero count byte at HERE
                 REP     #$20
                 .a16
                 BRA     @return         ; Tear down frame and return
@@ -1943,75 +1946,71 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ; so load index into A then transfer to Y for indirect fetch
                 SEP     #$20
                 .a8
-                LDA     (LOC_TIB,S),Y   ; Fetch TIB[index]
+                LDA     (LOC_TIB),Y     ; Fetch TIB[index]
                 REP     #$20
                 .a16
                 AND     #$00FF
-                CMP     LOC_DELIM,S     ; Is it the delimiter?
+                CMP     LOC_DELIM       ; Is it the delimiter?
                 BNE     @found_start    ; No - start of word found
                 INY                     ; Increment parse index
-                TYA
                 BRA     @skip_loop
 
                 ; --- Copy word characters to HERE+1 ---
 @found_start:
                 ; Set up destination: HERE+1 (past the count byte)
-                LDA     LOC_HERE,S
+                LDA     LOC_HERE
                 INC     A               ; dest = HERE+1
-                STA     SCRATCH0        ; SCRATCH0 = dest pointer
-                STZ     SCRATCH1        ; SCRATCH1 = char count = 0
-
+                STA     LOC_UP          ; Borrow LOC_UP as dest pointer
+                PHX
+                LDX     #$0000          ; Borrow X for char count = 0
 @copy:
-                TYA                     ; parse index
-                CMP     LOC_LEN,S       ; >= source length?
+                CPY     LOC_LEN         ; parse index >= source length?
                 BCS     @copy_done      ; End of input
 
                 SEP     #$20
                 .a8
-                LDA     (LOC_TIB,S),Y   ; Fetch TIB[index]
+                LDA     (LOC_TIB),Y     ; Fetch TIB[index]
                 REP     #$20
                 .a16
                 AND     #$00FF
-                CMP     LOC_DELIM,S     ; Is it the delimiter?
+                CMP     LOC_DELIM       ; Is it the delimiter?
                 BEQ     @copy_done      ; Yes - end of word
 
                 ; Store char at dest
                 SEP     #$20
                 .a8
-                STA     (SCRATCH0)
+                STA     (LOC_UP)
                 REP     #$20
                 .a16
-                INC     SCRATCH0        ; Advance dest pointer
-                INC     SCRATCH1        ; Increment char count
+                INC     LOC_UP          ; Advance dest pointer
+                INX                     ; Increment char count
                 INY                     ; Advance parse index
                 BRA     @copy
 
 @copy_done:
                 ; Skip the trailing delimiter if not at end
-                TYA
-                CMP     LOC_LEN,S
+                CPY     LOC_LEN
                 BCS     @store_count
                 INY                     ; Consume trailing delimiter
 
 @store_count:
                 ; Store count byte at HERE
-                TYA
-                STA     LOC_IDX,S       ; Update LOC_IDX with Y contents.
+                STY     LOC_IDX         ; Update LOC_IDX with Y contents.
+                TXA                     ; char count
+                PLX                     ; Restore X
                 SEP     #$20
                 .a8
-                LDY     #0
-                LDA     SCRATCH1        ; char count
-                STA     (LOC_HERE,S),Y  ; Store count byte at HERE
+                STA     (LOC_HERE)      ; Store count byte at HERE
                 REP     #$20
                 .a16
 
                 ; Update >IN in user area
-                LDA     LOC_IDX,S
-                STA     (U_TOIN,S),Y
+                LDA     LOC_IDX
+                STA     (U_TOIN)
 
 @return:
-                LDA     LOC_HERE,S
-                STA     0,X             ; Put HERE onto parameter stack TOS
+                LDA     LOC_HERE
+                STA     a:0,X           ; Put HERE onto parameter stack TOS
 
                 ; --- Tear down stack frame and return to interpreter ---
                 TSC                     ; Drop locals
@@ -2019,6 +2018,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ADC    #LOC_SIZE
                 TCS
                 PLY                     ; Restore IP
+                PLD                     ; Restore DP
                 NEXT
         ENDPUBLIC
 
@@ -2058,7 +2058,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         .a16
         .i16
                 ; --- Reset parameter stack ---
-                LDX     #$03FF          ; PSP_INIT (stack grows down from here)
+                LDX     #PSP_INIT       ; Stack grows down from here.
 
                 ; --- Reset return stack ---
                 ; TAS transfers A to S (hardware stack pointer)
@@ -2362,7 +2362,6 @@ QUIT_LOOP:
                 DEX
                 LDA     #SPACE
                 STA     a:0,X
-
                 ; WORD ( bl -- addr )
                 LDY     #RTS_CFA_LIST
                 JSR     WORD_CODE
@@ -2483,10 +2482,9 @@ QUIT_LOOP:
                 INX
                 LDA     #'?'
                 JSR     hal_putch
-                LDA     #C_RETURN
-                JSR     hal_putch
-                LDA     #L_FEED
-                JSR     hal_putch
+                LDY     #RTS_CFA_LIST
+                JSR     CR_CODE
+
                 ; Tear down frame before ABORT resets stacks
                 TSC
                 CLC
@@ -2614,7 +2612,7 @@ print_udec:
         .i16
                 PHX                     ; Save PSP
 @print_loop:
-                CPX     #$03FF          ; PSP_INIT
+                CPX     #PSP_INIT
                 BCS     @ds_done
                 LDA     0,X
                 INX
