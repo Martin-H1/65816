@@ -3061,16 +3061,17 @@ SQUOTE_CFA:
                 SEC
                 SBC     #LOC_SIZE
                 TCS
+                TCD                     ; No page zero access until return!
 
                 ;----------------------------------------------------------
                 ; Fetch BASE using UP page zero pointer into LOC_BASE
                 ;----------------------------------------------------------
+                LDY     #UP
+                LDA     a:0,Y           ; Initialize pointer to user area
+                STA     LOC_PTR         ; Borrow pointer to hold UP
                 LDY     #U_BASE
-                LDA     (UP),Y          ; BASE
-                STA     LOC_BASE,S      ; LOC_BASE = BASE
-                TSC                     ; Set DP to point to stack locals.
-                TCD                     ; No page zero access until reset!
-
+                LDA     (LOC_PTR),Y     ; BASE
+                STA     LOC_BASE        ; LOC_BASE = BASE
                 STZ     LOC_SIGN        ; LOC_SIGN = 0, assume positive
                 STZ     LOC_RESULT      ; Initial value is zero.
 
