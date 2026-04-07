@@ -161,5 +161,6 @@ F_LENMASK       = $1F
         .global DOVAR
         .global DOCON
         .global DODOES
+        .global RTS_CFA_LIST
 
 .endif ; DICTIONARY_INC

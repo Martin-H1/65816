@@ -132,19 +132,19 @@ TMPB:           .res 2          ; Temp for multiply/divide
 	LDA #$20
 	STA (UP),Y
 
-	ldy #CFA_LIST
+	ldy #RTS_CFA_LIST
 
 	jsr MAIN
 	rtl
 .endproc
 
 ; CFA used to handle the NEXT at the end of code were testing.
-CFA_LIST:
+RTS_CFA_LIST:
 	.word RTS_CFA
 HEADER "RTS", RTS_ENTRY, RTS_CFA, 0, 0
 CODEPTR RTS_CODE
 PUBLIC  RTS_CODE
-	ldy #CFA_LIST
+	ldy #RTS_CFA_LIST
 	rts
 ENDPUBLIC
 
