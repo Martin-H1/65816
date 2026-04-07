@@ -33,12 +33,10 @@ PUBLIC MAIN
 	jsr compareTest
 	jsr numberTest
 	jsr findTest
+	jsr interpretTest
 
 	TYPESTRCR "interpret test - exit!"
 	rts
-
-	jsr interpretTest
-
 ENDPUBLIC
 
 .proc wordTest
@@ -441,10 +439,47 @@ find3:	PString ";"
 find4:	PString "number"
 
 .proc interpretTest
-	;Executing a known primitive by name
-	;Compiling vs interpreting state
-	;Unknown word triggering error
+	; Interpreting state
+
+	; Parse a number
+	LDA #interpret1
+	PUSH
+	LDA #TIB_BASE
+	PUSH
+	LDA #$10
+	PUSH
+	jsr MOVE_CODE
+	jsr INTERPRET_CODE
+	TYPESTR_DOT "Interpret test of '1' (expect 1) = "
+
+	; Executing the plus operator primitive by name
+	LDA #interpret2
+	PUSH
+	LDA #TIB_BASE
+	PUSH
+	LDA #$10
+	PUSH
+	jsr MOVE_CODE
+	jsr INTERPRET_CODE
+	TYPESTR_DOT "Interpret '2 2 + ' (expect 4) = "
+
+	; Unknown word triggering error
+	LDA #interpret3
+	PUSH
+	LDA #TIB_BASE
+	PUSH
+	LDA #$10
+	PUSH
+	jsr MOVE_CODE
+	jsr INTERPRET_CODE
+
+	; Compiling state
+
 	rts
 .endproc
 interpret1:
-	.asciiz ""
+	.asciiz " 1             "
+interpret2:
+	.asciiz " 2 2 +         "
+interpret3:
+	.asciiz " splat         "
