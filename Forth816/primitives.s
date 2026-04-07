@@ -2290,731 +2290,6 @@ QUIT_LOOP:
         ENDPUBLIC
 
 ;==============================================================================
-; INTERPRET ( -- )
-;
-; Outer interpreter loop body. Parses one word at a time from the current
-; input source and either executes or compiles it. Loops until the input
-; is exhausted (WORD returns an empty counted string).
-;
-; For each token:
-;   1. WORD ( bl -- addr )       parse next space-delimited token
-;   2. Empty length byte -> done
-;   3. FIND ( addr -- xt f )     look up in dictionary
-;   4. If found (f=1 or f=-1):
-;        STATE=0 (interpret): EXECUTE xt
-;        STATE=1 (compile):   if immediate EXECUTE xt, else compile xt into DP
-;   5. If not found (f=0):
-;        NUMBER ( addr -- n TRUE | addr FALSE )
-;        Success + interpret: number stays on stack
-;        Success + compile:   compile LIT_CFA then value into DP
-;        Failure:             print error, ABORT
-;
-; Subroutine call pattern (PHY/LDY/JSR/PLY): Y saved in stack frame
-;   LDY  #RTS_CFA_LIST      ; Trampoline: NEXT inside callee -> RTS_CODE -> RTS
-;   JSR  TARGET_CODE
-;
-; Stack frame locals (DP points here after TCD):
-;   LOC_XT      = 1    execution token saved across DP fetch
-;   LOC_FLAG    = 3    FIND result flag (0, 1, $FFFF)
-;   LOC_STATE   = 5    cached STATE value
-;   LOC_UP      = 7    cached UP value (avoids repeated zero page reads)
-;   LOC_SIZE    = LOC_UP + 1   ; = 8 bytes
-;==============================================================================
-        HEADER  "INTERPRET", INTERPRET_ENTRY, INTERPRET_CFA, 0, ACCEPT_ENTRY
-        CODEPTR INTERPRET_CODE
-        PUBLIC  INTERPRET_CODE
-        .a16
-        .i16
-
-        LOC_XT      = 1
-        LOC_FLAG    = 3
-        LOC_STATE   = 5
-        LOC_UP      = 7
-        LOC_SIZE    = LOC_UP + 1        ; = 8 bytes
-
-                PHD                     ; Save DP
-                PHY                     ; Save IP
-
-                TSC                     ; Reserve stack frame
-                SEC
-                SBC     #LOC_SIZE
-                TCS
-                TCD                     ; DP -> stack frame
-
-                ;--------------------------------------------------------------
-                ; Cache UP and STATE before DP is fully in use.
-                ; UP is a zero page variable; read via absolute Y addressing.
-                ;--------------------------------------------------------------
-                LDY     #UP
-                LDA     a:0,Y           ; UP value
-                STA     LOC_UP
-
-                LDY     #U_STATE
-                LDA     (LOC_UP),Y      ; STATE
-                STA     LOC_STATE
-
-                ;--------------------------------------------------------------
-                ; Main parse loop
-                ;--------------------------------------------------------------
-@next_word:
-                ; Push space delimiter for WORD
-                DEX
-                DEX
-                LDA     #SPACE
-                STA     a:0,X
-                ; WORD ( bl -- addr )
-                LDY     #RTS_CFA_LIST
-                JSR     WORD_CODE
-
-                ; Check length byte at addr; empty = end of input
-                LDA     a:0,X           ; addr
-                STA     LOC_XT          ; Borrow LOC_XT as pointer temporarily
-                SEP     #$20
-                .a8
-                LDA     (LOC_XT)        ; Length byte
-                REP     #$20
-                .a16
-                AND     #$00FF
-                BNE     @find
-                JMP     @done           ; Empty -> done, addr still on stack
-
-                ; FIND ( addr -- xt flag )
-@find:          LDY     #RTS_CFA_LIST
-                JSR     FIND_CODE
-
-                ; Pop flag and xt
-                LDA     a:0,X           ; flag
-                STA     LOC_FLAG
-                INX
-                INX
-                LDA     a:0,X           ; xt or original addr
-                STA     LOC_XT
-                INX
-                INX
-
-                LDA     LOC_FLAG
-                BEQ     @not_found      ; flag=0 -> not in dictionary
-
-                ;--------------------------------------------------------------
-                ; Found: execute or compile
-                ;--------------------------------------------------------------
-                LDA     LOC_STATE
-                BNE     @compile        ; STATE != 0 -> compiling
-
-@execute:
-                ; Interpret mode: execute xt directly via EXECUTE
-                DEX
-                DEX
-                LDA     LOC_XT
-                STA     a:0,X           ; Push xt
-                LDY     #RTS_CFA_LIST
-                JSR     EXECUTE_CODE
-                BRA     @next_word
-
-@compile:
-                ; Compile mode: immediate words execute, normal words compile
-                LDA     LOC_FLAG
-                CMP     #FORTH_TRUE     ; flag = $FFFF -> immediate
-                BEQ     @execute        ; Immediate: execute even when compiling
-
-                ; Normal word: compile xt into dictionary at DP
-                LDY     #U_DP
-                LDA     (LOC_UP),Y      ; DP
-                STA     LOC_FLAG        ; Reuse LOC_FLAG as DP pointer
-                LDA     LOC_XT          ; xt (safely preserved in LOC_XT)
-                STA     (LOC_FLAG)      ; Store xt at DP
-                LDA     LOC_FLAG
-                INC     A
-                INC     A               ; DP += 2
-                LDY     #U_DP
-                STA     (LOC_UP),Y      ; Update DP
-                BRA     @next_word
-
-                ;--------------------------------------------------------------
-                ; Not found: try NUMBER
-                ; Restore addr onto parameter stack (was saved in LOC_XT)
-                ;--------------------------------------------------------------
-@not_found:
-                DEX
-                DEX
-                LDA     LOC_XT          ; original addr
-                STA     a:0,X
-
-                ; NUMBER ( addr -- n TRUE | addr FALSE )
-                LDY     #RTS_CFA_LIST
-                JSR     NUMBER_CODE
-
-                LDA     a:0,X           ; flag
-                INX
-                INX
-                CMP     #FORTH_TRUE
-                BNE     @error          ; Conversion failed
-
-                ; Successful number conversion
-                LDA     LOC_STATE
-                BNE     @skip
-                JMP     @next_word      ; Interpreting: number stays on stack
-                ; Compiling: compile LIT_CFA then value
-@skip:          LDY     #U_DP
-                LDA     (LOC_UP),Y      ; DP
-                STA     LOC_FLAG        ; DP pointer
-                LDA     #LIT_CFA
-                STA     (LOC_FLAG)      ; Store LIT_CFA at DP
-                INC     LOC_FLAG
-                INC     LOC_FLAG        ; Advance to next cell
-                LDA     a:0,X           ; value (left on stack by NUMBER)
-                STA     (LOC_FLAG)      ; Store value at DP+2
-                INX                     ; Drop value from parameter stack
-                INX
-                LDA     LOC_FLAG
-                INC     A
-                INC     A               ; DP += 4 total (LIT + value)
-                LDY     #U_DP
-                STA     (LOC_UP),Y      ; Update DP
-                JMP     @next_word
-
-                ;--------------------------------------------------------------
-                ; Unrecognised token: print " ?" and ABORT
-                ; addr from failed NUMBER is on stack; drop it
-                ;--------------------------------------------------------------
-@error:
-                INX                     ; Drop addr
-                INX
-                LDA     #'?'
-                JSR     hal_putch
-                LDY     #RTS_CFA_LIST
-                JSR     CR_CODE
-
-                ; Tear down frame before ABORT resets stacks
-                TSC
-                CLC
-                ADC     #LOC_SIZE
-                TCS
-                PLY
-                PLD
-                JMP     ABORT_CODE      ; Reset stacks and restart QUIT
-
-                ;--------------------------------------------------------------
-                ; Input exhausted: drop addr left by WORD and return
-                ;--------------------------------------------------------------
-@done:
-                INX                     ; Drop addr
-                INX
-
-@return:
-                TSC                     ; Tear down frame
-                CLC
-                ADC     #LOC_SIZE
-                TCS
-                PLY                     ; Restore IP
-                PLD                     ; Restore DP
-                NEXT
-        ENDPUBLIC
-
-;------------------------------------------------------------------------------
-; . (DOT) ( n -- ) print signed number
-;------------------------------------------------------------------------------
-        HEADER  ".", DOT_ENTRY, DOT_CFA, 0, INTERPRET_ENTRY
-        CODEPTR DOT_CODE
-        PUBLIC  DOT_CODE
-        .a16
-        .i16
-                LDA     0,X
-                INX
-                INX
-                ; Print trailing space
-                STA     SCRATCH0
-                JSR     print_sdec
-                ; Print trailing space
-                LDA     #SPACE
-                JSR     hal_putch
-                NEXT
-
-print_sdec:
-                LDA     SCRATCH0
-                CMP     #0
-                BPL     print_udec
-                ; Negative: negate value, then print minus sign
-                EOR     #$FFFF
-                INC     A
-                STA     SCRATCH0
-                LDA     #'-'
-                JSR     hal_putch
-print_udec:
-                ; Print SCRATCH0 as unsigned decimal via repeated division
-                ; Digits pushed onto hardware stack in reverse, then printed
-                NUM_MSB = 4             ; Offsets to locals
-                NUM_LSB = 3
-                BCD = 2
-                BASE = 1
-
-                PHD                     ; save direct page register
-                PHY                     ; Save IP (Y used as digit counter)
-
-                LDA     SCRATCH0
-                PHA                     ; Establish working area
-                LDY     #U_BASE
-                LDA     (UP),Y          ; BASE (10 or 16)
-                PHA
-	        TSC                     ; Xfer RSP to direct page reg
-                TCD                     ; stack local space is now direct page.
-
-                OFF16MEM                ; Switch to byte mode.
-
-                LDA     #0              ; null delimiter for print loop
-                PHA
-@while:	                                ; divide TOS by base
-                STZ     BCD             ; clr BCD
-                LDY     #16             ; {>} = loop counter
-@foreachbit:
-                ASL     NUM_LSB         ; TOS is gradually replaced
-                ROL     NUM_MSB         ; with the quotient
-                ROL     BCD             ; BCD result is gradually replaced
-                LDA     BCD             ; with the remainder
-                SEC
-                SBC     BASE            ; partial BCD >= base ?
-                BCC     @else
-                STA     BCD             ; yes: update the partial result
-                INC     NUM_LSB         ; set low bit in partial quotient
-@else:
-                DEY
-                BNE     @foreachbit     ; loop 16 times
-                LDA     BCD
-                CMP     #10
-                BCC     @decdigit
-                ADC     #6              ; 'A'-10-1+carry
-@decdigit:      ADC     #'0'            ; convert BCD result to ASCII
-                PHA                     ; stack digits in ascending
-                LDA     NUM_LSB         ; order ('0' for zero)
-                ORA     NUM_MSB
-                BNE     @while          ; } until TOS is 0
-@print:
-                PLA
-@loop:
-                JSR     hal_putch       ; print digits in descending order
-                PLA                     ; until null delimiter is encountered
-                BNE     @loop
-                ON16MEM                 ; exit byte mode
-                PLA                     ; clean up working area
-                PLA
-                PLY                     ; restore registers and return
-                PLD
-                RTS
-	ENDPUBLIC
-
-;------------------------------------------------------------------------------
-; .S ( -- ) print stack contents non-destructively
-;------------------------------------------------------------------------------
-        HEADER  ".S", DOTS_ENTRY, DOTS_CFA, 0, DOT_ENTRY
-        CODEPTR DOTS_CODE
-        PUBLIC  DOTS_CODE
-        .a16
-        .i16
-                PHX                     ; Save PSP
-@print_loop:
-                CPX     #PSP_INIT
-                BCS     @ds_done
-                LDA     0,X
-                INX
-                INX
-                STA     SCRATCH0
-                JSR     DOT_CODE::print_sdec
-                LDA     #SPACE
-                JSR     hal_putch
-                BRA     @print_loop
-@ds_done:
-                PLX                     ; Restore PSP
-                NEXT
-        ENDPUBLIC
-
-;------------------------------------------------------------------------------
-; DOT-PROMPT - print " ok" prompt (hidden, used by QUIT)
-;------------------------------------------------------------------------------
-        HEADER  "DOT-PROMPT", DOT_PROMPT_ENTRY, DOT_PROMPT_CFA, F_HIDDEN, DOTS_ENTRY
-        CODEPTR DOT_PROMPT_CODE
-        PUBLIC  DOT_PROMPT_CODE
-        .a16
-        .i16
-                LDA     #@prompt
-                JSR     hal_cputs
-                NEXT
-        @prompt: .byte ' ', 'o', 'k', C_RETURN, L_FEED,0
-        ENDPUBLIC
-
-;------------------------------------------------------------------------------
-; COMPARE
-; On entry:  PSP (X) has 4 cells: u2 addr2 u1 addr1 (TOS first)
-; On exit:   PSP (X) has 1 cell:  result
-; see: https://forth-standard.org/standard/string/COMPARE
-;------------------------------------------------------------------------------
-        HEADER  "COMPARE", COMPARE_ENTRY, COMPARE_CFA, 0, DOT_PROMPT_ENTRY
-        CODEPTR COMPARE_CODE
-        PUBLIC  COMPARE_CODE
-        .a16
-        .i16
-
-        LOC_ADDR1       = 1             ; hw stack offset for addr1
-        LOC_ADDR2       = 3             ; hw stack offset for addr2
-        ; saved IP lives at 5,S (pushed by PHY before the two PHAs)
-
-                PHY                     ; Save IP; hw stack: [saved_IP]
-
-                ;----------------------------------------------------------
-                ; Pop all four arguments from the parameter stack.
-                ; Save u1 -> TMPB, u2 -> SCRATCH1 for the length comparison
-                ; after the byte loop. Both addresses go onto the hw stack
-                ; as locals so (LOC,S),Y indirect indexed addressing works.
-                ;----------------------------------------------------------
-                LDA     0,X             ; u2
-                STA     SCRATCH1        ; SCRATCH1 = u2 (preserved for length cmp)
-                INX
-                INX
-
-                LDA     0,X             ; addr2
-                INX
-                INX
-                PHA                     ; hw stack: [addr2][saved_IP]
-                                        ; -> addr2 now at LOC_ADDR2 = 3,S
-
-                LDA     0,X             ; u1
-                STA     TMPB            ; TMPB = u1 (preserved for length cmp)
-                INX
-                INX
-
-                LDA     0,X             ; addr1
-                INX
-                INX
-                PHA                     ; hw stack: [addr1][addr2][saved_IP]
-                                        ; -> addr1 now at LOC_ADDR1 = 1,S
-
-                ;----------------------------------------------------------
-                ; Compute MIN(u1, u2) -> TMPA (the byte-loop trip count).
-                ; u1 is in TMPB, u2 is in SCRATCH1.
-                ; CMP is unsigned - lengths are always non-negative.
-                ;----------------------------------------------------------
-                LDA     TMPB            ; u1
-                CMP     SCRATCH1        ; unsigned: u1 - u2, sets C
-                BCS     @min_is_u2      ; C set  -> u1 >= u2  -> min = u2
-                STA     TMPA            ; C clear -> u1 <  u2  -> min = u1
-                BRA     @loop_start
-@min_is_u2:
-                LDA     SCRATCH1        ; min = u2
-                STA     TMPA
-
-@loop_start:
-                ;----------------------------------------------------------
-                ; Byte comparison loop.
-                ; Y is the byte index (0-based).
-                ; TMPA is the remaining byte count (counts down).
-                ; Uses (LOC_ADDR1,S),Y and (LOC_ADDR2,S),Y -- these are
-                ; 65816 stack-relative indirect indexed addressing modes,
-                ; the same technique used in MOVE_CODE and FILL_CODE.
-                ;----------------------------------------------------------
-                LDY     #0
-
-                LDA     TMPA
-                BEQ     @length_check   ; MIN = 0 -> skip loop, compare lengths
-
-@byte_loop:
-                ;------------------------------------------------------
-                ; Fetch one byte from each string in 8-bit mode.
-                ; SCRATCH0 is a zero-page cell; storing a byte there in
-                ; 8-bit mode is safe (only the low byte is written).
-                ;------------------------------------------------------
-                SEP     #$20            ; A = 8-bit
-                .a8
-                LDA     (LOC_ADDR1,S),Y ; byte from string1
-                STA     SCRATCH0        ; save for comparison
-                LDA     (LOC_ADDR2,S),Y ; byte from string2
-                CMP     SCRATCH0        ; str2[Y] - str1[Y]  (unsigned)
-                REP     #$20            ; A = 16-bit (before any branch)
-                .a16
-
-                BEQ     @next_byte      ; bytes equal -> continue
-                BCC     @str1_greater   ; str2[Y] < str1[Y]  -> str1 > str2
-                ; else  str2[Y] > str1[Y] -> str1 < str2
-                LDA     #$FFFF          ; result = -1
-                BRA     @store_result
-
-@str1_greater:
-                LDA     #$0001          ; result = +1
-                BRA     @store_result
-
-@next_byte:
-                INY                     ; advance byte index
-                DEC     TMPA            ; one fewer byte to compare
-                BNE     @byte_loop      ; loop until TMPA = 0
-
-                ;----------------------------------------------------------
-                ; All MIN(u1,u2) bytes matched. Compare lengths.
-                ; u1 is in TMPB, u2 is in SCRATCH1.
-                ;----------------------------------------------------------
-@length_check:
-                LDA     TMPB            ; u1
-                CMP     SCRATCH1        ; u1 - u2  (unsigned)
-                BEQ     @equal          ; u1 == u2 -> strings are equal
-                BCS     @str1_longer    ; u1 >  u2 -> str1 longer -> str1 > str2
-                LDA     #$FFFF          ; u1 <  u2 -> str1 shorter -> str1 < str2
-                BRA     @store_result
-@str1_longer:
-                LDA     #$0001
-                BRA     @store_result
-@equal:
-                LDA     #$0000
-
-@store_result:
-                ;----------------------------------------------------------
-                ; Tear down hw stack locals, restore IP, push result.
-                ;----------------------------------------------------------
-                PLY                     ; discard addr1
-                PLY                     ; discard addr2
-                PLY                     ; Restore IP
-
-                DEX
-                DEX
-                STA     0,X             ; Push result onto parameter stack
-                NEXT
-        ENDPUBLIC
-
-;==============================================================================
-; Stub declarations for words referenced in QUIT_BODY colon definition
-; that are not yet implemented (WORDS, defining words etc.)
-; These allow the project to assemble; implement fully in a later pass.
-;==============================================================================
-
-        HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, COMPARE_ENTRY
-        CODEPTR WORDS_CODE
-        PUBLIC  WORDS_CODE
-        .a16
-        .i16
-                ; Walk dictionary and print names
-                LDA     UP
-                CLC
-                ADC     #U_LATEST
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; LATEST
-                STA     SCRATCH0
-                PHY                     ; Save IP
-                LDY     #0
-@wloop:
-                LDA     SCRATCH0
-                BEQ     @wdone
-                ; Get flags+len byte
-                LDA     SCRATCH0
-                CLC
-                ADC     #2              ; Skip link field
-                STA     SCRATCH1
-                SEP     #MEM16
-                .A8
-                LDA     (SCRATCH1)      ; flags+len byte
-                AND     #F_LENMASK      ; isolate name length
-                REP     #MEM16
-                .A16
-                AND     #$00FF
-                BEQ     @wnext          ; Skip zero-length names
-                STA     TMPA            ; Save name length
-                ; Point SCRATCH1 to first char of name
-                LDA     SCRATCH1
-                INC     A
-                STA     SCRATCH1
-                LDY     #0
-@wtype:
-                SEP     #MEM16
-                .A8
-                LDA     (SCRATCH1),Y
-                REP     #MEM16
-                .A16
-                AND     #$00FF
-                JSR     hal_putch
-                INY
-                DEC     TMPA
-                BNE     @wtype
-                ; Space after name
-                LDA     #$20
-                JSR     hal_putch
-                LDY     #0              ; Reset Y for next word
-@wnext:
-                LDA     (SCRATCH0)      ; Follow link field
-                STA     SCRATCH0
-                BRA     @wloop
-@wdone:
-                PLY                     ; Restore IP
-                NEXT
-        ENDPUBLIC
-
-; Stub defining words - to be fully implemented
-        HEADER  ":", COLON_ENTRY, COLON_CFA, 0, WORDS_ENTRY
-        CODEPTR COLON_CODE
-        PUBLIC  COLON_CODE
-        .a16
-        .i16
-                ; Full implementation: parse name, create header, set STATE=1
-                ; Stub: just set STATE to compile mode
-                LDA     UP
-                CLC
-                ADC     #U_STATE
-                STA     SCRATCH0
-                LDA     #1
-                STA     (SCRATCH0)
-                NEXT
-        ENDPUBLIC
-
-        HEADER  ";", SEMICOLON_ENTRY, SEMICOLON_CFA, F_IMMEDIATE, COLON_ENTRY
-        CODEPTR SEMICOLON_CODE
-        PUBLIC  SEMICOLON_CODE
-        .a16
-        .i16
-                ; Full implementation: compile EXIT, set STATE=0, smudge
-                ; STZ (indirect) not supported - use STA (SCRATCH0),Y
-                LDA     UP
-                STA     SCRATCH0
-                LDA     #0
-                LDY     #U_STATE
-                STA     (SCRATCH0),Y    ; STATE = 0 (interpret)
-                NEXT
-        ENDPUBLIC
-
-        HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, SEMICOLON_ENTRY
-        CODEPTR CONSTANT_CODE
-        PUBLIC  CONSTANT_CODE
-        .a16
-        .i16
-                ; Stub: full impl parses name, creates entry with DOCON, stores value
-                NEXT
-        ENDPUBLIC
-
-        HEADER  "VARIABLE", VARIABLE_ENTRY, VARIABLE_CFA, 0, CONSTANT_ENTRY
-        CODEPTR VARIABLE_CODE
-        PUBLIC  VARIABLE_CODE
-        .a16
-        .i16
-                ; Stub: full impl parses name, creates entry with DOVAR, allots cell
-                NEXT
-        ENDPUBLIC
-
-        HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, VARIABLE_ENTRY
-        CODEPTR CREATE_CODE
-        PUBLIC  CREATE_CODE
-        .a16
-        .i16
-                ; Stub
-                NEXT
-        ENDPUBLIC
-
-        HEADER  "DOES>", DOES_ENTRY, DOES_CFA, F_IMMEDIATE, CREATE_ENTRY
-        CODEPTR DOES_CODE
-        PUBLIC  DOES_CODE
-        .a16
-        .i16
-                ; Stub
-                NEXT
-        ENDPUBLIC
-
-; Output formatting stubs
-        HEADER  "U.", UDOT_ENTRY, UDOT_CFA, 0, DOES_ENTRY
-        CODEPTR UDOT_CODE
-        PUBLIC  UDOT_CODE
-        .a16
-        .i16
-                LDA     0,X
-                INX
-                INX
-                STA     SCRATCH0
-                JSR     DOT_CODE::print_udec
-                NEXT
-        ENDPUBLIC
-
-        HEADER  ".HEX", DOTHEX_ENTRY, DOTHEX_CFA, 0, UDOT_ENTRY
-        CODEPTR DOTHEX_CODE
-        PUBLIC  DOTHEX_CODE
-        .a16
-        .i16
-                ; Print TOS as 4-digit hex
-                LDA     0,X
-                INX
-                INX
-                JSR     print_chex
-                NEXT
-
-        ; print_ahex - prints lower eight bits of the accumulator in hex
-        ; Inputs:
-        ;   A - byte to print
-        ; Outputs:
-        ;   A - retained
-	.proc print_ahex
-                PHA
-                PHA
-                LSR
-                LSR
-                LSR
-                LSR
-                JSR @print_nybble
-                PLA
-                JSR @print_nybble
-                PLA
-                RTS
-
-@print_nybble:
-                AND #LOWNIB
-                SED
-                CLC
-                ADC #$9990              ; Produce $90-$99 or $00-$05
-                ADC #$9940              ; Produce $30-$39 or $41-$46
-                CLD
-                jmp hal_putch
-        .endproc
-
-        ; print_chex - prints C as a 16 bit hex number to the console.
-        ; Inputs:
-        ;   C - number
-        ; Outputs:
-        ;   C - preserved
-        .proc print_chex
-                PHA
-                PHA
-                XBA
-                JSR print_ahex
-                PLA
-                JSR print_ahex
-                PLA
-                RTS
-        .endproc
-
-        ENDPUBLIC
-
-; String literal words - stubs
-; Note: HEADER macro can't handle quote chars in names - written manually
-; ." ( -- ) output string literal
-DOTQUOTE_ENTRY:
-        .word   DOTHEX_ENTRY           ; Link field
-        .byte   F_IMMEDIATE | 2        ; Flags + length (2 chars)
-        .byte   $2E, $22               ; '.' '"'
-        .align  2
-DOTQUOTE_CFA:
-        CODEPTR DOTQUOTE_CODE
-        PUBLIC  DOTQUOTE_CODE
-        .a16
-        .i16
-                ; Full impl: if interpreting emit string, if compiling compile it
-                NEXT
-        ENDPUBLIC
-
-; S" ( -- addr len ) string literal
-SQUOTE_ENTRY:
-        .word   DOTQUOTE_ENTRY         ; Link field
-        .byte   F_IMMEDIATE | 2        ; Flags + length (2 chars)
-        .byte   $53, $22               ; 'S' '"'
-        .align  2
-SQUOTE_CFA:
-        CODEPTR SQUOTE_CODE
-        PUBLIC  SQUOTE_CODE
-        .a16
-        .i16
-                ; Stub
-                NEXT
-        ENDPUBLIC
-
-;==============================================================================
 ; NUMBER ( addr -- n flag )
 ;
 ; Convert a counted string at addr to a signed integer using the current BASE.
@@ -3040,7 +2315,7 @@ SQUOTE_CFA:
 ;               ( addr -- addr FALSE ) on failure [addr preserved for error msg]
 ;==============================================================================
 
-        HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, SQUOTE_ENTRY
+        HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, ACCEPT_ENTRY
         CODEPTR NUMBER_CODE
         PUBLIC  NUMBER_CODE
         .a16
@@ -3398,9 +2673,741 @@ SQUOTE_CFA:
                 NEXT
         ENDPUBLIC
 
+;==============================================================================
+; INTERPRET ( -- )
+;
+; Outer interpreter loop body. Parses one word at a time from the current
+; input source and either executes or compiles it. Loops until the input
+; is exhausted (WORD returns an empty counted string).
+;
+; For each token:
+;   1. WORD ( bl -- addr )       parse next space-delimited token
+;   2. Empty length byte -> done
+;   3. FIND ( addr -- xt f )     look up in dictionary
+;   4. If found (f=1 or f=-1):
+;        STATE=0 (interpret): EXECUTE xt
+;        STATE=1 (compile):   if immediate EXECUTE xt, else compile xt into DP
+;   5. If not found (f=0):
+;        NUMBER ( addr -- n TRUE | addr FALSE )
+;        Success + interpret: number stays on stack
+;        Success + compile:   compile LIT_CFA then value into DP
+;        Failure:             print error, ABORT
+;
+; Subroutine call pattern (PHY/LDY/JSR/PLY): Y saved in stack frame
+;   LDY  #RTS_CFA_LIST      ; Trampoline: NEXT inside callee -> RTS_CODE -> RTS
+;   JSR  TARGET_CODE
+;
+; Stack frame locals (DP points here after TCD):
+;   LOC_XT      = 1    execution token saved across DP fetch
+;   LOC_FLAG    = 3    FIND result flag (0, 1, $FFFF)
+;   LOC_STATE   = 5    cached STATE value
+;   LOC_UP      = 7    cached UP value (avoids repeated zero page reads)
+;   LOC_SIZE    = LOC_UP + 1   ; = 8 bytes
+;==============================================================================
+        HEADER  "INTERPRET", INTERPRET_ENTRY, INTERPRET_CFA, 0, FIND_ENTRY
+        CODEPTR INTERPRET_CODE
+        PUBLIC  INTERPRET_CODE
+        .a16
+        .i16
+
+        LOC_XT      = 1
+        LOC_FLAG    = 3
+        LOC_STATE   = 5
+        LOC_UP      = 7
+        LOC_SIZE    = LOC_UP + 1        ; = 8 bytes
+
+                PHD                     ; Save DP
+                PHY                     ; Save IP
+
+                TSC                     ; Reserve stack frame
+                SEC
+                SBC     #LOC_SIZE
+                TCS
+                TCD                     ; DP -> stack frame
+
+                ;--------------------------------------------------------------
+                ; Cache UP and STATE before DP is fully in use.
+                ; UP is a zero page variable; read via absolute Y addressing.
+                ;--------------------------------------------------------------
+                LDY     #UP
+                LDA     a:0,Y           ; UP value
+                STA     LOC_UP
+
+                LDY     #U_STATE
+                LDA     (LOC_UP),Y      ; STATE
+                STA     LOC_STATE
+
+                ;--------------------------------------------------------------
+                ; Main parse loop
+                ;--------------------------------------------------------------
+@next_word:
+                ; Push space delimiter for WORD
+                DEX
+                DEX
+                LDA     #SPACE
+                STA     a:0,X
+                ; WORD ( bl -- addr )
+                LDY     #RTS_CFA_LIST
+                JSR     WORD_CODE
+
+                ; Check length byte at addr; empty = end of input
+                LDA     a:0,X           ; addr
+                STA     LOC_XT          ; Borrow LOC_XT as pointer temporarily
+                SEP     #$20
+                .a8
+                LDA     (LOC_XT)        ; Length byte
+                REP     #$20
+                .a16
+                AND     #$00FF
+                BNE     @find
+                JMP     @done           ; Empty -> done, addr still on stack
+
+                ; FIND ( addr -- xt flag )
+@find:          LDY     #RTS_CFA_LIST
+                JSR     FIND_CODE
+
+                ; Pop flag and xt
+                LDA     a:0,X           ; flag
+                STA     LOC_FLAG
+                INX
+                INX
+                LDA     a:0,X           ; xt or original addr
+                STA     LOC_XT
+                INX
+                INX
+
+                LDA     LOC_FLAG
+                BEQ     @not_found      ; flag=0 -> not in dictionary
+
+                ;--------------------------------------------------------------
+                ; Found: execute or compile
+                ;--------------------------------------------------------------
+                LDA     LOC_STATE
+                BNE     @compile        ; STATE != 0 -> compiling
+
+@execute:
+                ; Interpret mode: execute xt directly via EXECUTE
+                DEX
+                DEX
+                LDA     LOC_XT
+                STA     a:0,X           ; Push xt
+                LDY     #RTS_CFA_LIST
+                JSR     EXECUTE_CODE
+                BRA     @next_word
+
+@compile:
+                ; Compile mode: immediate words execute, normal words compile
+                LDA     LOC_FLAG
+                CMP     #FORTH_TRUE     ; flag = $FFFF -> immediate
+                BEQ     @execute        ; Immediate: execute even when compiling
+
+                ; Normal word: compile xt into dictionary at DP
+                LDY     #U_DP
+                LDA     (LOC_UP),Y      ; DP
+                STA     LOC_FLAG        ; Reuse LOC_FLAG as DP pointer
+                LDA     LOC_XT          ; xt (safely preserved in LOC_XT)
+                STA     (LOC_FLAG)      ; Store xt at DP
+                LDA     LOC_FLAG
+                INC     A
+                INC     A               ; DP += 2
+                LDY     #U_DP
+                STA     (LOC_UP),Y      ; Update DP
+                BRA     @next_word
+
+                ;--------------------------------------------------------------
+                ; Not found: try NUMBER
+                ; Restore addr onto parameter stack (was saved in LOC_XT)
+                ;--------------------------------------------------------------
+@not_found:
+                DEX
+                DEX
+                LDA     LOC_XT          ; original addr
+                STA     a:0,X
+
+                ; NUMBER ( addr -- n TRUE | addr FALSE )
+                LDY     #RTS_CFA_LIST
+                JSR     NUMBER_CODE
+
+                LDA     a:0,X           ; flag
+                INX
+                INX
+                CMP     #FORTH_TRUE
+                BNE     @error          ; Conversion failed
+
+                ; Successful number conversion
+                LDA     LOC_STATE
+                BNE     @skip
+                JMP     @next_word      ; Interpreting: number stays on stack
+                ; Compiling: compile LIT_CFA then value
+@skip:          LDY     #U_DP
+                LDA     (LOC_UP),Y      ; DP
+                STA     LOC_FLAG        ; DP pointer
+                LDA     #LIT_CFA
+                STA     (LOC_FLAG)      ; Store LIT_CFA at DP
+                INC     LOC_FLAG
+                INC     LOC_FLAG        ; Advance to next cell
+                LDA     a:0,X           ; value (left on stack by NUMBER)
+                STA     (LOC_FLAG)      ; Store value at DP+2
+                INX                     ; Drop value from parameter stack
+                INX
+                LDA     LOC_FLAG
+                INC     A
+                INC     A               ; DP += 4 total (LIT + value)
+                LDY     #U_DP
+                STA     (LOC_UP),Y      ; Update DP
+                JMP     @next_word
+
+                ;--------------------------------------------------------------
+                ; Unrecognised token: print " ?" and ABORT
+                ; addr from failed NUMBER is on stack; drop it
+                ;--------------------------------------------------------------
+@error:
+                INX                     ; Drop addr
+                INX
+                LDA     #'?'
+                JSR     hal_putch
+                LDY     #RTS_CFA_LIST
+                JSR     CR_CODE
+
+                ; Tear down frame before ABORT resets stacks
+                TSC
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY
+                PLD
+                JMP     ABORT_CODE      ; Reset stacks and restart QUIT
+
+                ;--------------------------------------------------------------
+                ; Input exhausted: drop addr left by WORD and return
+                ;--------------------------------------------------------------
+@done:
+                INX                     ; Drop addr
+                INX
+
+@return:
+                TSC                     ; Tear down frame
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY                     ; Restore IP
+                PLD                     ; Restore DP
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; . (DOT) ( n -- ) print signed number
+;------------------------------------------------------------------------------
+        HEADER  ".", DOT_ENTRY, DOT_CFA, 0, INTERPRET_ENTRY
+        CODEPTR DOT_CODE
+        PUBLIC  DOT_CODE
+        .a16
+        .i16
+                LDA     0,X
+                INX
+                INX
+                ; Print trailing space
+                STA     SCRATCH0
+                JSR     print_sdec
+                ; Print trailing space
+                LDA     #SPACE
+                JSR     hal_putch
+                NEXT
+
+print_sdec:
+                LDA     SCRATCH0
+                CMP     #0
+                BPL     print_udec
+                ; Negative: negate value, then print minus sign
+                EOR     #$FFFF
+                INC     A
+                STA     SCRATCH0
+                LDA     #'-'
+                JSR     hal_putch
+print_udec:
+                ; Print SCRATCH0 as unsigned decimal via repeated division
+                ; Digits pushed onto hardware stack in reverse, then printed
+                NUM_MSB = 4             ; Offsets to locals
+                NUM_LSB = 3
+                BCD = 2
+                BASE = 1
+
+                PHD                     ; save direct page register
+                PHY                     ; Save IP (Y used as digit counter)
+
+                LDA     SCRATCH0
+                PHA                     ; Establish working area
+                LDY     #U_BASE
+                LDA     (UP),Y          ; BASE (10 or 16)
+                PHA
+	        TSC                     ; Xfer RSP to direct page reg
+                TCD                     ; stack local space is now direct page.
+
+                OFF16MEM                ; Switch to byte mode.
+
+                LDA     #0              ; null delimiter for print loop
+                PHA
+@while:	                                ; divide TOS by base
+                STZ     BCD             ; clr BCD
+                LDY     #16             ; {>} = loop counter
+@foreachbit:
+                ASL     NUM_LSB         ; TOS is gradually replaced
+                ROL     NUM_MSB         ; with the quotient
+                ROL     BCD             ; BCD result is gradually replaced
+                LDA     BCD             ; with the remainder
+                SEC
+                SBC     BASE            ; partial BCD >= base ?
+                BCC     @else
+                STA     BCD             ; yes: update the partial result
+                INC     NUM_LSB         ; set low bit in partial quotient
+@else:
+                DEY
+                BNE     @foreachbit     ; loop 16 times
+                LDA     BCD
+                CMP     #10
+                BCC     @decdigit
+                ADC     #6              ; 'A'-10-1+carry
+@decdigit:      ADC     #'0'            ; convert BCD result to ASCII
+                PHA                     ; stack digits in ascending
+                LDA     NUM_LSB         ; order ('0' for zero)
+                ORA     NUM_MSB
+                BNE     @while          ; } until TOS is 0
+@print:
+                PLA
+@loop:
+                JSR     hal_putch       ; print digits in descending order
+                PLA                     ; until null delimiter is encountered
+                BNE     @loop
+                ON16MEM                 ; exit byte mode
+                PLA                     ; clean up working area
+                PLA
+                PLY                     ; restore registers and return
+                PLD
+                RTS
+	ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; U. ( n -- ) print unsigned number
+;------------------------------------------------------------------------------
+        HEADER  "U.", UDOT_ENTRY, UDOT_CFA, 0, DOT_ENTRY
+        CODEPTR UDOT_CODE
+        PUBLIC  UDOT_CODE
+        .a16
+        .i16
+                LDA     0,X
+                INX
+                INX
+                STA     SCRATCH0
+                JSR     DOT_CODE::print_udec
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; .HEX ( n -- ) print hexadecimal number
+;------------------------------------------------------------------------------
+        HEADER  ".HEX", DOTHEX_ENTRY, DOTHEX_CFA, 0, UDOT_ENTRY
+        CODEPTR DOTHEX_CODE
+        PUBLIC  DOTHEX_CODE
+        .a16
+        .i16
+                ; Print TOS as 4-digit hex
+                LDA     0,X
+                INX
+                INX
+                JSR     print_chex
+                NEXT
+
+        ; print_ahex - prints lower eight bits of the accumulator in hex
+        ; Inputs:
+        ;   A - byte to print
+        ; Outputs:
+        ;   A - retained
+	.proc print_ahex
+                PHA
+                PHA
+                LSR
+                LSR
+                LSR
+                LSR
+                JSR @print_nybble
+                PLA
+                JSR @print_nybble
+                PLA
+                RTS
+
+@print_nybble:
+                AND #LOWNIB
+                SED
+                CLC
+                ADC #$9990              ; Produce $90-$99 or $00-$05
+                ADC #$9940              ; Produce $30-$39 or $41-$46
+                CLD
+                jmp hal_putch
+        .endproc
+
+        ; print_chex - prints C as a 16 bit hex number to the console.
+        ; Inputs:
+        ;   C - number
+        ; Outputs:
+        ;   C - preserved
+        .proc print_chex
+                PHA
+                PHA
+                XBA
+                JSR print_ahex
+                PLA
+                JSR print_ahex
+                PLA
+                RTS
+        .endproc
+
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; .S ( -- ) print stack contents non-destructively
+;------------------------------------------------------------------------------
+        HEADER  ".S", DOTS_ENTRY, DOTS_CFA, 0, DOTHEX_ENTRY
+        CODEPTR DOTS_CODE
+        PUBLIC  DOTS_CODE
+        .a16
+        .i16
+                PHX                     ; Save PSP
+@print_loop:
+                CPX     #PSP_INIT
+                BCS     @ds_done
+                LDA     0,X
+                INX
+                INX
+                STA     SCRATCH0
+                JSR     DOT_CODE::print_sdec
+                LDA     #SPACE
+                JSR     hal_putch
+                BRA     @print_loop
+@ds_done:
+                PLX                     ; Restore PSP
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; DOT-PROMPT - print " ok" prompt (hidden, used by QUIT)
+;------------------------------------------------------------------------------
+        HEADER  "DOT-PROMPT", DOT_PROMPT_ENTRY, DOT_PROMPT_CFA, F_HIDDEN, DOTS_ENTRY
+        CODEPTR DOT_PROMPT_CODE
+        PUBLIC  DOT_PROMPT_CODE
+        .a16
+        .i16
+                LDA     #@prompt
+                JSR     hal_cputs
+                NEXT
+        @prompt: .byte ' ', 'o', 'k', C_RETURN, L_FEED,0
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; COMPARE
+; On entry:  PSP (X) has 4 cells: u2 addr2 u1 addr1 (TOS first)
+; On exit:   PSP (X) has 1 cell:  result
+; see: https://forth-standard.org/standard/string/COMPARE
+;------------------------------------------------------------------------------
+        HEADER  "COMPARE", COMPARE_ENTRY, COMPARE_CFA, 0, DOT_PROMPT_ENTRY
+        CODEPTR COMPARE_CODE
+        PUBLIC  COMPARE_CODE
+        .a16
+        .i16
+
+        LOC_ADDR1       = 1             ; hw stack offset for addr1
+        LOC_ADDR2       = 3             ; hw stack offset for addr2
+        ; saved IP lives at 5,S (pushed by PHY before the two PHAs)
+
+                PHY                     ; Save IP; hw stack: [saved_IP]
+
+                ;----------------------------------------------------------
+                ; Pop all four arguments from the parameter stack.
+                ; Save u1 -> TMPB, u2 -> SCRATCH1 for the length comparison
+                ; after the byte loop. Both addresses go onto the hw stack
+                ; as locals so (LOC,S),Y indirect indexed addressing works.
+                ;----------------------------------------------------------
+                LDA     0,X             ; u2
+                STA     SCRATCH1        ; SCRATCH1 = u2 (preserved for length cmp)
+                INX
+                INX
+
+                LDA     0,X             ; addr2
+                INX
+                INX
+                PHA                     ; hw stack: [addr2][saved_IP]
+                                        ; -> addr2 now at LOC_ADDR2 = 3,S
+
+                LDA     0,X             ; u1
+                STA     TMPB            ; TMPB = u1 (preserved for length cmp)
+                INX
+                INX
+
+                LDA     0,X             ; addr1
+                INX
+                INX
+                PHA                     ; hw stack: [addr1][addr2][saved_IP]
+                                        ; -> addr1 now at LOC_ADDR1 = 1,S
+
+                ;----------------------------------------------------------
+                ; Compute MIN(u1, u2) -> TMPA (the byte-loop trip count).
+                ; u1 is in TMPB, u2 is in SCRATCH1.
+                ; CMP is unsigned - lengths are always non-negative.
+                ;----------------------------------------------------------
+                LDA     TMPB            ; u1
+                CMP     SCRATCH1        ; unsigned: u1 - u2, sets C
+                BCS     @min_is_u2      ; C set  -> u1 >= u2  -> min = u2
+                STA     TMPA            ; C clear -> u1 <  u2  -> min = u1
+                BRA     @loop_start
+@min_is_u2:
+                LDA     SCRATCH1        ; min = u2
+                STA     TMPA
+
+@loop_start:
+                ;----------------------------------------------------------
+                ; Byte comparison loop.
+                ; Y is the byte index (0-based).
+                ; TMPA is the remaining byte count (counts down).
+                ; Uses (LOC_ADDR1,S),Y and (LOC_ADDR2,S),Y -- these are
+                ; 65816 stack-relative indirect indexed addressing modes,
+                ; the same technique used in MOVE_CODE and FILL_CODE.
+                ;----------------------------------------------------------
+                LDY     #0
+
+                LDA     TMPA
+                BEQ     @length_check   ; MIN = 0 -> skip loop, compare lengths
+
+@byte_loop:
+                ;------------------------------------------------------
+                ; Fetch one byte from each string in 8-bit mode.
+                ; SCRATCH0 is a zero-page cell; storing a byte there in
+                ; 8-bit mode is safe (only the low byte is written).
+                ;------------------------------------------------------
+                SEP     #$20            ; A = 8-bit
+                .a8
+                LDA     (LOC_ADDR1,S),Y ; byte from string1
+                STA     SCRATCH0        ; save for comparison
+                LDA     (LOC_ADDR2,S),Y ; byte from string2
+                CMP     SCRATCH0        ; str2[Y] - str1[Y]  (unsigned)
+                REP     #$20            ; A = 16-bit (before any branch)
+                .a16
+
+                BEQ     @next_byte      ; bytes equal -> continue
+                BCC     @str1_greater   ; str2[Y] < str1[Y]  -> str1 > str2
+                ; else  str2[Y] > str1[Y] -> str1 < str2
+                LDA     #$FFFF          ; result = -1
+                BRA     @store_result
+
+@str1_greater:
+                LDA     #$0001          ; result = +1
+                BRA     @store_result
+
+@next_byte:
+                INY                     ; advance byte index
+                DEC     TMPA            ; one fewer byte to compare
+                BNE     @byte_loop      ; loop until TMPA = 0
+
+                ;----------------------------------------------------------
+                ; All MIN(u1,u2) bytes matched. Compare lengths.
+                ; u1 is in TMPB, u2 is in SCRATCH1.
+                ;----------------------------------------------------------
+@length_check:
+                LDA     TMPB            ; u1
+                CMP     SCRATCH1        ; u1 - u2  (unsigned)
+                BEQ     @equal          ; u1 == u2 -> strings are equal
+                BCS     @str1_longer    ; u1 >  u2 -> str1 longer -> str1 > str2
+                LDA     #$FFFF          ; u1 <  u2 -> str1 shorter -> str1 < str2
+                BRA     @store_result
+@str1_longer:
+                LDA     #$0001
+                BRA     @store_result
+@equal:
+                LDA     #$0000
+
+@store_result:
+                ;----------------------------------------------------------
+                ; Tear down hw stack locals, restore IP, push result.
+                ;----------------------------------------------------------
+                PLY                     ; discard addr1
+                PLY                     ; discard addr2
+                PLY                     ; Restore IP
+
+                DEX
+                DEX
+                STA     0,X             ; Push result onto parameter stack
+                NEXT
+        ENDPUBLIC
+
+;==============================================================================
+; Stub declarations for words referenced in QUIT_BODY colon definition
+; that are not yet implemented (WORDS, defining words etc.)
+; These allow the project to assemble; implement fully in a later pass.
+;==============================================================================
+
+        HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, COMPARE_ENTRY
+        CODEPTR WORDS_CODE
+        PUBLIC  WORDS_CODE
+        .a16
+        .i16
+                ; Walk dictionary and print names
+                LDA     UP
+                CLC
+                ADC     #U_LATEST
+                STA     SCRATCH0
+                LDA     (SCRATCH0)      ; LATEST
+                STA     SCRATCH0
+                PHY                     ; Save IP
+                LDY     #0
+@wloop:
+                LDA     SCRATCH0
+                BEQ     @wdone
+                ; Get flags+len byte
+                LDA     SCRATCH0
+                CLC
+                ADC     #2              ; Skip link field
+                STA     SCRATCH1
+                SEP     #MEM16
+                .A8
+                LDA     (SCRATCH1)      ; flags+len byte
+                AND     #F_LENMASK      ; isolate name length
+                REP     #MEM16
+                .A16
+                AND     #$00FF
+                BEQ     @wnext          ; Skip zero-length names
+                STA     TMPA            ; Save name length
+                ; Point SCRATCH1 to first char of name
+                LDA     SCRATCH1
+                INC     A
+                STA     SCRATCH1
+                LDY     #0
+@wtype:
+                SEP     #MEM16
+                .A8
+                LDA     (SCRATCH1),Y
+                REP     #MEM16
+                .A16
+                AND     #$00FF
+                JSR     hal_putch
+                INY
+                DEC     TMPA
+                BNE     @wtype
+                ; Space after name
+                LDA     #$20
+                JSR     hal_putch
+                LDY     #0              ; Reset Y for next word
+@wnext:
+                LDA     (SCRATCH0)      ; Follow link field
+                STA     SCRATCH0
+                BRA     @wloop
+@wdone:
+                PLY                     ; Restore IP
+                NEXT
+        ENDPUBLIC
+
+; Stub defining words - to be fully implemented
+        HEADER  ":", COLON_ENTRY, COLON_CFA, 0, WORDS_ENTRY
+        CODEPTR COLON_CODE
+        PUBLIC  COLON_CODE
+        .a16
+        .i16
+                ; Full implementation: parse name, create header, set STATE=1
+                ; Stub: just set STATE to compile mode
+                LDA     UP
+                CLC
+                ADC     #U_STATE
+                STA     SCRATCH0
+                LDA     #1
+                STA     (SCRATCH0)
+                NEXT
+        ENDPUBLIC
+
+        HEADER  ";", SEMICOLON_ENTRY, SEMICOLON_CFA, F_IMMEDIATE, COLON_ENTRY
+        CODEPTR SEMICOLON_CODE
+        PUBLIC  SEMICOLON_CODE
+        .a16
+        .i16
+                ; Full implementation: compile EXIT, set STATE=0, smudge
+                ; STZ (indirect) not supported - use STA (SCRATCH0),Y
+                LDA     UP
+                STA     SCRATCH0
+                LDA     #0
+                LDY     #U_STATE
+                STA     (SCRATCH0),Y    ; STATE = 0 (interpret)
+                NEXT
+        ENDPUBLIC
+
+        HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, SEMICOLON_ENTRY
+        CODEPTR CONSTANT_CODE
+        PUBLIC  CONSTANT_CODE
+        .a16
+        .i16
+                ; Stub: full impl parses name, creates entry with DOCON, stores value
+                NEXT
+        ENDPUBLIC
+
+        HEADER  "VARIABLE", VARIABLE_ENTRY, VARIABLE_CFA, 0, CONSTANT_ENTRY
+        CODEPTR VARIABLE_CODE
+        PUBLIC  VARIABLE_CODE
+        .a16
+        .i16
+                ; Stub: full impl parses name, creates entry with DOVAR, allots cell
+                NEXT
+        ENDPUBLIC
+
+        HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, VARIABLE_ENTRY
+        CODEPTR CREATE_CODE
+        PUBLIC  CREATE_CODE
+        .a16
+        .i16
+                ; Stub
+                NEXT
+        ENDPUBLIC
+
+        HEADER  "DOES>", DOES_ENTRY, DOES_CFA, F_IMMEDIATE, CREATE_ENTRY
+        CODEPTR DOES_CODE
+        PUBLIC  DOES_CODE
+        .a16
+        .i16
+                ; Stub
+                NEXT
+        ENDPUBLIC
+
+; stubs
+
+; String literal words - stubs
+; Note: HEADER macro can't handle quote chars in names - written manually
+; ." ( -- ) output string literal
+DOTQUOTE_ENTRY:
+        .word   DOES_ENTRY             ; Link field
+        .byte   F_IMMEDIATE | 2        ; Flags + length (2 chars)
+        .byte   $2E, $22               ; '.' '"'
+        .align  2
+DOTQUOTE_CFA:
+        CODEPTR DOTQUOTE_CODE
+        PUBLIC  DOTQUOTE_CODE
+        .a16
+        .i16
+                ; Full impl: if interpreting emit string, if compiling compile it
+                NEXT
+        ENDPUBLIC
+
+; S" ( -- addr len ) string literal
+SQUOTE_ENTRY:
+        .word   DOTQUOTE_ENTRY         ; Link field
+        .byte   F_IMMEDIATE | 2        ; Flags + length (2 chars)
+        .byte   $53, $22               ; 'S' '"'
+        .align  2
+SQUOTE_CFA:
+        CODEPTR SQUOTE_CODE
+        PUBLIC  SQUOTE_CODE
+        .a16
+        .i16
+                ; Stub
+                NEXT
+        ENDPUBLIC
+
 ; ABORT" ( flag -- ) abort with message if flag non-zero
 ABORTQ_ENTRY:
-	.word   FIND_ENTRY             ; Link field
+	.word   SQUOTE_ENTRY             ; Link field
         .byte   F_IMMEDIATE | 6        ; Flags + length (6 chars)
         .byte   "ABORT", $22           ; 'A' 'B' 'O' 'R' 'T' '"'
         .align  2
