@@ -11,24 +11,16 @@
 ;   Any digit >= BASE, or unrecognised character, causes failure
 ;   Empty string (length = 0) causes failure
 ;
-; Register / ZP allocation:
-;   TMPA     - character count (counts down)
-;   TMPB     - accumulated result (low word)
-;   SCRATCH0 - base (fetched once from user area)
-;   SCRATCH1 - sign flag: $0000 = positive, $FFFF = negative
-;   hw stack local (after PHY + PHA):
-;     LOC_PTR = 1,S   current character pointer (advances through string)
-;     saved IP = 3,S  (pushed by PHY)
-;
 ; Stack effect: ( addr -- n TRUE ) on success
 ;               ( addr -- addr FALSE ) on failure [addr preserved for error msg]
 ;==============================================================================
 
-        HEADER  "NUMBER", NUMBER_CFA, 0, SQUOTE_CFA
+        HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, ACCEPT_ENTRY
         CODEPTR NUMBER_CODE
         PUBLIC  NUMBER_CODE
         .a16
         .i16
+
         LOC_COUNT   = 1         ; hw stack offset for character count
         LOC_PTR     = 3         ; hw stack offset for current char pointer
         LOC_SIGN    = 5         ; hw stack offset for sign value
@@ -44,16 +36,17 @@
                 SEC
                 SBC     #LOC_SIZE
                 TCS
+                TCD                     ; No page zero access until return!
 
                 ;----------------------------------------------------------
                 ; Fetch BASE using UP page zero pointer into LOC_BASE
                 ;----------------------------------------------------------
+                LDY     #UP
+                LDA     a:0,Y           ; Initialize pointer to user area
+                STA     LOC_PTR         ; Borrow pointer to hold UP
                 LDY     #U_BASE
-                LDA     (UP),Y          ; BASE
-                STA     LOC_BASE,S      ; LOC_BASE = BASE
-                TSC                     ; Set DP to point to stack locals.
-                TCD                     ; No page zero access until reset!
-
+                LDA     (LOC_PTR),Y     ; BASE
+                STA     LOC_BASE        ; LOC_BASE = BASE
                 STZ     LOC_SIGN        ; LOC_SIGN = 0, assume positive
                 STZ     LOC_RESULT      ; Initial value is zero.
 
@@ -189,6 +182,5 @@
                 TCS
                 PLY                     ; Restore IP
                 PLD                     ; Restore DP
-                RTS
                 NEXT
         ENDPUBLIC
