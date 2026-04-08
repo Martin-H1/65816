@@ -64,12 +64,13 @@ MACROS_INC = 1
 ;------------------------------------------------------------------------------
 ; HEADER - Create a dictionary entry header in ROM
 ;
-; Usage: HEADER "NAME", name_label, flags, prev_label
+; Usage: HEADER "NAME", entry_label, cfa_label, flags, prev
 ;
 ;   str_name   - string literal for the name field
-;   lbl        - assembly label for the CFA (used as execution token)
+;   entry_lbl  - assembly label for the header (used for next word's link field)
+;   cfa_lbl    - assembly label for the CFA (used as execution token)
 ;   flags      - F_IMMEDIATE, F_HIDDEN, or 0
-;   prev       - label of previous word's header (for link field)
+;   prev       - label of previous word's header entry (for link field)
 ;                use 0 for the first word
 ;
 ; Layout produced:
