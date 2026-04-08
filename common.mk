@@ -28,8 +28,20 @@ endif
 bin:
 	mkdir bin
 
+bin/debug:
+	mkdir bin$(SEP)debug
+
+bin/release:
+	mkdir bin$(SEP)release
+
 obj:
 	mkdir obj
+
+obj/debug:
+	mkdir obj$(SEP)debug
+
+obj/release:
+	mkdir obj$(SEP)release
 
 tests/obj:
 	mkdir tests$(SEP)obj
@@ -40,8 +52,11 @@ tests/bin:
 %.o : %.asm
 	$(CA65) --cpu 65816 -I include $< -l $*.lst -o $@
 
-obj/%.o : %.s obj
-	$(CA65) --cpu 65816 -I include $< -l obj/$*.lst -o $@
+obj/debug/%.o : %.s obj obj/debug
+	$(CA65) --cpu 65816 -D DEBUG -I include $< -l obj/debug/$*.lst -o $@
+
+obj/release/%.o : %.s obj obj/release
+	$(CA65) --cpu 65816 -I include $< -l obj/release/$*.lst -o $@
 
 tests/obj/%.o : tests/%.s tests/obj tests/bin
 	$(CA65) --cpu 65816 -I . $< -l tests/obj/$*.lst -o $@

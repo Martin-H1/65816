@@ -101,6 +101,33 @@ PUBLIC hal_cputs
 	rts
 ENDPUBLIC
 
+; hal_lpputs - prints a length-prefixed string to the console
+; Inputs:
+;   C - address of the string within the current bank
+; Outputs:
+;   C - preserved
+PUBLIC hal_lpputs
+	STRPTR = 1
+	phy
+	phx
+	pha
+	ldy #$0000
+	lda (STRPTR,S),Y	; Load the length byte
+	and #$00ff
+	tax
+	beq @return		; Nothing to print if zero
+@loop:	iny
+	lda (STRPTR,S),Y
+	jsr hal_putch
+	dex
+	bne @loop
+@return:
+	pla			; Clean off stack and return
+	plx
+	ply
+	rts
+ENDPUBLIC
+
 ; returns true if data in in buffer
 PUBLIC hal_cready
 	rts
@@ -157,7 +184,7 @@ PUBLIC hal_set_nmi
 ENDPUBLIC
 
 ;==============================================================================
-; SYSTEM INITIALIZATION
+; SYSTEM INITIALIZATION from ROM vectors
 ;==============================================================================
 .import MAIN
 .proc hal_init
@@ -185,6 +212,7 @@ ENDPUBLIC
 	jsr MAIN
 .endproc
 
+.ifndef DEBUG
 ;==============================================================================
 ; HARDWARE VECTORS
 ;==============================================================================
@@ -210,3 +238,4 @@ ENDPUBLIC
 .word hal_init			; $FFFA - unused
 .word hal_init			; $FFFC - RESET (native)
 .word $0000			; $FFFE - IRQ/BRK (native)
+.endif
