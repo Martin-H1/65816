@@ -74,6 +74,7 @@ UPPER_CASE		= $E0A3	; Converts lower-case ASCII chars to upper-case.
 
 W:              .res 2          ; Working register (current CFA)
 UP:             .res 2          ; User Pointer (base of user area)
+RSP_INIT:       .res 2          ; RSP init value from ROM monitor or $01FF
 SCRATCH0:       .res 2          ; General purpose scratch
 SCRATCH1:       .res 2          ; General purpose scratch
 TMPA:           .res 2          ; Temp for multiply/divide
@@ -83,6 +84,7 @@ TMPB:           .res 2          ; Temp for multiply/divide
 ; use direct page addressing when referencing them
         .globalzp       W
         .globalzp       UP
+        .globalzp       RSP_INIT
         .globalzp       SCRATCH0
         .globalzp       SCRATCH1
         .globalzp       TMPA
@@ -99,6 +101,8 @@ TMPB:           .res 2          ; Temp for multiply/divide
 	lda #$0D
 	jsr hal_putch
 	ldx #PSP_INIT
+	TSC				; S initialized by HAL ROM Vector.
+	STA RSP_INIT			; Save S to reinitialize stack pointer
 
 	; Perform Forth interpreter initialization
 	LDA #UP_BASE			; Initialize User Pointer

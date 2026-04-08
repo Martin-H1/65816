@@ -11,7 +11,6 @@ CONSTANTS_INC = 1
 
 ; Stack addresses
 PSP_INIT        = $03FF         ; Parameter stack initial pointer
-RSP_INIT        = $01FF         ; Return stack initial pointer (hardware)
 
 ; User area base and offsets
 UP_BASE         = $0400

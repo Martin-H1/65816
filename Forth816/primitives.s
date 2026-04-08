@@ -31,6 +31,7 @@
 ; Using .importzp ensures ca65 uses direct page addressing
         .importzp       W
         .importzp       UP
+        .importzp       RSP_INIT
         .importzp       SCRATCH0
         .importzp       SCRATCH1
         .importzp       TMPA
@@ -1419,6 +1420,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 
 ;------------------------------------------------------------------------------
 ; EXIT ( -- ) return from current colon definition
+; https://forth-standard.org/standard/core/EXIT
 ;------------------------------------------------------------------------------
         HEADER  "EXIT", EXIT_ENTRY, EXIT_CFA, 0, SPACES_ENTRY
         CODEPTR EXIT_CODE
@@ -2061,9 +2063,9 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 LDX     #PSP_INIT       ; Stack grows down from here.
 
                 ; --- Reset return stack ---
-                ; TAS transfers A to S (hardware stack pointer)
-                LDA     #$01FF          ; RSP_INIT
-                TAS
+                LDA     RSP_INIT        ; Reload from entry value.
+                TCS
+
 
                 ; --- Reset STATE and >IN to 0 ---
                 ; STZ (indirect) is not supported on 65816.
@@ -2134,8 +2136,8 @@ QUIT_LOOP:
         PUBLIC  RSP_RESET_CODE
         .a16
         .i16
-                LDA     #$01FF          ; RSP_INIT
-                TAS                     ; S = RSP_INIT
+                LDA     RSP_INIT
+                TCS                     ; S = RSP_INIT
                 NEXT
         ENDPUBLIC
 
@@ -2301,15 +2303,6 @@ QUIT_LOOP:
 ;   Digits 0-9, A-F (uppercase) interpreted in current BASE
 ;   Any digit >= BASE, or unrecognised character, causes failure
 ;   Empty string (length = 0) causes failure
-;
-; Register / ZP allocation:
-;   TMPA     - character count (counts down)
-;   TMPB     - accumulated result (low word)
-;   SCRATCH0 - base (fetched once from user area)
-;   SCRATCH1 - sign flag: $0000 = positive, $FFFF = negative
-;   hw stack local (after PHY + PHA):
-;     LOC_PTR = 1,S   current character pointer (advances through string)
-;     saved IP = 3,S  (pushed by PHY)
 ;
 ; Stack effect: ( addr -- n TRUE ) on success
 ;               ( addr -- addr FALSE ) on failure [addr preserved for error msg]
@@ -3304,21 +3297,16 @@ print_udec:
         ENDPUBLIC
 
 ; Stub defining words - to be fully implemented
+; https://forth-standard.org/standard/core/Colon
         HEADER  ":", COLON_ENTRY, COLON_CFA, 0, WORDS_ENTRY
-        CODEPTR COLON_CODE
-        PUBLIC  COLON_CODE
-        .a16
-        .i16
+        CODEPTR DOCOL
                 ; Full implementation: parse name, create header, set STATE=1
                 ; Stub: just set STATE to compile mode
-                LDA     UP
-                CLC
-                ADC     #U_STATE
-                STA     SCRATCH0
-                LDA     #1
-                STA     (SCRATCH0)
-                NEXT
-        ENDPUBLIC
+        ;.word Parse_Name       ; get name  ( caddr len )
+        .word LIT_CODE, DOCOL   ;, HeaderComma
+        ;.word CloseBracket	; State= compile
+        .word EXIT_CODE
+
 
         HEADER  ";", SEMICOLON_ENTRY, SEMICOLON_CFA, F_IMMEDIATE, COLON_ENTRY
         CODEPTR SEMICOLON_CODE

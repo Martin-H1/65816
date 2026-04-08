@@ -43,6 +43,7 @@
 
 W:              .res 2          ; Working register (current CFA)
 UP:             .res 2          ; User Pointer (base of user area)
+RSP_INIT:       .res 2          ; RSP init value from ROM monitor or $01FF
 SCRATCH0:       .res 2          ; General purpose scratch
 SCRATCH1:       .res 2          ; General purpose scratch
 TMPA:           .res 2          ; Temp for multiply/divide
@@ -52,6 +53,7 @@ TMPB:           .res 2          ; Temp for multiply/divide
 ; use direct page addressing when referencing them
         .globalzp       W
         .globalzp       UP
+        .globalzp       RSP_INIT
         .globalzp       SCRATCH0
         .globalzp       SCRATCH1
         .globalzp       TMPA
@@ -204,8 +206,8 @@ RTS_CFA_LIST:
 
                 ; --- Initialize stacks ---
                 LDX     #PSP_INIT       ; Parameter stack pointer
-                LDA     #RSP_INIT
-                TAS                     ; Hardware (return) stack pointer
+                TSC                     ; S initialized by HAL ROM Vector.
+                STA     RSP_INIT        ; Save S to reinitialize stack pointer
 
                 ; --- Initialize User Pointer ---
                 LDA     #UP_BASE
