@@ -24,11 +24,13 @@
 
 .importzp SCRATCH0
 .importzp UP
+.importzp W
 
 ; Main entry point for the test
 PUBLIC MAIN
 	TYPESTRCR "interpret test - enter!"
 
+	jsr wordsTest
 	jsr wordTest
 	jsr compareTest
 	jsr numberTest
@@ -38,6 +40,15 @@ PUBLIC MAIN
 	TYPESTRCR "interpret test - exit!"
 	rts
 ENDPUBLIC
+
+.proc wordsTest
+	phy			; Push IP on return stack
+	ldy #WORDS_CFA		; Invoke WORDS
+	iny			; Body starts at CFA+2
+	iny
+	NEXT			; Execute first body word
+	; RTS_CFA will be called by NEXT and return
+.endproc
 
 .proc wordTest
 	; Leading delimiters being skipped

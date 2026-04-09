@@ -221,7 +221,7 @@ RTS_CFA_LIST:
                 ; --- User area: STATE = 0 (interpret) ---
                 ; STZ (indirect) not supported - use STA (UP),Y
                 LDY     #U_STATE
-                LDA     #0
+                LDA     #FORTH_FALSE
                 STA     (UP),Y          ; STATE = 0
 
                 ; --- User area: DP = DICT_BASE ---

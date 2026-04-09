@@ -2070,7 +2070,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ; --- Reset STATE and >IN to 0 ---
                 ; STZ (indirect) is not supported on 65816.
                 ; Store UP in SCRATCH0, use Y as offset into user area.
-                LDA     #0
+                LDA     #FORTH_FALSE
                 LDY     #U_STATE
                 STA     (UP),Y          ; STATE = 0 (interpret)
                 LDY     #U_TOIN
@@ -2666,6 +2666,21 @@ QUIT_LOOP:
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; UNDEFINED-WORD ( -- ) print error message and abort
+; Called when INTERPRET cannot find or convert a word.
+;------------------------------------------------------------------------------
+        HEADER  "UNDEFINED-WORD", UNDEFINED_WORD_ENTRY, UNDEFINED_WORD_CFA, 0, WORDS_ENTRY
+        CODEPTR UNDEFINED_WORD_CODE
+        PUBLIC  UNDEFINED_WORD_CODE
+        .a16
+        .i16
+                LDA     #<undefined_msg
+                JSR     hal_cputs
+                JMP     ABORT_CODE
+undefined_msg:  .byte   "error: Undefined word", $0D, $0A, $00
+        ENDPUBLIC
+
 ;==============================================================================
 ; INTERPRET ( -- )
 ;
@@ -3235,66 +3250,50 @@ print_udec:
 ; that are not yet implemented (WORDS, defining words etc.)
 ; These allow the project to assemble; implement fully in a later pass.
 ;==============================================================================
-
+;------------------------------------------------------------------------------
+; WORDS ( -- ) list all non-hidden words in the dictionary
+;------------------------------------------------------------------------------
         HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, COMPARE_ENTRY
-        CODEPTR WORDS_CODE
-        PUBLIC  WORDS_CODE
-        .a16
-        .i16
-                ; Walk dictionary and print names
-                LDA     UP
-                CLC
-                ADC     #U_LATEST
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; LATEST
-                STA     SCRATCH0
-                PHY                     ; Save IP
-                LDY     #0
-@wloop:
-                LDA     SCRATCH0
-                BEQ     @wdone
-                ; Get flags+len byte
-                LDA     SCRATCH0
-                CLC
-                ADC     #2              ; Skip link field
-                STA     SCRATCH1
-                SEP     #MEM16
-                .A8
-                LDA     (SCRATCH1)      ; flags+len byte
-                AND     #F_LENMASK      ; isolate name length
-                REP     #MEM16
-                .A16
-                AND     #$00FF
-                BEQ     @wnext          ; Skip zero-length names
-                STA     TMPA            ; Save name length
-                ; Point SCRATCH1 to first char of name
-                LDA     SCRATCH1
-                INC     A
-                STA     SCRATCH1
-                LDY     #0
-@wtype:
-                SEP     #MEM16
-                .A8
-                LDA     (SCRATCH1),Y
-                REP     #MEM16
-                .A16
-                AND     #$00FF
-                JSR     hal_putch
-                INY
-                DEC     TMPA
-                BNE     @wtype
-                ; Space after name
-                LDA     #$20
-                JSR     hal_putch
-                LDY     #0              ; Reset Y for next word
-@wnext:
-                LDA     (SCRATCH0)      ; Follow link field
-                STA     SCRATCH0
-                BRA     @wloop
-@wdone:
-                PLY                     ; Restore IP
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+
+WORDS_BODY:
+        .word   LATEST_CFA              ; ( addr-of-LATEST-var )
+        .word   FETCH_CFA               ; ( entry )
+WORDS_LOOP:
+        .word   DUP_CFA                 ; ( entry entry )
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA                ; ( entry entry+2 )
+        .word   CFETCH_CFA              ; ( entry flags+len )
+        .word   LIT_CFA
+        .word   F_HIDDEN
+        .word   AND_CFA                 ; ( entry flags+len & F_HIDDEN )
+        .word   ZEROEQ_CFA              ; ( entry flag ) true if not hidden
+        .word   ZBRANCH_CFA
+        .word   WORDS_SKIP
+        .word   DUP_CFA                 ; ( entry entry )
+        .word   LIT_CFA
+        .word   3
+        .word   PLUS_CFA                ; ( entry entry+3 ) skip link+flags byte
+        .word   DUP_CFA                 ; ( entry entry+3 entry+3 )
+        .word   LIT_CFA
+        .word   1
+        .word   MINUS_CFA               ; ( entry entry+3 entry+2 )
+        .word   CFETCH_CFA              ; ( entry entry+3 flags+len )
+        .word   LIT_CFA
+        .word   F_LENMASK
+        .word   AND_CFA                 ; ( entry entry+3 len )
+        .word   TYPE_CFA                ; ( entry )
+        .word   SPACE_CFA
+WORDS_SKIP:
+        .word   FETCH_CFA               ; ( prev-entry ) follow link
+        .word   DUP_CFA
+        .word   ZEROEQ_CFA
+        .word   ZBRANCH_CFA
+        .word   WORDS_LOOP
+        .word   DROP_CFA
+        .word   CR_CFA
+        .word   EXIT_CFA
 
 ; Stub defining words - to be fully implemented
 ; https://forth-standard.org/standard/core/Colon
@@ -3303,27 +3302,67 @@ print_udec:
                 ; Full implementation: parse name, create header, set STATE=1
                 ; Stub: just set STATE to compile mode
         ;.word Parse_Name       ; get name  ( caddr len )
-        .word LIT_CODE, DOCOL   ;, HeaderComma
-        ;.word CloseBracket	; State= compile
-        .word EXIT_CODE
+        .word LIT_CFA, DOCOL   ;, HeaderComma
+        .word RBRACKET_CFA	; State= compile
+        .word EXIT_CFA
 
-
+; https://forth-standard.org/standard/core/Semi
         HEADER  ";", SEMICOLON_ENTRY, SEMICOLON_CFA, F_IMMEDIATE, COLON_ENTRY
-        CODEPTR SEMICOLON_CODE
-        PUBLIC  SEMICOLON_CODE
-        .a16
-        .i16
+        CODEPTR DOCOL
                 ; Full implementation: compile EXIT, set STATE=0, smudge
                 ; STZ (indirect) not supported - use STA (SCRATCH0),Y
-                LDA     UP
-                STA     SCRATCH0
-                LDA     #0
+
+        .word LIT_CFA, EXIT_CFA, COMPILECOMMA_CFA	; compile Exit
+	; smudge
+        .word LBRACKET_CFA	; STATE= interpret
+        .word EXIT_CFA
+
+;------------------------------------------------------------------------------
+; [ ( -- ) enter interpretation state (immediate)
+; Sets STATE = 0
+; https://forth-standard.org/standard/core/Bracket
+;------------------------------------------------------------------------------
+        HEADER  "[", LBRACKET_ENTRY, LBRACKET_CFA, F_IMMEDIATE, SEMICOLON_ENTRY
+        CODEPTR LBRACKET_CODE
+        PUBLIC  LBRACKET_CODE
+        .a16
+        .i16
+                PHY                     ; Save IP
                 LDY     #U_STATE
-                STA     (SCRATCH0),Y    ; STATE = 0 (interpret)
+                LDA     #FORTH_FALSE
+                STA     (UP),Y          ; STATE = 0 (interpret)
+                PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
 
-        HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, SEMICOLON_ENTRY
+;------------------------------------------------------------------------------
+; ] ( -- ) enter compilation state
+; Sets STATE = 1 (compile)
+; https://forth-standard.org/standard/right-bracket
+;------------------------------------------------------------------------------
+        HEADER  "]", RBRACKET_ENTRY, RBRACKET_CFA, 0, LBRACKET_ENTRY
+        CODEPTR RBRACKET_CODE
+        PUBLIC  RBRACKET_CODE
+        .a16
+        .i16
+                PHY                     ; Save IP
+                LDY     #U_STATE
+                LDA     #FORTH_TRUE
+                STA     (UP),Y          ; STATE = 1 (compile)
+                PLY                     ; Restore IP
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; COMPILE, ( xt -- ) compile xt into the current definition
+; In ITC Forth, compiling a word is just storing its CFA at HERE.
+; Functionally identical to , (COMMA) for this implementation.
+; https://forth-standard.org/standard/core/COMPILEComma
+;------------------------------------------------------------------------------
+        HEADER  "COMPILE,", COMPILECOMMA_ENTRY, COMPILECOMMA_CFA, 0, RBRACKET_ENTRY
+        CODEPTR COMMA_CODE              ; Reuse COMMA_CODE directly
+
+        HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, COMPILECOMMA_ENTRY
         CODEPTR CONSTANT_CODE
         PUBLIC  CONSTANT_CODE
         .a16

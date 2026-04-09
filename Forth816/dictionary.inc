@@ -127,6 +127,8 @@ F_LENMASK       = $1F
         .global COMPARE_CFA
         .global WORD_CFA
         .global FIND_CFA
+        .global UNDEFINED_WORD_CFA
+        .global INTERPRET_CFA
         .global NUMBER_CFA
         .global COUNT_CFA
         .global DOTQUOTE_CFA
@@ -142,6 +144,9 @@ F_LENMASK       = $1F
 ; Defining words
         .global COLON_CFA
         .global SEMICOLON_CFA
+        .global LBRACKET_CFA
+        .global RBRACKET_CFA
+        .global COMPILECOMMA_CFA
         .global CONSTANT_CFA
         .global VARIABLE_CFA
         .global CREATE_CFA
