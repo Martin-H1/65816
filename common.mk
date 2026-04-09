@@ -4,7 +4,7 @@ ifeq ($(OS),Windows_NT)
     CA65 = "%HOMEPATH%\cc65-snapshot-win32\bin\ca65.exe"
     LD65 = "%HOMEPATH%\cc65-snapshot-win32\bin\ld65.exe"
     PY65MON = "%HOMEPATH%\AppData\Local\Programs\Python\Python311\Scripts\py65mon"
-    PYTHON = python
+    PYTHON = "C:\Users\mheer\AppData\Local\Programs\Python\Python311\python.exe"
     65816S = "%HOMEPATH%\Documents\git\65816\tools\65816S.exe"
     SREC_CAT = "C:\Program Files\srecord\bin\srec_cat.exe"
     RM = del /f /q

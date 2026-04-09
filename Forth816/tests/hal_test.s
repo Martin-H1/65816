@@ -79,6 +79,7 @@ SCRATCH0:       .res 2          ; General purpose scratch
 SCRATCH1:       .res 2          ; General purpose scratch
 TMPA:           .res 2          ; Temp for multiply/divide
 TMPB:           .res 2          ; Temp for multiply/divide
+TRACE_EN:	.res 2		; Trace enable boolean.
 
 ; Export zero page symbols with .globalzp so other translation units
 ; use direct page addressing when referencing them
@@ -89,6 +90,7 @@ TMPB:           .res 2          ; Temp for multiply/divide
         .globalzp       SCRATCH1
         .globalzp       TMPA
         .globalzp       TMPB
+        .globalzp       TRACE_EN
 
 ;==============================================================================
 ; CODE SEGMENT - Entry from ROM monitor
@@ -105,6 +107,9 @@ TMPB:           .res 2          ; Temp for multiply/divide
 	STA RSP_INIT			; Save S to reinitialize stack pointer
 
 	; Perform Forth interpreter initialization
+.ifdef DEBUG
+        STZ TRACE_EN			; Tracing off at startup
+.endif
 	LDA #UP_BASE			; Initialize User Pointer
 	STA UP
 

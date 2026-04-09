@@ -2670,7 +2670,7 @@ QUIT_LOOP:
 ; UNDEFINED-WORD ( -- ) print error message and abort
 ; Called when INTERPRET cannot find or convert a word.
 ;------------------------------------------------------------------------------
-        HEADER  "UNDEFINED-WORD", UNDEFINED_WORD_ENTRY, UNDEFINED_WORD_CFA, 0, WORDS_ENTRY
+        HEADER  "UNDEFINED-WORD", UNDEFINED_WORD_ENTRY, UNDEFINED_WORD_CFA, 0, FIND_ENTRY
         CODEPTR UNDEFINED_WORD_CODE
         PUBLIC  UNDEFINED_WORD_CODE
         .a16
@@ -2681,227 +2681,101 @@ QUIT_LOOP:
 undefined_msg:  .byte   "error: Undefined word", $0D, $0A, $00
         ENDPUBLIC
 
-;==============================================================================
-; INTERPRET ( -- )
-;
-; Outer interpreter loop body. Parses one word at a time from the current
-; input source and either executes or compiles it. Loops until the input
-; is exhausted (WORD returns an empty counted string).
-;
-; For each token:
-;   1. WORD ( bl -- addr )       parse next space-delimited token
-;   2. Empty length byte -> done
-;   3. FIND ( addr -- xt f )     look up in dictionary
-;   4. If found (f=1 or f=-1):
-;        STATE=0 (interpret): EXECUTE xt
-;        STATE=1 (compile):   if immediate EXECUTE xt, else compile xt into DP
-;   5. If not found (f=0):
-;        NUMBER ( addr -- n TRUE | addr FALSE )
-;        Success + interpret: number stays on stack
-;        Success + compile:   compile LIT_CFA then value into DP
-;        Failure:             print error, ABORT
-;
-; Subroutine call pattern (PHY/LDY/JSR/PLY): Y saved in stack frame
-;   LDY  #RTS_CFA_LIST      ; Trampoline: NEXT inside callee -> RTS_CODE -> RTS
-;   JSR  TARGET_CODE
-;
-; Stack frame locals (DP points here after TCD):
-;   LOC_XT      = 1    execution token saved across DP fetch
-;   LOC_FLAG    = 3    FIND result flag (0, 1, $FFFF)
-;   LOC_STATE   = 5    cached STATE value
-;   LOC_UP      = 7    cached UP value (avoids repeated zero page reads)
-;   LOC_SIZE    = LOC_UP + 1   ; = 8 bytes
-;==============================================================================
-        HEADER  "INTERPRET", INTERPRET_ENTRY, INTERPRET_CFA, 0, FIND_ENTRY
-        CODEPTR INTERPRET_CODE
-        PUBLIC  INTERPRET_CODE
-        .a16
-        .i16
+;------------------------------------------------------------------------------
+; INTERPRET ( -- ) parse and execute/compile words from input
+;------------------------------------------------------------------------------
+        HEADER  "INTERPRET", INTERPRET_ENTRY, INTERPRET_CFA, 0, UNDEFINED_WORD_ENTRY
+        CODEPTR DOCOL
 
-        LOC_XT      = 1
-        LOC_FLAG    = 3
-        LOC_STATE   = 5
-        LOC_UP      = 7
-        LOC_SIZE    = LOC_UP + 1        ; = 8 bytes
+INTERPRET_BODY:
+INTERPRET_LOOP:
+        ; Parse next space-delimited word from input
+        .word   LIT_CFA
+        .word   ' '                     ; space delimiter
+        .word   WORD_CFA                ; ( addr ) counted string at HERE
 
-                PHD                     ; Save DP
-                PHY                     ; Save IP
+        ; Check for empty word - if length 0, input exhausted
+        .word   DUP_CFA                 ; ( addr addr )
+        .word   CFETCH_CFA              ; ( addr len )
+        .word   ZEROEQ_CFA             ; ( addr flag )
+        .word   ZBRANCH_CFA
+        .word   INTERPRET_NOTEMPTY
+        .word   DROP_CFA                ; ( ) discard addr
+        .word   EXIT_CFA                ; done
 
-                TSC                     ; Reserve stack frame
-                SEC
-                SBC     #LOC_SIZE
-                TCS
-                TCD                     ; DP -> stack frame
+INTERPRET_NOTEMPTY:
+        ; Try to find the word in the dictionary
+        .word   FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
 
-                ;--------------------------------------------------------------
-                ; Cache UP and STATE before DP is fully in use.
-                ; UP is a zero page variable; read via absolute Y addressing.
-                ;--------------------------------------------------------------
-                LDY     #UP
-                LDA     a:0,Y           ; UP value
-                STA     LOC_UP
+        ; Was it found?
+        .word   DUP_CFA                 ; ( addr 0 0 | xt 1 1 | xt -1 -1 )
+        .word   ZEROEQ_CFA              ; ( addr 0 true | xt 1 false | xt -1 false )
+        .word   ZBRANCH_CFA
+        .word   INTERPRET_FOUND
 
-                LDY     #U_STATE
-                LDA     (LOC_UP),Y      ; STATE
-                STA     LOC_STATE
+        ; Not found - drop the zero and try NUMBER
+        .word   DROP_CFA                ; ( addr )
+        .word   NUMBER_CFA              ; ( n TRUE | addr FALSE )
+        .word   ZBRANCH_CFA
+        .word   INTERPRET_NOTANUMBER
 
-                ;--------------------------------------------------------------
-                ; Main parse loop
-                ;--------------------------------------------------------------
-@next_word:
-                ; Push space delimiter for WORD
-                DEX
-                DEX
-                LDA     #SPACE
-                STA     a:0,X
-                ; WORD ( bl -- addr )
-                LDY     #RTS_CFA_LIST
-                JSR     WORD_CODE
+        ; It's a number - check STATE
+        .word   STATE_CFA               ; ( n addr-of-STATE )
+        .word   FETCH_CFA               ; ( n state )
+        .word   ZEROEQ_CFA              ; ( n flag ) true if interpreting
+        .word   ZBRANCH_CFA
+        .word   INTERPRET_COMPILE_LIT
+        ; Interpreting: number is already on stack, just loop
+        .word   BRANCH_CFA
+        .word   INTERPRET_LOOP
 
-                ; Check length byte at addr; empty = end of input
-                LDA     a:0,X           ; addr
-                STA     LOC_XT          ; Borrow LOC_XT as pointer temporarily
-                SEP     #$20
-                .a8
-                LDA     (LOC_XT)        ; Length byte
-                REP     #$20
-                .a16
-                AND     #$00FF
-                BNE     @find
-                JMP     @done           ; Empty -> done, addr still on stack
+INTERPRET_COMPILE_LIT:
+        ; Compiling: emit LIT followed by the number
+        .word   LIT_CFA
+        .word   LIT_CFA                 ; push the CFA of LIT
+        .word   COMPILECOMMA_CFA        ; compile LIT into definition
+        .word   COMPILECOMMA_CFA        ; compile the number value itself
+        .word   BRANCH_CFA
+        .word   INTERPRET_LOOP
 
-                ; FIND ( addr -- xt flag )
-@find:          LDY     #RTS_CFA_LIST
-                JSR     FIND_CODE
+INTERPRET_NOTANUMBER:
+        ; Neither a word nor a number
+        .word   DROP_CFA                ; discard the addr
+        .word   UNDEFINED_WORD_CFA
+        .word   BRANCH_CFA
+        .word   INTERPRET_LOOP          ; unreachable but tidy
 
-                ; Pop flag and xt
-                LDA     a:0,X           ; flag
-                STA     LOC_FLAG
-                INX
-                INX
-                LDA     a:0,X           ; xt or original addr
-                STA     LOC_XT
-                INX
-                INX
+INTERPRET_FOUND:
+        ; ( xt 1 | xt -1 ) - check STATE
+        .word   STATE_CFA               ; ( xt flag addr-of-STATE )
+        .word   FETCH_CFA               ; ( xt flag state )
+        .word   ZEROEQ_CFA              ; ( xt flag true-if-interpreting )
+        .word   ZBRANCH_CFA
+        .word   INTERPRET_COMPILE_WORD
 
-                LDA     LOC_FLAG
-                BEQ     @not_found      ; flag=0 -> not in dictionary
+        ; Interpreting: execute regardless of immediate flag
+        .word   DROP_CFA                ; ( xt ) discard flag
+        .word   EXECUTE_CFA
+        .word   BRANCH_CFA
+        .word   INTERPRET_LOOP
 
-                ;--------------------------------------------------------------
-                ; Found: execute or compile
-                ;--------------------------------------------------------------
-                LDA     LOC_STATE
-                BNE     @compile        ; STATE != 0 -> compiling
+INTERPRET_COMPILE_WORD:
+        ; Compiling: execute if immediate (-1), compile if normal (1)
+        .word   LIT_CFA
+        .word   $FFFF                   ; -1 = immediate
+        .word   EQUAL_CFA               ; ( xt flag ) true if immediate
+        .word   ZBRANCH_CFA
+        .word   INTERPRET_COMPILE_NORMAL
+        ; Immediate: execute it
+        .word   EXECUTE_CFA
+        .word   BRANCH_CFA
+        .word   INTERPRET_LOOP
 
-@execute:
-                ; Interpret mode: execute xt directly via EXECUTE
-                DEX
-                DEX
-                LDA     LOC_XT
-                STA     a:0,X           ; Push xt
-                LDY     #RTS_CFA_LIST
-                JSR     EXECUTE_CODE
-                BRA     @next_word
-
-@compile:
-                ; Compile mode: immediate words execute, normal words compile
-                LDA     LOC_FLAG
-                CMP     #FORTH_TRUE     ; flag = $FFFF -> immediate
-                BEQ     @execute        ; Immediate: execute even when compiling
-
-                ; Normal word: compile xt into dictionary at DP
-                LDY     #U_DP
-                LDA     (LOC_UP),Y      ; DP
-                STA     LOC_FLAG        ; Reuse LOC_FLAG as DP pointer
-                LDA     LOC_XT          ; xt (safely preserved in LOC_XT)
-                STA     (LOC_FLAG)      ; Store xt at DP
-                LDA     LOC_FLAG
-                INC     A
-                INC     A               ; DP += 2
-                LDY     #U_DP
-                STA     (LOC_UP),Y      ; Update DP
-                BRA     @next_word
-
-                ;--------------------------------------------------------------
-                ; Not found: try NUMBER
-                ; Restore addr onto parameter stack (was saved in LOC_XT)
-                ;--------------------------------------------------------------
-@not_found:
-                DEX
-                DEX
-                LDA     LOC_XT          ; original addr
-                STA     a:0,X
-
-                ; NUMBER ( addr -- n TRUE | addr FALSE )
-                LDY     #RTS_CFA_LIST
-                JSR     NUMBER_CODE
-
-                LDA     a:0,X           ; flag
-                INX
-                INX
-                CMP     #FORTH_TRUE
-                BNE     @error          ; Conversion failed
-
-                ; Successful number conversion
-                LDA     LOC_STATE
-                BNE     @skip
-                JMP     @next_word      ; Interpreting: number stays on stack
-                ; Compiling: compile LIT_CFA then value
-@skip:          LDY     #U_DP
-                LDA     (LOC_UP),Y      ; DP
-                STA     LOC_FLAG        ; DP pointer
-                LDA     #LIT_CFA
-                STA     (LOC_FLAG)      ; Store LIT_CFA at DP
-                INC     LOC_FLAG
-                INC     LOC_FLAG        ; Advance to next cell
-                LDA     a:0,X           ; value (left on stack by NUMBER)
-                STA     (LOC_FLAG)      ; Store value at DP+2
-                INX                     ; Drop value from parameter stack
-                INX
-                LDA     LOC_FLAG
-                INC     A
-                INC     A               ; DP += 4 total (LIT + value)
-                LDY     #U_DP
-                STA     (LOC_UP),Y      ; Update DP
-                JMP     @next_word
-
-                ;--------------------------------------------------------------
-                ; Unrecognised token: print " ?" and ABORT
-                ; addr from failed NUMBER is on stack; drop it
-                ;--------------------------------------------------------------
-@error:
-                INX                     ; Drop addr
-                INX
-                LDA     #'?'
-                JSR     hal_putch
-                LDY     #RTS_CFA_LIST
-                JSR     CR_CODE
-
-                ; Tear down frame before ABORT resets stacks
-                TSC
-                CLC
-                ADC     #LOC_SIZE
-                TCS
-                PLY
-                PLD
-                JMP     ABORT_CODE      ; Reset stacks and restart QUIT
-
-                ;--------------------------------------------------------------
-                ; Input exhausted: drop addr left by WORD and return
-                ;--------------------------------------------------------------
-@done:
-                INX                     ; Drop addr
-                INX
-
-@return:
-                TSC                     ; Tear down frame
-                CLC
-                ADC     #LOC_SIZE
-                TCS
-                PLY                     ; Restore IP
-                PLD                     ; Restore DP
-                NEXT
-        ENDPUBLIC
+INTERPRET_COMPILE_NORMAL:
+        ; Normal word in compile mode: compile its xt
+        .word   COMPILECOMMA_CFA
+        .word   BRANCH_CFA
+        .word   INTERPRET_LOOP
 
 ;------------------------------------------------------------------------------
 ; . (DOT) ( n -- ) print signed number
@@ -3759,8 +3633,56 @@ DOABORTQ_CFA:
                 NEXT
         ENDPUBLIC
 
+.ifdef DEBUG
+;------------------------------------------------------------------------------
+; TRACEOUT ( -- ) Prints current IP to console in hex.
+;------------------------------------------------------------------------------
+        .importzp TRACE_EN
+        PUBLIC  TRACEOUT
+        .a16
+        .i16
+                LDA     TRACE_EN
+                BEQ     @done           ; FORTH_FALSE = 0, skip if off
+                TYA                     ; Print IP (Y) as 4-digit hex
+                JSR     DOTHEX_CODE::print_chex
+                LDA     #SPACE
+                JSR     hal_putch
+@done:          RTS
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; TRACEON ( -- ) enable execution tracing
+;------------------------------------------------------------------------------
+        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, ABORTQ_ENTRY
+        CODEPTR TRACEON_CODE
+        PUBLIC  TRACEON_CODE
+        .a16
+        .i16
+                LDA     #FORTH_TRUE
+                STA     TRACE_EN
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; TRACEOFF ( -- ) disable execution tracing
+;------------------------------------------------------------------------------
+        HEADER  "TRACEOFF", TRACEOFF_ENTRY, TRACEOFF_CFA, 0, TRACEON_ENTRY
+        CODEPTR TRACEOFF_CODE
+        PUBLIC  TRACEOFF_CODE
+        .a16
+        .i16
+                LDA     #FORTH_FALSE
+                STA     TRACE_EN
+                NEXT
+        ENDPUBLIC
+.endif
+
 ;==============================================================================
 ; LAST_WORD - must be the ENTRY of the final word defined above
 ; Used by FORTH_INIT to seed LATEST
 ;==============================================================================
-LAST_WORD = DOABORTQ_ENTRY
+.ifdef DEBUG
+	LAST_WORD = TRACEOFF_ENTRY
+.else
+	LAST_WORD = DOABORTQ_ENTRY
+.endif

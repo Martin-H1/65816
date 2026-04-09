@@ -48,6 +48,9 @@ SCRATCH0:       .res 2          ; General purpose scratch
 SCRATCH1:       .res 2          ; General purpose scratch
 TMPA:           .res 2          ; Temp for multiply/divide
 TMPB:           .res 2          ; Temp for multiply/divide
+.ifdef DEBUG
+TRACE_EN:       .res 2                  ; Trace enable flag
+.endif
 
 ; Export zero page symbols with .globalzp so other translation units
 ; use direct page addressing when referencing them
@@ -58,7 +61,9 @@ TMPB:           .res 2          ; Temp for multiply/divide
         .globalzp       SCRATCH1
         .globalzp       TMPA
         .globalzp       TMPB
-
+.ifdef DEBUG
+        .globalzp       TRACE_EN
+.endif
 ;------------------------------------------------------------------------------
 ; CONSTANTS - shared with primitives.s via include file
 ;------------------------------------------------------------------------------
@@ -208,6 +213,10 @@ RTS_CFA_LIST:
                 LDX     #PSP_INIT       ; Parameter stack pointer
                 TSC                     ; S initialized by HAL ROM Vector.
                 STA     RSP_INIT        ; Save S to reinitialize stack pointer
+
+.ifdef DEBUG
+                STZ     TRACE_EN        ; Tracing off at startup
+.endif
 
                 ; --- Initialize User Pointer ---
                 LDA     #UP_BASE

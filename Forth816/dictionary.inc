@@ -168,4 +168,12 @@ F_LENMASK       = $1F
         .global DODOES
         .global RTS_CFA_LIST
 
+; Tracing functions in the DEBUG build.
+.ifdef DEBUG
+        .globalzp   TRACE_EN
+        .global TRACEOUT
+        .global TRACEON_CFA
+        .global TRACEOFF_CFA
+.endif
+
 .endif ; DICTIONARY_INC

@@ -19,8 +19,10 @@ MACROS_INC = 1
 ; Cycle cost: ~14 cycles (inlined)
 ;------------------------------------------------------------------------------
 .macro  NEXT
+.ifdef DEBUG
+        JSR     TRACEOUT
+.endif
         LDA     0,Y             ; A = *IP (fetch CFA of next word)
-        .a16
         INY                     ; IP += 1
         INY                     ; IP += 2  (advance past this cell)
         STA     W               ; W = CFA

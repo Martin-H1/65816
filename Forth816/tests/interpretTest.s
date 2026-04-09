@@ -21,6 +21,7 @@
 .import FIND_CODE
 .import NUMBER_CODE
 .import INTERPRET_CODE
+.import TRACEON_CODE
 
 .importzp SCRATCH0
 .importzp UP
@@ -450,9 +451,26 @@ find3:	PString ";"
 find4:	PString "number"
 
 .proc interpretTest
+	jsr TRACEON_CODE
+
 	; Interpreting state
 
 	; Parse a number
+	jsr interpretNumTest
+	TYPESTR_DOT "Interpret test of '1' (expect 1) = "
+
+	; Executing the plus operator primitive by name
+	jsr interpretPlusTest
+	TYPESTR_DOT "Interpret '2 2 + ' (expect 4) = "
+
+	; Unknown word triggering error
+	jsr interpretErrorTest
+	; Compiling state
+
+	rts
+.endproc
+
+.proc interpretNumTest
 	LDA #interpret1
 	PUSH
 	LDA #TIB_BASE
@@ -460,10 +478,17 @@ find4:	PString "number"
 	LDA #$10
 	PUSH
 	jsr MOVE_CODE
-	jsr INTERPRET_CODE
-	TYPESTR_DOT "Interpret test of '1' (expect 1) = "
+	phy			; Push IP on return stack
+	ldy #INTERPRET_CFA	; Invoke INTERPRET
+	iny			; Body starts at CFA+2
+	iny
+	NEXT			; Execute first body word
+	; RTS_CFA will be called by NEXT and return
+.endproc
+interpret1:
+	.asciiz "    1             "
 
-	; Executing the plus operator primitive by name
+.proc interpretPlusTest
 	LDA #interpret2
 	PUSH
 	LDA #TIB_BASE
@@ -471,10 +496,17 @@ find4:	PString "number"
 	LDA #$10
 	PUSH
 	jsr MOVE_CODE
-	jsr INTERPRET_CODE
-	TYPESTR_DOT "Interpret '2 2 + ' (expect 4) = "
+	phy			; Push IP on return stack
+	ldy #INTERPRET_CFA	; Invoke INTERPRET
+	iny			; Body starts at CFA+2
+	iny
+	NEXT			; Execute first body word
+	; RTS_CFA will be called by NEXT and return
+.endproc
+interpret2:
+	.asciiz " 2 2 +         "
 
-	; Unknown word triggering error
+.proc interpretErrorTest
 	LDA #interpret3
 	PUSH
 	LDA #TIB_BASE
@@ -482,15 +514,12 @@ find4:	PString "number"
 	LDA #$10
 	PUSH
 	jsr MOVE_CODE
-	jsr INTERPRET_CODE
-
-	; Compiling state
-
-	rts
+	phy			; Push IP on return stack
+	ldy #INTERPRET_CFA	; Invoke INTERPRET
+	iny			; Body starts at CFA+2
+	iny
+	NEXT			; Execute first body word
+	; RTS_CFA will be called by NEXT and return
 .endproc
-interpret1:
-	.asciiz " 1             "
-interpret2:
-	.asciiz " 2 2 +         "
 interpret3:
 	.asciiz " splat         "
