@@ -41,6 +41,9 @@ tests/bin/stackTest.bin: tests/obj/hal_test.o tests/obj/stackTest.o obj/debug/pr
 %.srec : %.bin
 	$(SREC_CAT) -address-length=3 -execution_start_address 0x004000 $< -binary -offset 0x4000 -O -Motorola -DISable Header > $@
 
+decode:
+	$(PYTHON) trace_decode.py tests/bin/interpretTest.map < trace.txt
+
 clean:
 	-$(RM) bin$(SEP)debug$(SEP)*.map
 	-$(RM) bin$(SEP)debug$(SEP)*.bin
