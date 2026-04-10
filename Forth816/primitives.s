@@ -1876,7 +1876,9 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;   LOC_TIB   = 5,S   TIB base address
 ;   LOC_HERE  = 7,S   HERE (output buffer)
 ;   LOC_DELIM = 9,S   delimiter char
-;   (saved IP at 11,S, pushed first by PHY)
+;   LOC_DST   = 11,S  destination pointer.
+;   LOC_UP    = 13,S  local UP
+;   (saved IP at 15,S, pushed first by PHY)
 ;------------------------------------------------------------------------------
         HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, COUNT_ENTRY
         CODEPTR WORD_CODE
@@ -1888,7 +1890,8 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 LOC_TIB   = 5
                 LOC_HERE  = 7
                 LOC_DELIM = 9
-                LOC_UP    = 11
+                LOC_DEST  = 11
+                LOC_UP    = 13
                 LOC_SIZE  = LOC_UP+LOC_IDX
 
                 ; --- Save DP, IP, and set up stack frame ---
@@ -1962,7 +1965,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ; Set up destination: HERE+1 (past the count byte)
                 LDA     LOC_HERE
                 INC     A               ; dest = HERE+1
-                STA     LOC_UP          ; Borrow LOC_UP as dest pointer
+                STA     LOC_DEST
                 PHX
                 LDX     #$0000          ; Borrow X for char count = 0
 @copy:
@@ -1981,10 +1984,10 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ; Store char at dest
                 SEP     #$20
                 .a8
-                STA     (LOC_UP)
+                STA     (LOC_DEST)
                 REP     #$20
                 .a16
-                INC     LOC_UP          ; Advance dest pointer
+                INC     LOC_DEST        ; Advance dest pointer
                 INX                     ; Increment char count
                 INY                     ; Advance parse index
                 BRA     @copy
@@ -2007,8 +2010,9 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 .a16
 
                 ; Update >IN in user area
+                LDY     #U_TOIN
                 LDA     LOC_IDX
-                STA     (U_TOIN)
+                STA     (LOC_UP),Y      ; >IN
 
 @return:
                 LDA     LOC_HERE

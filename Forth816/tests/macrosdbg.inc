@@ -16,6 +16,32 @@
 ;
 ; Macros
 ;
+.macro CALL_DOCOL cfa_addr
+       lda #cfa_addr
+       sta W
+       jsr DOCOL
+.endmacro
+
+.macro MOVE_TIB str
+.scope
+	lda #@localstr
+	PUSH
+	lda #TIB_BASE
+	PUSH
+	lda #.strlen(str)
+	PUSH
+	jsr MOVE_CODE
+	phy
+	ldy #U_TOIN
+	lda #0
+	sta (UP),Y			; >IN = 0
+	ply
+	bra @skip
+@localstr: .asciiz str
+@skip:
+.endscope
+.endmacro
+
 .macro LPPUTS str
        lda #str
        jsr hal_lpputs

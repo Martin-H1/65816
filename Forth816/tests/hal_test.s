@@ -97,7 +97,7 @@ TRACE_EN:	.res 2		; Trace enable boolean.
 ;==============================================================================
 .segment "CODE"
 .import MAIN			; unit test entry point
-.proc MONITOR_ENTRY
+PUBLIC MONITOR_ENTRY
 	ON16MEM
 	ON16X
 	lda #$0D
@@ -145,7 +145,7 @@ TRACE_EN:	.res 2		; Trace enable boolean.
 
 	jsr MAIN
 	rtl
-.endproc
+ENDPUBLIC
 
 ; CFA used to handle the NEXT at the end of code were testing.
 RTS_CFA_LIST:
@@ -157,11 +157,24 @@ PUBLIC  RTS_CODE
 	rts
 ENDPUBLIC
 
-PUBLIC  DOCOL
+;------------------------------------------------------------------------------
+; DOCOL - Code pointer for all colon (:) definitions
+;
+; On entry: W = CFA of the word being entered
+; Action:   Push current IP (Y) onto return stack,
+;           set IP to first cell of body (W+2),
+;           then NEXT.
+;------------------------------------------------------------------------------
+        PUBLIC  DOCOL
         .a16
         .i16
-        rts
-ENDPUBLIC
+                PHY                     ; Push IP onto return stack
+                LDA     W               ; W = CFA of this word
+                TAY                     ; IP = body start
+                INY                     ; Body starts at CFA+2
+                INY
+                NEXT                    ; Execute first body word
+        ENDPUBLIC
 
 ; reads a CR terminated line from console into buffer
 PUBLIC hal_cgets

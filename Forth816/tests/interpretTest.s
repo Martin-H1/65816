@@ -21,6 +21,7 @@
 .import FIND_CODE
 .import NUMBER_CODE
 .import INTERPRET_CODE
+.import TRACEOFF_CODE
 .import TRACEON_CODE
 
 .importzp SCRATCH0
@@ -30,6 +31,7 @@
 ; Main entry point for the test
 PUBLIC MAIN
 	TYPESTRCR "interpret test - enter!"
+	jsr TRACEOFF_CODE	; tracing initialization.
 
 	jsr wordsTest
 	jsr wordTest
@@ -43,23 +45,13 @@ PUBLIC MAIN
 ENDPUBLIC
 
 .proc wordsTest
-	phy			; Push IP on return stack
-	ldy #WORDS_CFA		; Invoke WORDS
-	iny			; Body starts at CFA+2
-	iny
-	NEXT			; Execute first body word
-	; RTS_CFA will be called by NEXT and return
+	CALL_DOCOL WORDS_CFA	; RTS_CFA will return here.
+	RTS
 .endproc
 
 .proc wordTest
 	; Leading delimiters being skipped
-	LDA #word1
-	PUSH
-	LDA #TIB_BASE
-	PUSH
-	LDA #$20
-	PUSH
-	jsr MOVE_CODE
+	MOVE_TIB "             can                "
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
@@ -74,13 +66,7 @@ ENDPUBLIC
 	TYPESTRCR "'"
 
 	; Word at end of input with no trailing delimiter
-	LDA #word2
-	PUSH
-	LDA #TIB_BASE
-	PUSH
-	LDA #$20
-	PUSH
-	jsr MOVE_CODE
+	MOVE_TIB "                             you"
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
@@ -95,13 +81,7 @@ ENDPUBLIC
 	TYPESTRCR "'"
 
 	; Word at start of input with trailing delimiter
-	LDA #word3
-	PUSH
-	LDA #TIB_BASE
-	PUSH
-	LDA #$20
-	PUSH
-	jsr MOVE_CODE
+	MOVE_TIB "read                            "
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
@@ -116,14 +96,7 @@ ENDPUBLIC
 	TYPESTRCR "'"
 
 	; Empty input returning zero-length string
-	LDA #word4
-	PUSH
-	LDA #TIB_BASE
-	PUSH
-	LDA #$20
-	PUSH
-	jsr MOVE_CODE
-	lda #SPACE
+	MOVE_TIB "                                "
 	PUSH
 	jsr WORD_CODE
 	TYPESTR "Size="
@@ -137,13 +110,7 @@ ENDPUBLIC
 	TYPESTRCR "'"
 
 	; Word with a single leading delimiter
-	LDA #word5
-	PUSH
-	LDA #TIB_BASE
-	PUSH
-	LDA #$20
-	PUSH
-	jsr MOVE_CODE
+	MOVE_TIB " this                           "
 	lda #SPACE
 	PUSH
 	jsr WORD_CODE
@@ -160,11 +127,6 @@ ENDPUBLIC
 	; Maximum length words
 	rts
 .endproc
-word1:	.asciiz "             can                "
-word2:	.asciiz "                             you"
-word3:	.asciiz "read                            "
-word4:	.asciiz "                                "
-word5:	.asciiz " this                           "
 
 .proc compareTest
 	LDA #compare1
@@ -451,75 +413,21 @@ find3:	PString ";"
 find4:	PString "number"
 
 .proc interpretTest
-	jsr TRACEON_CODE
-
 	; Interpreting state
-
 	; Parse a number
-	jsr interpretNumTest
+	MOVE_TIB "    1                           "
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
 	TYPESTR_DOT "Interpret test of '1' (expect 1) = "
-
+jsr DOTS_CODE
 	; Executing the plus operator primitive by name
-	jsr interpretPlusTest
-	TYPESTR_DOT "Interpret '2 2 + ' (expect 4) = "
+	MOVE_TIB "    2 3 +                       "
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "Interpret '2 3 + ' (expect 5) = "
 
 	; Unknown word triggering error
-	jsr interpretErrorTest
-	; Compiling state
+	MOVE_TIB "    splat                       "
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "Interpret ' splat ' (expect error) = "
 
 	rts
 .endproc
-
-.proc interpretNumTest
-	LDA #interpret1
-	PUSH
-	LDA #TIB_BASE
-	PUSH
-	LDA #$10
-	PUSH
-	jsr MOVE_CODE
-	phy			; Push IP on return stack
-	ldy #INTERPRET_CFA	; Invoke INTERPRET
-	iny			; Body starts at CFA+2
-	iny
-	NEXT			; Execute first body word
-	; RTS_CFA will be called by NEXT and return
-.endproc
-interpret1:
-	.asciiz "    1             "
-
-.proc interpretPlusTest
-	LDA #interpret2
-	PUSH
-	LDA #TIB_BASE
-	PUSH
-	LDA #$10
-	PUSH
-	jsr MOVE_CODE
-	phy			; Push IP on return stack
-	ldy #INTERPRET_CFA	; Invoke INTERPRET
-	iny			; Body starts at CFA+2
-	iny
-	NEXT			; Execute first body word
-	; RTS_CFA will be called by NEXT and return
-.endproc
-interpret2:
-	.asciiz " 2 2 +         "
-
-.proc interpretErrorTest
-	LDA #interpret3
-	PUSH
-	LDA #TIB_BASE
-	PUSH
-	LDA #$10
-	PUSH
-	jsr MOVE_CODE
-	phy			; Push IP on return stack
-	ldy #INTERPRET_CFA	; Invoke INTERPRET
-	iny			; Body starts at CFA+2
-	iny
-	NEXT			; Execute first body word
-	; RTS_CFA will be called by NEXT and return
-.endproc
-interpret3:
-	.asciiz " splat         "
