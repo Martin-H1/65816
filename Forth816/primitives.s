@@ -1978,6 +1978,14 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 CMP     LOC_DELIM       ; Is it the delimiter?
                 BEQ     @copy_done      ; Yes - end of word
 
+                ; ANS Forth 1994 requires case-insensitivity for standards
+                ; words, uppercasing input before dictionary lookup.
+                CMP     #'a'
+                BCC     @not_lower
+                CMP     #'z'+1
+                BCS     @not_lower
+                AND     #$DF            ; Clear bit 5 = convert to uppercase
+@not_lower:
                 ; Store char at dest
                 SEP     #$20
                 .a8
@@ -2360,8 +2368,10 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         PUBLIC  BYE_CODE
         .a16
         .i16
-                SEI                     ; Disable interrupts
-@halt:          BRA     @halt           ; Spin forever
+                ; --- Reset return stack ---
+                LDA     RSP_INIT        ; Reload from entry value.
+                TCS
+                RTL		        ; Return to ROM monitor or HAL INIT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
@@ -2811,10 +2821,17 @@ QUIT_LOOP:
         PUBLIC  UNDEFINED_WORD_CODE
         .a16
         .i16
-                LDA     #undefined_msg
+                LDA     #@error_undef
+                JSR     hal_cputs
+                LDA     a:0,X
+                DEX
+                DEX
+                JSR     hal_lpputs
+                LDA     #@crlf
                 JSR     hal_cputs
                 JMP     ABORT_CODE
-undefined_msg:  .byte   "error: Undefined word", $0D, $0A, $00
+@error_undef:   .asciiz "error: Undefined word "
+@crlf:          .byte $0D, $0A, $00
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
@@ -2876,7 +2893,7 @@ INTERPRET_COMPILE_LIT:
 
 INTERPRET_NOTANUMBER:
         ; Neither a word nor a number
-        .word   DROP_CFA                ; discard the addr
+        ;.word   DROP_CFA                ; discard the addr
         .word   UNDEFINED_WORD_CFA
         .word   BRANCH_CFA
         .word   INTERPRET_LOOP          ; unreachable but tidy
