@@ -2403,7 +2403,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ; Cannot JSR/RTS because the return stack was just wiped.
                 ; Loading QUIT_BODY into IP (Y) and calling NEXT causes
                 ; the inner interpreter to begin executing QUIT's word list.
-                LDY     #<QUIT_BODY     ; IP = start of QUIT body
+                LDY     #QUIT_BODY      ; IP = start of QUIT body
                 NEXT
         ENDPUBLIC
 
@@ -2811,7 +2811,7 @@ QUIT_LOOP:
         PUBLIC  UNDEFINED_WORD_CODE
         .a16
         .i16
-                LDA     #<undefined_msg
+                LDA     #undefined_msg
                 JSR     hal_cputs
                 JMP     ABORT_CODE
 undefined_msg:  .byte   "error: Undefined word", $0D, $0A, $00
@@ -3352,7 +3352,7 @@ ABORTQ_CFA:
                 STA     SCRATCH0
                 LDA     (SCRATCH0)      ; DP
                 STA     SCRATCH1
-                LDA     #<DOABORTQ_CFA
+                LDA     #DOABORTQ_CFA
                 STA     (SCRATCH1)      ; Compile (ABORT") CFA
                 LDA     SCRATCH1
                 CLC
