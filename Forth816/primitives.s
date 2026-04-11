@@ -1943,8 +1943,6 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 BRA     @return         ; Tear down frame and return
 
 @otherwise:
-                ; Fetch TIB[index] - only A supports stack-relative,
-                ; so load index into A then transfer to Y for indirect fetch
                 SEP     #$20
                 .a8
                 LDA     (LOC_TIB),Y     ; Fetch TIB[index]

@@ -97,6 +97,7 @@ ENDPUBLIC
 
 	; Empty input returning zero-length string
 	MOVE_TIB "                                "
+	lda #SPACE
 	PUSH
 	jsr WORD_CODE
 	TYPESTR "Size="
