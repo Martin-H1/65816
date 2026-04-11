@@ -14,13 +14,16 @@ bin/debug/forth816.bin: obj/debug/hal_mench.o obj/debug/forth.o obj/debug/primit
 bin/release/forth816.rom: obj/release/forth.o obj/release/hal_mench.o obj/release/primitives.o
 	$(LD65) -C forth.cfg -o bin/release/forth816.rom -m bin/release/forth816.map $^
 
-tests: tests/bin/acceptTest.srec tests/bin/compareTest.srec \
-	tests/bin/interpretTest.srec tests/bin/ioTest.srec \
-	tests/bin/mathTest.srec tests/bin/memoryTest.srec \
-	tests/bin/stackTest.srec
+tests: tests/bin/acceptTest.srec tests/bin/compilerTest.srec \
+	tests/bin/compareTest.srec tests/bin/interpretTest.srec \
+	tests/bin/ioTest.srec tests/bin/mathTest.srec \
+	tests/bin/memoryTest.srec tests/bin/stackTest.srec
 
 tests/bin/acceptTest.bin: tests/obj/hal_test.o tests/obj/acceptTest.o obj/debug/primitives.o
 	$(LD65) -C tests/test.cfg -o tests/bin/acceptTest.bin -m tests/bin/acceptTest.map $^
+
+tests/bin/compilerTest.bin: tests/obj/hal_test.o tests/obj/compilerTest.o obj/debug/primitives.o
+	$(LD65) -C tests/test.cfg -o tests/bin/compilerTest.bin -m tests/bin/compilerTest.map $^
 
 tests/bin/compareTest.bin: tests/obj/hal_test.o tests/obj/compareTest.o obj/debug/primitives.o
 	$(LD65) -C tests/test.cfg -o tests/bin/compareTest.bin -m tests/bin/compareTest.map $^

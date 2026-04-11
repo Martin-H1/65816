@@ -176,6 +176,41 @@ ENDPUBLIC
                 NEXT                    ; Execute first body word
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; DOVAR - Code pointer for VARIABLE definitions
+;
+; Pushes the address of the variable body (CFA+2) onto parameter stack.
+;------------------------------------------------------------------------------
+        PUBLIC  DOVAR
+        .a16
+        .i16
+                LDA     W               ; CFA
+                CLC
+                ADC     #2              ; Address of body
+                DEX
+                DEX
+                STA     0,X             ; Push onto parameter stack
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; DOCON - Code pointer for CONSTANT definitions
+;
+; Pushes the value stored in the body (CFA+2) onto parameter stack.
+;------------------------------------------------------------------------------
+        PUBLIC  DOCON
+        .a16
+        .i16
+                PHY
+                LDY     #2
+                LDA     (W),Y           ; Fetch constant value at CFA+2
+                PLY
+                DEX
+                DEX
+                STA     0,X             ; Push value
+                NEXT
+        ENDPUBLIC
+
 ; reads a CR terminated line from console into buffer
 PUBLIC hal_cgets
 	rts
