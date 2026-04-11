@@ -6,6 +6,8 @@ debug: bin bin/debug bin/debug/forth816.bin bin/debug/forth816.srec
 
 release: bin bin/release bin/release/forth816.rom
 
+# NOTE: hal_mench.o must be listed first due to a ca65 linker bug with
+# dependency resolution. Do not reorder.
 bin/debug/forth816.bin: obj/debug/hal_mench.o obj/debug/forth.o obj/debug/primitives.o
 	$(LD65) -C tests/test.cfg -o bin/debug/forth816.bin -m bin/debug/forth816.map $^
 
