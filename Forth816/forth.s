@@ -187,19 +187,6 @@ RTS_CFA_LIST:
 ; SYSTEM INITIALIZATION
 ;==============================================================================
         PUBLIC MAIN
-                ; --- Switch to 65816 native mode ---
-                CLC
-                XCE                     ; Clear emulation bit → native mode
-
-                ; --- 16-bit registers ---
-                REP     #$30
-                .a16
-                .i16
-
-                ; --- Set Direct Page to $0000 ---
-                LDA     #$0000
-                TCD
-
                 ; --- Set Data Bank to $00 ---
                 ; PEA pushes $0000 as a 16-bit value (2 bytes on stack).
                 ; First PLB discards the high byte, second PLB loads

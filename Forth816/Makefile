@@ -2,11 +2,11 @@ include ../common.mk
 
 all: release debug
 
-debug: bin bin/debug bin/debug/forth816.bin
+debug: bin bin/debug bin/debug/forth816.bin bin/debug/forth816.srec
 
 release: bin bin/release bin/release/forth816.rom
 
-bin/debug/forth816.bin: obj/debug/forth.o obj/debug/hal_mench.o obj/debug/primitives.o
+bin/debug/forth816.bin: obj/debug/hal_mench.o obj/debug/forth.o obj/debug/primitives.o
 	$(LD65) -C tests/test.cfg -o bin/debug/forth816.bin -m bin/debug/forth816.map $^
 
 bin/release/forth816.rom: obj/release/forth.o obj/release/hal_mench.o obj/release/primitives.o
