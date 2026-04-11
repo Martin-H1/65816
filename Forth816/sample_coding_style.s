@@ -41,8 +41,7 @@
                 ;----------------------------------------------------------
                 ; Fetch BASE using UP page zero pointer into LOC_BASE
                 ;----------------------------------------------------------
-                LDY     #UP
-                LDA     a:0,Y           ; Initialize pointer to user area
+                LDA     a:UP            ; Initialize pointer to user area
                 STA     LOC_PTR         ; Borrow pointer to hold UP
                 LDY     #U_BASE
                 LDA     (LOC_PTR),Y     ; BASE

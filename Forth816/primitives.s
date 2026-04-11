@@ -1904,8 +1904,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 LDA     a:0,X           ; Peek TOS to get delimiter
                 STA     LOC_DELIM
 
-                LDY     #UP
-                LDA     a:0,Y           ; Initialize pointer to user area
+                LDA     a:UP            ; Initialize pointer to user area
                 STA     LOC_UP
 
                 ; Push HERE
@@ -2076,8 +2075,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ;----------------------------------------------------------
                 ; Fetch BASE using UP page zero pointer into LOC_BASE
                 ;----------------------------------------------------------
-                LDY     #UP
-                LDA     a:0,Y           ; Initialize pointer to user area
+                LDA     a:UP            ; Initialize pointer to user area
                 STA     LOC_PTR         ; Borrow pointer to hold UP
                 LDY     #U_BASE
                 LDA     (LOC_PTR),Y     ; BASE
@@ -2671,8 +2669,7 @@ QUIT_LOOP:
                 ;--------------------------------------------------------------
                 ; Load LATEST to start dictionary walk
                 ;--------------------------------------------------------------
-                LDY     #UP
-                LDA     a:0,Y
+                LDA     a:UP
                 STA     LOC_ADDR        ; Use LOC_ADDR before it is initialized
                 LDY     #U_LATEST
                 LDA     (LOC_ADDR),Y    ; LATEST -> first entry to check
