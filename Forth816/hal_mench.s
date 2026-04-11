@@ -212,7 +212,10 @@ ENDPUBLIC
 	; --- Initialize stacks ---
 	lda #$01FF
 	tas			; Hardware (return) stack pointer
-	jsr MAIN
+	jsl MAIN
+	; Note: if consumer does an RTL the HAL halts the system here.
+        sei                     ; Disable interrupts
+@halt:	bra @halt               ; Spin forever
 .endproc
 
 .ifndef DEBUG
