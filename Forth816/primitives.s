@@ -1889,7 +1889,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 LOC_DELIM = 9
                 LOC_DEST  = 11
                 LOC_UP    = 13
-                LOC_SIZE  = LOC_UP+LOC_IDX
+                LOC_SIZE  = LOC_UP + 1
 
                 ; --- Save DP, IP, and set up stack frame ---
                 PHD                     ; Save DP (at 13,S after frame built)
@@ -2062,7 +2062,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
         LOC_BASE    = 7         ; hw stack offset for base value
         LOC_RESULT  = 9         ; hw stack offset for result
         LOC_PRODUCT = 11        ; hw stack offset for product
-        LOC_SIZE = LOC_COUNT+LOC_PRODUCT
+        LOC_SIZE = LOC_PRODUCT + 1
 
                 PHD                     ; Save DP
                 PHY                     ; Save IP
@@ -3189,26 +3189,238 @@ WORDS_SKIP:
 ;==============================================================================
 
 ; Stub defining words - to be fully implemented
+
+;------------------------------------------------------------------------------
+; : ( -- ) parse name, create dictionary header, enter compile mode
+;
+; When : executes, INTERPRET has already called WORD which left the
+; counted string at HERE. Layout at HERE on entry:
+;   HERE+0 = length byte
+;   HERE+1..n = name characters (already uppercased by WORD)
+;
+; Header layout written to dictionary:
+;   +0  LINK    (2 bytes) = old LATEST
+;   +2  FL|LEN  (1 byte)  = F_HIDDEN | namelen
+;   +3  NAME    (n bytes) = name characters
+;   +3+n [pad]  (0-1 byte) align to even
+;   CFA (2 bytes) = DOCOL
+;
+; The name is shifted up 2 bytes in place using a backwards copy
+; (high index to low index) to avoid overlap corruption.
+; LOC_SRC points to HERE+1 (first name char in WORD output).
+; LOC_DST points to HERE+3 (first name char in final header).
 ; https://forth-standard.org/standard/core/Colon
+;------------------------------------------------------------------------------
         HEADER  ":", COLON_ENTRY, COLON_CFA, 0, WORDS_ENTRY
-        CODEPTR DOCOL
-                ; Full implementation: parse name, create header, set STATE=1
-                ; Stub: just set STATE to compile mode
-        ;.word Parse_Name       ; get name  ( caddr len )
-        .word LIT_CFA, DOCOL   ;, HeaderComma
-        .word RBRACKET_CFA	; State= compile
-        .word EXIT_CFA
+        CODEPTR COLON_CODE
+        PUBLIC  COLON_CODE
+        .a16
+        .i16
+        LOC_NAMELEN = 1                 ; name length
+        LOC_ENTRY   = LOC_NAMELEN + 2   ; original HERE = new entry address
+        LOC_LATEST  = LOC_ENTRY + 2     ; old LATEST value
+        LOC_DP      = LOC_LATEST + 2    ; current dictionary pointer
+        LOC_SRC     = LOC_DP + 2        ; source pointer HERE+1
+        LOC_DST     = LOC_SRC + 2       ; dest pointer HERE+3
+        LOC_UP      = LOC_DST + 2       ; user area base pointer
+        LOC_SIZE    = LOC_UP + 1
 
+                PHD                     ; Save DP
+                PHY                     ; Save IP
+
+                TSC                     ; Reserve stack frame
+                SEC
+                SBC     #LOC_SIZE
+                TCS
+                TCD                     ; DP -> stack frame
+
+                ; --- Fetch zero page values before TCD loses direct page ---
+                LDA     a:UP
+                STA     LOC_UP
+
+                ; Fetch current DP (HERE)
+                LDY     #U_DP
+                LDA     (LOC_UP),Y
+                STA     LOC_DP
+                STA     LOC_ENTRY       ; save original HERE for LATEST update
+
+                ; Fetch current LATEST
+                LDY     #U_LATEST
+                LDA     (LOC_UP),Y
+                STA     LOC_LATEST
+
+                ; --- Read length byte from HERE+0 ---
+                LDY     #0
+                SEP     #$20
+                .a8
+                LDA     (LOC_DP),Y      ; length byte at HERE+0
+                REP     #$20
+                .a16
+                AND     #$00FF
+                STA     LOC_NAMELEN
+
+                ; --- Set up src and dst pointers for name shift ---
+                LDA     LOC_DP
+                INC     A
+                STA     LOC_SRC         ; LOC_SRC = HERE+1 (first name char)
+                CLC
+                ADC     #2
+                STA     LOC_DST         ; LOC_DST = HERE+3 (dest in header)
+
+                ; --- Shift name chars from HERE+1 to HERE+3 ---
+                ; Backwards copy (high index to low) avoids overlap corruption
+                LDY     LOC_NAMELEN
+                BEQ     @name_shifted
+                DEY                     ; Y = namelen-1 (zero based)
+@shift_loop:
+                SEP     #$20
+                .a8
+                LDA     (LOC_SRC),Y     ; read src[Y]
+                STA     (LOC_DST),Y     ; write dst[Y]
+                REP     #$20
+                .a16
+                DEY
+                BPL     @shift_loop     ; loop until Y goes negative
+@name_shifted:
+
+                ; --- Write FLAGS|LEN at HERE+2 ---
+                LDY     #2
+                LDA     LOC_NAMELEN
+                ORA     #F_HIDDEN
+                SEP     #$20
+                .a8
+                STA     (LOC_DP),Y      ; HERE[2] = F_HIDDEN|namelen
+                REP     #$20
+                .a16
+
+                ; --- Write LINK field at HERE+0 ---
+                LDY     #0
+                LDA     LOC_LATEST
+                STA     (LOC_DP),Y      ; HERE[0..1] = old LATEST
+
+                ; --- Advance LOC_DP past link(2) + flags(1) + name(n) ---
+                LDA     LOC_DP
+                CLC
+                ADC     #3
+                ADC     LOC_NAMELEN
+                STA     LOC_DP
+
+                ; --- Align LOC_DP to even boundary ---
+                LDA     LOC_DP
+                AND     #1
+                BEQ     @aligned
+                INC     LOC_DP
+@aligned:
+
+                ; --- Write DOCOL at CFA ---
+                LDY     #0
+                LDA     #DOCOL
+                STA     (LOC_DP),Y      ; *HERE = DOCOL
+                INC     LOC_DP
+                INC     LOC_DP          ; DP += 2
+
+                ; --- Update user area ---
+
+                ; LATEST = address of new entry header (original HERE)
+                LDY     #U_LATEST
+                LDA     LOC_ENTRY
+                STA     (LOC_UP),Y
+
+                ; DP = updated dictionary pointer
+                LDY     #U_DP
+                LDA     LOC_DP
+                STA     (LOC_UP),Y
+
+                ; STATE = 1 (compile mode)
+                LDY     #U_STATE
+                LDA     #1
+                STA     (LOC_UP),Y
+
+                ; --- Tear down frame ---
+                TSC
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY                     ; Restore IP
+                PLD                     ; Restore DP
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; ; ( -- ) close colon definition: compile EXIT, unhide, interpret mode
+; Immediate word - executes during compilation.
 ; https://forth-standard.org/standard/core/Semi
+;------------------------------------------------------------------------------
         HEADER  ";", SEMICOLON_ENTRY, SEMICOLON_CFA, F_IMMEDIATE, COLON_ENTRY
-        CODEPTR DOCOL
-                ; Full implementation: compile EXIT, set STATE=0, smudge
-                ; STZ (indirect) not supported - use STA (SCRATCH0),Y
+        CODEPTR SEMICOLON_CODE
+        PUBLIC  SEMICOLON_CODE
+        .a16
+        .i16
+        LOC_UP      = 1
+        LOC_DP      = 3
+        LOC_LATEST  = 5
+        LOC_SIZE    = LOC_LATEST + 1
 
-        .word LIT_CFA, EXIT_CFA, COMPILECOMMA_CFA	; compile Exit
-	; smudge
-        .word LBRACKET_CFA	; STATE= interpret
-        .word EXIT_CFA
+                PHD
+                PHY
+
+                TSC
+                SEC
+                SBC     #LOC_SIZE
+                TCS
+                TCD
+
+                ; Fetch zero page values
+                LDA     a:UP
+                STA     LOC_UP
+
+                LDY     #U_DP
+                LDA     (LOC_UP),Y
+                STA     LOC_DP
+
+                LDY     #U_LATEST
+                LDA     (LOC_UP),Y
+                STA     LOC_LATEST
+
+                ; Step 1: compile EXIT_CFA at HERE
+                LDY     #0
+                LDA     #EXIT_CFA
+                STA     (LOC_DP),Y
+                INC     LOC_DP
+                INC     LOC_DP
+
+                ; Update DP
+                LDY     #U_DP
+                LDA     LOC_DP
+                STA     (LOC_UP),Y
+
+                ; Step 2: clear F_HIDDEN flag in the entry header
+                ; flags byte is at LATEST+2
+                INC     LOC_LATEST      ; point to flags byte
+                INC     LOC_LATEST      ; reuse local as pointer
+                LDY     #0
+                SEP     #$20
+                .a8
+                LDA     (LOC_LATEST),Y  ; read flags byte
+                AND     #($FF^F_HIDDEN) ; clear hidden bit
+                STA     (LOC_LATEST),Y  ; write back
+                REP     #$20
+                .a16
+
+                ; Step 3: STATE = 0 (interpret)
+                LDY     #U_STATE
+                LDA     #0
+                STA     (LOC_UP),Y
+
+                ; Tear down frame
+                TSC
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY
+                PLD
+                NEXT
+        ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; [ ( -- ) enter interpretation state (immediate)

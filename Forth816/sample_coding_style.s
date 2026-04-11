@@ -27,7 +27,7 @@
         LOC_BASE    = 7         ; hw stack offset for base value
         LOC_RESULT  = 9         ; hw stack offset for result
         LOC_PRODUCT = 11        ; hw stack offset for product
-        LOC_SIZE = LOC_COUNT+LOC_PRODUCT
+        LOC_SIZE = LOC_PRODUCT + 1
 
                 PHD                     ; Save DP
                 PHY                     ; Save IP
