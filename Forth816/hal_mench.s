@@ -65,6 +65,14 @@ UPPER_CASE		= $E0A3	; Converts lower-case ASCII chars to upper-case.
 ;==============================================================================
 .segment "CODE"
 
+.ifdef DEBUG
+        PUBLIC  MONITOR_ENTRY
+                ON16MEM
+                ON16X
+                JMP     MAIN
+        ENDPUBLIC
+.endif
+
 ; reads a CR terminated line from console into buffer
 PUBLIC hal_cgets
 	rts
@@ -77,16 +85,12 @@ ENDPUBLIC
 ;   C - preserved
 PUBLIC hal_cputs	
 	STRPTR = 1
-	php
-	phd
 	phy
 	phx
 	pha
-	tsc
-	tcd
 	ldy #$0000
 	OFF16MEM
-@while:	lda (STRPTR),y
+@while:	lda (STRPTR,S),y
 	beq @return
 	jsr hal_putch
 	iny
@@ -96,8 +100,6 @@ PUBLIC hal_cputs
 	pla
 	plx
 	ply
-	pld
-	plp
 	rts
 ENDPUBLIC
 
@@ -130,6 +132,7 @@ ENDPUBLIC
 
 ; returns true if data in in buffer
 PUBLIC hal_cready
+	lda #$ffff
 	rts
 ENDPUBLIC
 
