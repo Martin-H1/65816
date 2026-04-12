@@ -3222,8 +3222,7 @@ WORDS_SKIP:
                 TCS
                 TCD                     ; DP -> stack frame
 
-                ; --- Fetch zero page values before TCD loses direct page ---
-                LDA     a:UP
+                LDA     a:UP            ; Fetch UP using absolute addressing
                 STA     LOC_UP
 
                 ; --- Pop addr from parameter stack into LOC_ENTRY ---
@@ -3469,6 +3468,89 @@ CONSTANT_BODY:
         HEADER  "COMPILE,", COMPILECOMMA_ENTRY, COMPILECOMMA_CFA, 0, RBRACKET_ENTRY
         CODEPTR COMMA_CODE              ; Reuse COMMA_CODE directly
 
+;------------------------------------------------------------------------------
+; CREATE ( -- ) parse name, create dictionary entry with DOVAR behavior
+; Runtime: created word pushes address of its body onto stack
+;------------------------------------------------------------------------------
+        HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, COMPILECOMMA_ENTRY
+        CODEPTR DOCOL
+CREATE_BODY:
+        .word   LIT_CFA
+        .word   ' '
+        .word   WORD_CFA                ; ( addr ) parse name
+        .word   PCREATE_CFA             ; ( ) build header
+        .word   LIT_CFA
+        .word   DOVAR                   ; code pointer
+        .word   COMMA_CFA               ; write DOVAR at CFA
+        .word   LIT_CFA
+        .word   0                       ; placeholder for DOES> code address
+        .word   COMMA_CFA               ; reserve CFA+2 cell
+        .word   REVEAL_CFA              ; clear F_HIDDEN
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; (DOES>) ( -- ) runtime helper compiled by DOES>
+; Patches the most recently CREATED word to use DODOES behavior.
+; W points to this word's CFA. IP (Y) points to the DOES> code.
+;------------------------------------------------------------------------------
+        HEADER  "(DOES>)", PDOES_ENTRY, PDOES_CFA, F_HIDDEN, CREATE_ENTRY
+        CODEPTR PDOES_CODE
+        PUBLIC  PDOES_CODE
+        .a16
+        .i16
+                PHY                     ; Save IP
+
+                ; Fetch LATEST - points to most recently CREATEd word
+                LDY     #U_LATEST
+                LDA     (UP),Y          ; LATEST = entry address
+
+                ; Find CFA: entry + 2 (link) + 1 (flags) + namelen + padding
+                ; Easier: walk forward from LATEST+2 (flags byte)
+                ; to find the CFA using the name length
+                CLC
+                ADC     #2              ; point to flags byte
+                STA     SCRATCH0
+                SEP     #$20
+                .a8
+                LDA     (SCRATCH0)      ; flags|len byte
+                REP     #$20
+                .a16
+                AND     #F_LENMASK      ; isolate name length
+                CLC
+                ADC     SCRATCH0        ; flags addr + namelen
+                INC     A               ; +1 for flags byte itself
+
+                ; A = tentative CFA address
+                STA     SCRATCH0        ; save CFA address
+                AND     #1              ; test alignment
+                BEQ     @aligned
+                INC     SCRATCH0        ; pad if odd
+@aligned:
+                ; SCRATCH0 = CFA address
+                LDA     #DODOES
+                STA     (SCRATCH0)      ; patch CFA = DODOES
+
+                ; Store DOES> code address (current IP) at CFA+2
+                PLA                     ; restore IP = DOES> code address
+                LDY     #2
+                STA     (SCRATCH0),Y    ; store DOES> code address
+
+                ; EXIT the defining word - return to caller
+                PLY                     ; pop outer saved IP from DOCOL
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; DOES> ( -- ) immediate: compile (DOES>) into current definition
+;------------------------------------------------------------------------------
+        HEADER  "DOES>", DOES_ENTRY, DOES_CFA, F_IMMEDIATE, PDOES_ENTRY
+        CODEPTR DOCOL
+DOES_BODY:
+        .word   LIT_CFA
+        .word   PDOES_CFA
+        .word   COMPILECOMMA_CFA        ; compile (DOES>) into definition
+        .word   EXIT_CFA                ; return from DOES> itself
+
 ;==============================================================================
 ; Stub declarations for words referenced in QUIT_BODY colon definition
 ; that are not yet implemented (WORDS, defining words etc.)
@@ -3476,26 +3558,6 @@ CONSTANT_BODY:
 ;==============================================================================
 
 ; Stub defining words - to be fully implemented
-
-        HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, COMPILECOMMA_ENTRY
-        CODEPTR CREATE_CODE
-        PUBLIC  CREATE_CODE
-        .a16
-        .i16
-                ; Stub
-                NEXT
-        ENDPUBLIC
-
-        HEADER  "DOES>", DOES_ENTRY, DOES_CFA, F_IMMEDIATE, CREATE_ENTRY
-        CODEPTR DOES_CODE
-        PUBLIC  DOES_CODE
-        .a16
-        .i16
-                ; Stub
-                NEXT
-        ENDPUBLIC
-
-; stubs
 
 ; String literal words - stubs
 ; Note: HEADER macro can't handle quote chars in names - written manually
