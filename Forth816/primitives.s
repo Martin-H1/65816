@@ -3111,7 +3111,8 @@ print_udec:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; .S ( -- ) print stack contents non-destructively
+; .S ( -- ) print stack contents non-destructively using ANS Forth format
+; e.g. <depth> NOS_N ... NOS TOS ok N
 ;------------------------------------------------------------------------------
         HEADER  ".S", DOTS_ENTRY, DOTS_CFA, 0, DOTHEX_ENTRY
         CODEPTR DOTS_CODE
@@ -3145,8 +3146,23 @@ print_udec:
         .i16
                 LDA     #@prompt
                 JSR     hal_cputs
+
+                ; Print stack depth if nonzero
+                TXA
+                EOR     #$FFFF          ; Two's complement
+                INC     A
+                CLC
+                ADC     #PSP_INIT       ; PSP_INIT - result / 2
+                LSR     A               ; Divide by 2 (cells)
+                BEQ     @skip           ; no items on stack.
+                STA     SCRATCH0
+                JSR     DOT_CODE::print_udec
+
+@skip:          LDA     #@crlf
+                JSR     hal_cputs
                 NEXT
-        @prompt: .byte ' ', 'o', 'k', C_RETURN, L_FEED,0
+        @prompt: .asciiz "ok "
+        @crlf: .byte C_RETURN, L_FEED, 0
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
