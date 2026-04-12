@@ -74,9 +74,9 @@ and wrote header bytes manually, including the quote character as a numeric
 byte value $22.
 
 Word defintions end in NEXT, so a word definition can't JSR directly to another
-word definition. That's beecause the JSR requires and RTS return. When this is
-required, this is worked around by refactoring the word code into a helper
-function. SLASHMOD_CODE and SLASHMOD_IMPL are an example of this pattern.
+word definition. That's because the JSR requires and RTS return. When this is
+required, this is worked around by using the RTS_CFA_LIST trampoline.
+Calling SLASHMOD_CODE is example of this pattern.
 
 The 65816 supports stack relative addressing which is used to create stack local
 variables within a procedure. This reduces the need for direct page space, and
@@ -112,3 +112,101 @@ stack local, or use CMP #0 after the pops.
 TODO items: STAR_CODE, UMSTAR_CODE, UMSLASHMOD_CODE, SLASHMOD_CODE, and
 MOD_CODE have known failures on edge cases and need replacing with verified
 implementations.
+
+New words implemented and tested:
+
+[ and ] — switch between interpret and compile mode. Both require PHY/PLY
+around LDY since Y holds the IP at all times.
+COMPILE, — compiles an xt into the current definition. In ITC Forth identical
+to ,.
+WORDS — rewritten as a DOCOL definition to test the inner interpreter. Uses
+dictionary traversal with FETCH, CFETCH, TYPE, and ZBRANCH.
+INTERPRET — rewritten as a DOCOL definition. Handles word lookup via FIND,
+number conversion via NUMBER, and compiling via COMPILE, and LIT.
+QUIT — implemented as a DOCOL definition. The double return stack reset
+(once in ABORT, once in QUIT) is intentional and harmless.
+UNDEFINED-WORD — prints "error: Undefined word" and calls ABORT.
+TRACEON / TRACEOFF — debug words that set a zero page variable TRACE_EN to
+enable/disable execution tracing via a modified NEXT macro.
+TRACEOUT — prints current IP in hex using DOTHEX_CODE::print_chex. Reuses
+existing hex output code.
+(CREATE) — hidden primitive that builds a dictionary header from a counted
+string at the address on the stack ( addr -- ). Used by :, CREATE, VARIABLE,
+and CONSTANT.
+: — rewritten as a DOCOL definition using (CREATE).
+; — rewritten as a DOCOL definition using REVEAL and [.
+REVEAL — assembly primitive that clears F_HIDDEN on the most recent dictionary
+entry. Replaces inline flag manipulation in ;, VARIABLE, and CONSTANT.
+CREATE — DOCOL definition. Reserves an extra placeholder cell at CFA+2 for the
+DOES> code address so that body data starts at CFA+4.
+DOES> — immediate DOCOL word that compiles (DOES>) into the current definition.
+(DOES>) — hidden assembly primitive. Patches the CFA of the most recently
+CREATEd word to DODOES and stores the current IP (DOES> code address) at CFA+2.
+DODOES — updated to push CFA+4 as the body address and set IP from CFA+2.
+VARIABLE — DOCOL definition using (CREATE), DOVAR, and REVEAL.
+CONSTANT — DOCOL definition using (CREATE), DOCON, and REVEAL.
+DECIMAL / HEX — DOCOL definitions that store 10 or 16 into BASE.
+
+Important bugs found and fixed:
+
+WORD was not updating >IN correctly after TCD relocated the direct page.
+Fix: use (LOC_UP),Y with Y=#U_TOIN instead of STA (U_TOIN).
+#<QUIT_BODY in ABORT_CODE loaded only the low byte of the address.
+Fix: use #QUIT_BODY for the full 16-bit address. Search for other #< usages
+throughout the codebase.
+(DOES>) was destroying A with AND #1 alignment test before storing the CFA
+address. Fix: save tentative CFA to SCRATCH0 first, then test alignment and
+increment SCRATCH0 if odd.
+CREATE must reserve a placeholder cell at CFA+2 for the DOES> code address,
+otherwise , overwrites it with body data. Body data starts at CFA+4.
+ca65 linker bug: hal_mench.o must be listed first in the linker command or
+hal_cputs resolves incorrectly. Document in Makefile.
+
+Coding style rules established:
+Three classes of routines each with their own pattern:
+
+Simple loops — use PHY/PLY with Y as counter only. See SPACES_CODE.
+Buffer walks — push addr and count onto hardware stack, use (offset,S),Y with
+Y as byte index. See TYPE_CODE.
+Complex routines — use full PHD/TCD stack frame. All temporaries in the frame.
+No SCRATCH0/SCRATCH1/TMPA/TMPB/W after TCD. See NUMBER_CODE in
+sample_coding_style.s.
+
+Additional rules:
+
+After TCD, all parameter stack accesses via X must use absolute forced
+addressing: LDA a:0,X.
+Zero page values needed throughout a routine must be fetched into locals
+immediately after reserving the frame but before TCD.
+Result must be pushed to parameter stack before frame teardown since TSC
+clobbers A.
+Use $FF ^ F_HIDDEN not ~F_HIDDEN for byte complement — ca65 produces a large
+constant with ~.
+The FIG Forth "smudge bit" is equivalent to F_HIDDEN. Your REVEAL approach is
+cleaner than FIG's toggle-based SMUDGE.
+BRANCH and ZBRANCH use absolute addresses not offsets for branch targets.
+
+
+Debugging tools added:
+
+TRACEOUT in a .ifdef DEBUG block calls DOTHEX_CODE::print_chex to print the
+current IP.
+trace_decode.py — Python 3 script that reads the CA65 map file and translates
+hex IP values in trace output to symbol names with offsets. Parses the "Exports
+list by name" section. Subtracts 2 from addresses to compensate for NEXT
+pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
+
+.S output should match GForth format: <depth> bottom ... top.
+
+
+TODO items carried forward:
+
+STAR_CODE, UMSTAR_CODE, UMSLASHMOD_CODE, SLASHMOD_CODE, MOD_CODE — known edge
+case failures, need verified implementations.
+.S needs fixing to print in ANS order (bottom to top) with depth prefix <n>.
+' (tick) not yet implemented.
+IF/THEN/ELSE, BEGIN/UNTIL/WHILE/REPEAT, DO/LOOP control flow words not yet
+implemented.
+$ hex prefix for number literals not yet supported in NUMBER/INTERPRET.
+S", .", ABORT" string words are stubs needing full implementation.
+FIND CFA offset calculation may need verification for words with padding.
