@@ -3120,12 +3120,31 @@ print_udec:
         .a16
         .i16
                 PHX                     ; Save PSP
-@print_loop:
-                CPX     #PSP_INIT
-                BCS     @ds_done
+
+                TXA                     ; Compute depth
+                EOR     #$FFFF          ; Two's complement
+                INC     A
+                CLC
+                ADC     #PSP_INIT       ; PSP_INIT - result / 2
+                LSR     A               ; Divide by 2 (cells)
+                BEQ     @ds_done        ; no items on stack, we're done.
+
+                STA     SCRATCH0        ; print "<depth> "
+                LDA     #'<'
+                JSR     hal_putch
+                JSR     DOT_CODE::print_sdec
+                LDA     #'>'
+                JSR     hal_putch
+                LDA     #SPACE
+                JSR     hal_putch
+                LDX     #PSP_INIT
+
+@print_loop:    TXA                     ; Print stack items bottom to top.
+                CMP     1,S
+                BEQ     @ds_done
+                DEX
+                DEX
                 LDA     0,X
-                INX
-                INX
                 STA     SCRATCH0
                 JSR     DOT_CODE::print_sdec
                 LDA     #SPACE
