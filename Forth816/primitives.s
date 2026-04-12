@@ -145,15 +145,13 @@
         PUBLIC  TUCK_CODE
         .a16
         .i16
+                DEX
+                DEX
+                LDA     2,X             ; b
+                STA     0,X             ; TOS = b
+                LDA     4,X             ; a
+                STA     2,X             ; NOS = a
                 LDA     0,X             ; b
-                STA     SCRATCH0
-                LDA     2,X             ; a
-                STA     0,X             ; TOS = a
-                DEX
-                DEX
-                LDA     SCRATCH0        ; b
-                STA     0,X             ; New TOS = b
-                LDA     SCRATCH0
                 STA     4,X             ; Slot below a = b
                 NEXT
         ENDPUBLIC
@@ -181,16 +179,14 @@
         PUBLIC  TWODUP_CODE
         .a16
         .i16
-                LDA     2,X             ; a
-                STA     SCRATCH0
-                LDA     0,X             ; b
                 DEX
                 DEX
                 DEX
                 DEX
+                LDA     6,X             ; a
+                STA     2,X             ; Push a
+                LDA     4,X             ; b
                 STA     0,X             ; Push b
-                LDA     SCRATCH0
-                STA     2,X             ; Push a below b
                 NEXT
         ENDPUBLIC
 
@@ -225,16 +221,14 @@
         PUBLIC  TWOOVER_CODE
         .a16
         .i16
-                LDA     6,X             ; a
-                STA     SCRATCH0
-                LDA     4,X             ; b
                 DEX
                 DEX
                 DEX
                 DEX
-                STA     0,X             ; Push b (TOS)
-                LDA     SCRATCH0
-                STA     2,X             ; Push a
+                LDA     10,X            ; a
+                STA     2,X             ; Push a (NOS)
+                LDA     8,X             ; b
+                STA     0,X             ; Push b
                 NEXT
         ENDPUBLIC
 
@@ -2030,6 +2024,30 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; DECIMAL ( -- ) set numeric base to 10
+;------------------------------------------------------------------------------
+        HEADER  "DECIMAL", DECIMAL_ENTRY, DECIMAL_CFA, 0, WORD_ENTRY
+        CODEPTR DOCOL
+DECIMAL_BODY:
+        .word   LIT_CFA
+        .word   10
+        .word   BASE_CFA
+        .word   STORE_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; HEX ( -- ) set numeric base to 16
+;------------------------------------------------------------------------------
+        HEADER  "HEX", HEX_ENTRY, HEX_CFA, 0, DECIMAL_ENTRY
+        CODEPTR DOCOL
+HEX_BODY:
+        .word   LIT_CFA
+        .word   16
+        .word   BASE_CFA
+        .word   STORE_CFA
+        .word   EXIT_CFA
+
 ;==============================================================================
 ; NUMBER ( addr -- n flag )
 ;
@@ -2047,7 +2065,7 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;               ( addr -- addr FALSE ) on failure [addr preserved for error msg]
 ;==============================================================================
 
-        HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, WORD_ENTRY
+        HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, HEX_ENTRY
         CODEPTR NUMBER_CODE
         PUBLIC  NUMBER_CODE
         .a16
@@ -2394,7 +2412,6 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
                 ; --- Reset return stack ---
                 LDA     RSP_INIT        ; Reload from entry value.
                 TCS
-
 
                 ; --- Reset STATE and >IN to 0 ---
                 ; STZ (indirect) is not supported on 65816.
@@ -2808,7 +2825,7 @@ QUIT_LOOP:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; UNDEFINED-WORD ( -- ) print error message and abort
+; UNDEFINED-WORD ( addr -- ) print error message and abort
 ; Called when INTERPRET cannot find or convert a word.
 ;------------------------------------------------------------------------------
         HEADER  "UNDEFINED-WORD", UNDEFINED_WORD_ENTRY, UNDEFINED_WORD_CFA, 0, FIND_ENTRY
