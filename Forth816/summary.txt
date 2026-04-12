@@ -109,10 +109,6 @@ Y is saved in the stackframe this can be omitted.
 just-popped value with BEQ/BNE directly after. Save to a zero page variable,
 stack local, or use CMP #0 after the pops.
 
-TODO items: STAR_CODE, UMSTAR_CODE, UMSLASHMOD_CODE, SLASHMOD_CODE, and
-MOD_CODE have known failures on edge cases and need replacing with verified
-implementations.
-
 New words implemented and tested:
 
 [ and ] — switch between interpret and compile mode. Both require PHY/PLY
