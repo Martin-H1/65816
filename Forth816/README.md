@@ -161,9 +161,9 @@ Offset  Size  Field
 `. U. .HEX .S`
 
 ### Strings
-`COUNT WORD NUMBER`
+`COUNT WORD HEX DECIMAL NUMBER`
 
-### Defining (stubs - to be completed)
+### Defining
 `: ; CONSTANT VARIABLE CREATE DOES>`
 
 ## UART Configuration
@@ -192,7 +192,7 @@ make all
 make debug
 make tests
 
-# Output: build/forth.bin (64KB ROM image)
+# Output: bin/release/forth.bin (32KB ROM image)
 ```
 
 ## Implementation Notes
@@ -212,14 +212,13 @@ make tests
 ### What needs completion
 The following words have stubs and need full implementation:
 
-1. **`: ;`** - Colon compiler needs: parse name → create header →
-   set STATE=1 → compile CFAs → compile EXIT → set STATE=0
+1. **`." S"`** - String literal compilation
 
-2. **`CONSTANT VARIABLE CREATE DOES>`** - Defining words
+2. Enhancing number to support the $ hex prefix.
 
-3. **`." S"`** - String literal compilation
+3. Conditional statements ?DUP, ABORT", IF, ELSE, THEN, CASE, OF, ENDOF, and ENDCASE
 
-4. **INTERPRET needs a rework
+4. Flow control words like DO, LOOP, +LOOP, LEAVE, BEGIN, UNTIL, AGAIN, WHILE, and REPEAT.
 
 ### Extending for your SBC
 - Change HAL code for your UART chip
