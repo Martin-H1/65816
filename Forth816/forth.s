@@ -156,17 +156,26 @@ TRACE_EN:       .res 2                  ; Trace enable flag
         PUBLIC  DODOES
         .a16
         .i16
-                ; Push body address of THIS word (W+2)
+                ; W = CFA of the created word
+                ; CFA+0 = address of DODOES code pointer cell
+                ; CFA+2 = address of DOES> code (stored by (DOES>))
+                ; CFA+4 = body start (what we push onto param stack)
+
+                ; Push IP to return stack (we're entering a colon-like context)
+                PHY                     ; save current IP
+
+                ; Fetch DOES> code address from CFA+2 and set as new IP
+                LDY      #2
+                LDA      (W),Y          ; IP = DOES> code
+                TAY                     ; IP = DOES> code
+
+                ; Push body address (CFA+4) onto parameter stack
                 LDA     W
                 CLC
-                ADC     #2
+                ADC     #4
                 DEX
                 DEX
-                STA     0,X             ; Push body address
-
-                ; W points to CFA which contains address of DODOES.
-                ; The DOES> code address is stored after DOCOL saved IP.
-                ; IP (Y) was set by the caller to point to DOES> code.
+                STA     0,X             ; push body address
                 NEXT
         ENDPUBLIC
 

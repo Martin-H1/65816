@@ -211,6 +211,32 @@ ENDPUBLIC
                 NEXT
         ENDPUBLIC
 
+        PUBLIC  DODOES
+        .a16
+        .i16
+                ; W = CFA of the created word
+                ; CFA+0 = address of DODOES code pointer cell
+                ; CFA+2 = address of DOES> code (stored by (DOES>))
+                ; CFA+4 = body start (what we push onto param stack)
+
+                ; Push IP to return stack (we're entering a colon-like context)
+                PHY                     ; save current IP
+
+                ; Fetch DOES> code address from CFA+2 and set as new IP
+                LDY      #2
+                LDA      (W),Y          ; IP = DOES> code
+                TAY                     ; IP = DOES> code
+
+                ; Push body address (CFA+4) onto parameter stack
+                LDA     W
+                CLC
+                ADC     #4
+                DEX
+                DEX
+                STA     0,X             ; push body address
+                NEXT
+        ENDPUBLIC
+
 ; reads a CR terminated line from console into buffer
 PUBLIC hal_cgets
 	rts
