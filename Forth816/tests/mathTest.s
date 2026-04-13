@@ -20,8 +20,6 @@
 .import UMSTAR_CODE
 .import UMSLASHMOD_CODE
 .import SLASHMOD_CODE
-.import SLASH_CODE
-.import MOD_CODE
 .import NEGATE_CODE
 .import ABS_CODE
 .import MAX_CODE
@@ -30,6 +28,8 @@
 .import ONEMINUS_CODE
 .import TWOSTAR_CODE
 .import TWOSLASH_CODE
+
+.importzp W
 
 ; Main entry point for the test
 PUBLIC MAIN
@@ -212,31 +212,31 @@ ENDPUBLIC
 	PUSH
 	lda #20
 	PUSH
-	jsr SLASH_CODE
+	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test 4133 / 20 (expect 206) = "
 	lda #4133
 	PUSH
 	lda #$fffd
 	PUSH
-	jsr SLASH_CODE
+	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test 4133 / -3 (expect -1377) = "
 	lda #$fffd
 	PUSH
 	lda #$fffd
 	PUSH
-	jsr SLASH_CODE
+	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test -3 / -3 (expect 1) = "
 	lda #$fffd
 	PUSH
 	lda #20
 	PUSH
-	jsr SLASH_CODE
+	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test -3 / 20 (expect 0) = "
 	lda #$fffd
 	PUSH
 	lda #$1
 	PUSH
-	jsr SLASH_CODE
+	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test -3 / 1 (expect -3) = "
 	rts
 .endproc
@@ -246,25 +246,25 @@ ENDPUBLIC
 	PUSH
 	lda #20
 	PUSH
-	jsr MOD_CODE
+	CALL_DOCOL MOD_CFA    ; RTS_CFA will return here.
 	TYPESTR_DOT "MOD test 4133 MOD 20 (expect 13) = "
 	lda #$4133
 	PUSH
 	lda #$fffd
 	PUSH
-	jsr MOD_CODE
+	CALL_DOCOL MOD_CFA    ; RTS_CFA will return here.
 	TYPESTR_DOT "MOD test 4133 MOD -3 (expect -1) = "
 	lda #$fffd
 	PUSH
 	lda #$fffd
 	PUSH
-	jsr MOD_CODE
+	CALL_DOCOL MOD_CFA    ; RTS_CFA will return here.
 	TYPESTR_DOT "MOD test -3 MOD -3 (expect 0) = "
 	lda #$fffd
 	PUSH
 	lda #20
 	PUSH
-	jsr MOD_CODE
+	CALL_DOCOL MOD_CFA    ; RTS_CFA will return here.
 	TYPESTR_DOT "MOD test -3 MOD 20 (expect 17) = "
 	rts
 .endproc
