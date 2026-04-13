@@ -396,7 +396,7 @@ calc_depth:     TXA
                 BCC     @skip
                 LDA     SCRATCH0
                 CLC
-                ADC     TMPB            ; product += current shifted multiplicand
+                ADC     TMPB            ; product += curr shifted multiplicand
                 STA     SCRATCH0
 @skip:
                 ASL     TMPB            ; shift multiplicand, not the sum
@@ -585,8 +585,8 @@ calc_depth:     TXA
         .a16
         .i16
 
-SDIV_N1 = 3                     ; offset to saved n1 in hardware stack frame
-SDIV_N2 = 1                     ; offset to saved n2
+        SDIV_N1 = 3                     ; offset to saved n1 in hardware stack
+        SDIV_N2 = 1                     ; offset to saved n2
 
                 ; Step 1: save originals on hardware stack
                 LDA     2,X             ; n1 (dividend)
@@ -608,11 +608,6 @@ SDIV_N2 = 1                     ; offset to saved n2
 @n2_pos:        STA     0,X
 
                 ; Step 3: build ( divisor ud_high ud_low ) for UMSLASHMOD_IMPL
-                ; Current stack:  0,X = |n2|   2,X = |n1|
-                ; UMSLASHMOD_IMPL (after INX/INX pops divisor) sees:
-                ;   0,X = ud_high  (remainder register)
-                ;   2,X = ud_low   (quotient register)
-                ; So we need to push: 0,X=|n2|  2,X=0  4,X=|n1|
                 DEX
                 DEX                     ; allocate one new cell
                 LDA     2,X             ; |n2| = divisor
@@ -626,51 +621,53 @@ SDIV_N2 = 1                     ; offset to saved n2
 
                 ; Step 4: unsigned division
                 JSR     UMSLASHMOD_IMPL
-                ; After JSR UMSLASHMOD_IMPL:
-                ; 0,X = |quotient|
-                ; 2,X = |remainder|
 
-                ; remainder sign = sign of divisor (n2)
-                LDA     SDIV_N2,S
-                BPL     @rem_positive
-                LDA     2,X             ; remainder
-                BEQ     @rem_positive
-                EOR     #$FFFF
-                INC     A
-                STA     2,X             ; negate remainder
-@rem_positive:
+                ; After UMSLASHMOD_IMPL: 0,X=|quot| 2,X=|rem|
 
-                ; floor correction if signs differ and remainder nonzero
+                ; Step 5: apply quotient sign (negate if signs differ)
                 LDA     SDIV_N1,S
-                EOR     SDIV_N2,S
-                BPL     @same_sign
-                LDA     2,X             ; remainder
-                BEQ     @same_sign
-                DEC     0,X             ; quotient -= 1
-                LDA     2,X
-                CLC
-                ADC     SDIV_N2,S       ; remainder += n2
-                STA     2,X
-
-@same_sign:
-                ; negate quotient if signs differed
-                LDA     SDIV_N1,S
-                EOR     SDIV_N2,S
+                EOR     SDIV_N2,S       ; bit 15 set if signs differ
                 BPL     @quot_positive
-                LDA     0,X             ; quotient
+                LDA     0,X
                 BEQ     @quot_positive
                 EOR     #$FFFF
                 INC     A
-                STA     0,X             ; negate quotient
+                STA     0,X             ; quot = -|quot|
 @quot_positive:
-                ; ANS /MOD: ( n1 n2 -- rem quot )
-                ; need TOS=quot=0,X  NOS=rem=2,X but currently reversed
-                LDA     0,X             ; remainder
+
+                ; Step 6: apply remainder sign (negate if dividend negative)
+                LDA     SDIV_N1,S       ; sign of n1 (dividend)
+                BPL     @rem_positive
+                LDA     2,X
+                BEQ     @rem_positive
+                EOR     #$FFFF
+                INC     A
+                STA     2,X             ; rem = -|rem|
+@rem_positive:
+
+                ; Step 7: floor correction
+                ; truncated→floored: if signs differed AND rem ≠ 0:
+                ;   quot -= 1
+                ;   rem  += n2  (original signed n2)
+                LDA     SDIV_N1,S
+                EOR     SDIV_N2,S
+                BPL     @done
+                LDA     2,X             ; remainder (now signed)
+                BEQ     @done
+                DEC     0,X             ; quot -= 1
+                LDA     2,X
+                CLC
+                ADC     SDIV_N2,S       ; rem += signed n2
+                STA     2,X
+
+@done:
+                ; swap so TOS=quot NOS=rem
+                LDA     0,X
                 STA     SCRATCH0
-                LDA     2,X             ; quotient
-                STA     0,X             ; TOS = quotient
+                LDA     2,X
+                STA     0,X
                 LDA     SCRATCH0
-                STA     2,X             ; NOS = remainder
+                STA     2,X
                 PLA
                 PLA
                 RTS
