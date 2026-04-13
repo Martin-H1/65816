@@ -240,17 +240,20 @@
         PUBLIC  DEPTH_CODE
         .a16
         .i16
-                TXA
+                JSR     calc_depth
+                DEX
+                DEX
+                STA     0,X
+                NEXT
+
+calc_depth:     TXA
                 EOR     #$FFFF          ; Two's complement
                 INC     A
                 CLC
                 ADC     #PSP_INIT       ; PSP_INIT - result / 2
                 LSR     A               ; Divide by 2 (cells)
-                DEX
-                DEX
-                STA     0,X
-                NEXT
-        ENDPUBLIC
+                RTS
+	ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; PICK ( xu...x1 x0 u -- xu...x1 x0 xu )
@@ -365,80 +368,99 @@
 
 ;------------------------------------------------------------------------------
 ; * ( a b -- a*b ) 16x16 -> 16 (low word)
-; TODO: Failing unit tests on edge cases (negative/large numbers).
-;       Replace with a verified implementation.
+;
+; Two's-complement low-word multiplication gives the same bit pattern for
+; both signed and unsigned inputs, so no sign handling is needed.
+;
+; Algorithm: shift-and-add, 16 iterations.
+;   TMPA      = multiplier   (shifted right, 1 bit per iteration)
+;   A         = multiplicand (shifted left,  1 bit per iteration)
+;   SCRATCH0  = running 16-bit product (accumulator)
 ;------------------------------------------------------------------------------
         HEADER  "*", STAR_ENTRY, STAR_CFA, 0, MINUS_ENTRY
         CODEPTR STAR_CODE
         PUBLIC  STAR_CODE
         .a16
         .i16
-                LDA     0,X             ; b (multiplier)
+                LDA     0,X             ; b = multiplier
                 STA     TMPA
-                LDA     2,X             ; a (multiplicand)
+                LDA     2,X             ; a = multiplicand
+                STA     TMPB            ; shifting multiplicand lives in TMPB
                 INX
-                INX                     ; Drop b slot
-                STZ     0,X             ; Clear result
-                PHY                     ; Save IP (Y must not be clobbered)
-                LDY     #16             ; 16 bit iterations
+                INX
+                STZ     SCRATCH0        ; product accumulator = 0
+                PHY
+                LDY     #16
 @loop:
-                LSR     TMPA            ; Shift multiplier right
+                LSR     TMPA            ; multiplier >>= 1; LSB → carry
                 BCC     @skip
+                LDA     SCRATCH0
                 CLC
-                ADC     0,X             ; Accumulate shifted multiplicand
-                STA     0,X
+                ADC     TMPB            ; product += current shifted multiplicand
+                STA     SCRATCH0
 @skip:
-                ASL     A               ; Shift multiplicand left
+                ASL     TMPB            ; shift multiplicand, not the sum
                 DEY
                 BNE     @loop
-                                        ; TOS now contains the final result
-                PLY                     ; Restore IP
+                LDA     SCRATCH0
+                STA     0,X
+                PLY
                 NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; UM* ( u1 u2 -- ud ) unsigned 16x16 -> 32-bit result
-; Result: TOS = high cell, NOS = low cell
-; TODO: Failing unit tests on edge cases (negative/large numbers).
-;       Replace with a verified implementation.
+; UM* ( u1 u2 -- ud )   unsigned 16×16 → 32-bit product
+;   On exit: NOS = ud_low, TOS = ud_high   (ANS Forth convention)
+;
+; Algorithm: shift-and-add over a 32-bit accumulator.
+;   TMPA      = multiplier   (16-bit, shifted right)
+;   TMPB      = multiplicand low  word (shifted left, carry tracked below)
+;   SCRATCH1  = multiplicand high word (starts 0; receives carry from TMPB)
+;   SCRATCH0  = product low  word (accumulator)
+;   2,X slot  = product high word (accumulator, kept on stack)
 ;------------------------------------------------------------------------------
         HEADER  "UM*", UMSTAR_ENTRY, UMSTAR_CFA, 0, STAR_ENTRY
         CODEPTR UMSTAR_CODE
         PUBLIC  UMSTAR_CODE
         .a16
         .i16
-                LDA     0,X             ; u2 (multiplier)
+                LDA     0,X             ; u2 → TMPA (multiplier)
                 STA     TMPA
-                LDA     2,X             ; u1 (multiplicand)
+                LDA     2,X             ; u1 → TMPB (multiplicand low)
                 STA     TMPB
-                STZ     2,X             ; Clear high result
-                STZ     0,X             ; Clear low result
-                PHY                     ; Save IP
-                LDY     #16
+                STZ     SCRATCH1        ; multiplicand high = 0
+                STZ     SCRATCH0        ; product low  = 0
+                STZ     2,X             ; product high = 0  (reuse NOS slot)
+                PHY                     ; save IP
+                LDY     #16             ; 16 iterations
+
 @loop:
-                LSR     TMPA            ; Shift multiplier right
-                BCC     @skip
-                ; Add TMPB to 32-bit result
+                LSR     TMPA            ; multiplier >>= 1; old LSB → carry
+                BCC     @skip           ; bit 0 was 0, nothing to add
+
+                ; Add 32-bit multiplicand (SCRATCH1:TMPB) to prod (2,X:SCRATCH0)
                 CLC
-                LDA     0,X             ; Low result
-                ADC     TMPB
-                STA     0,X
-                LDA     2,X             ; High result
-                ADC     #0              ; Add carry bit
-                STA     2,X
-@skip:
-                ASL     TMPB            ; Shift multiplicand left
-                DEY
-                BNE     @loop
-                ; Stack now has: NOS=high, TOS=low
-                ; ANS wants: NOS=low, TOS=high → swap
-                LDA     0,X
+                LDA     SCRATCH0
+                ADC     TMPB            ; product_low  += multiplicand_low
                 STA     SCRATCH0
                 LDA     2,X
-                STA     0,X
-                LDA     SCRATCH0
+                ADC     SCRATCH1        ; product_high += multiplicand_high + c
                 STA     2,X
-                PLY                     ; Restore IP
+@skip:
+                ; Shift 32-bit multiplicand left
+                ASL     TMPB            ; multiplicand_low <<= 1
+                ROL     SCRATCH1        ; multiplicand_high <<= 1
+
+                DEY
+                BNE     @loop
+
+                ; Place results on parameter stack:
+                ;   TOS = ud_high, NOS = ud_low
+                LDA     2,X             ; product high (already in 2,X)
+                STA     0,X             ; TOS = high
+                LDA     SCRATCH0
+                STA     2,X             ; NOS = low
+                PLY                     ; restore IP
                 NEXT
         ENDPUBLIC
 
@@ -452,168 +474,216 @@
 ; Exit stack: ( remainder quotient )
 ;   0,X = quotient
 ;   2,X = remainder
-;
-; Algorithm: restoring shift-and-subtract (non-restoring variant)
-;   Uses a 32-bit working register split across the two stack cells:
-;     remainder = 2,X (starts as ud_high, accumulates remainder bits)
-;     quotient  = 0,X (starts as ud_low,  accumulates quotient bits)
-;   Each iteration:
-;     1. Shift remainder:quotient left 1 bit
-;     2. If remainder >= divisor: subtract divisor, set quotient bit
-; TODO: Failing unit tests on edge cases (negative/large numbers).
-;       Replace with a verified implementation.
 ;------------------------------------------------------------------------------
         HEADER  "UM/MOD", UMSLASHMOD_ENTRY, UMSLASHMOD_CFA, 0, UMSTAR_ENTRY
         CODEPTR UMSLASHMOD_CODE
         PUBLIC  UMSLASHMOD_CODE
         .a16
         .i16
-                ; Load divisor, drop its stack slot
-                LDA     0,X             ; divisor → TMPA
-                STA     TMPA
-                INX
-                INX
-                ; Stack is now: 0,X=ud_low (quotient reg)
-                ;               2,X=ud_high (remainder reg)
-
-                PHY                     ; Save IP (LDY #16 would clobber it)
-                LDY     #16             ; 16 iterations, one per bit
-
-@loop:
-                ; Shift remainder:quotient left by 1
-                ; quotient (0,X) shifts left, its MSB goes into remainder (2,X)
-                ASL     0,X             ; Shift quotient left, MSB → carry
-                ROL     2,X             ; Shift remainder left, carry → LSB
-
-                ; Try to subtract divisor from remainder
-                LDA     2,X             ; Current remainder
-                SEC
-                SBC     TMPA            ; remainder - divisor
-                BCC     @no_sub         ; Borrow set = remainder < divisor, skip
-                STA     2,X             ; Update remainder with result
-                INC     0,X             ; Set quotient LSB (shifted in)
-@no_sub:
-                DEY
-                BNE     @loop
-
-                ; Result: 0,X = quotient, 2,X = remainder
-                PLY                     ; Restore IP
+                JSR     UMSLASHMOD_IMPL
                 NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; /MOD ( n1 n2 -- rem quot ) signed division
-; Entry stack: ( n1 n2 -- )
-;   0,X = n2 (divisor)
-;   2,X = n1 (dividend)
+; UMSLASHMOD_IMPL  –  shared subroutine: unsigned 32÷16 → 16r 16q
 ;
-; Exit stack: ( rem quot )
-;   0,X = quotient
-;   2,X = remainder
+; Called via JSR from UM/MOD and SLASHMOD_IMPL.
 ;
-; Sign rules (ANS Forth floored division):
-;   Remainder sign = sign of dividend (n1)
-;   Quotient sign  = sign(n1) XOR sign(n2)
+; Entry stack layout (X = PSP before JSR):
+;   0,X = divisor  (u16)
+;   2,X = ud_low   (low  cell of 32-bit dividend)
+;   4,X = ud_high  (high cell of 32-bit dividend)
 ;
-; Method:
-;   1. Save signs of both operands
-;   2. Take absolute values
-;   3. Sign-extend |n1| to 32 bits → call UMSLASHMOD
-;   4. Apply correct signs to remainder and quotient
-; TODO: Failing unit tests on edge cases (negative/large numbers).
-;       Replace with a verified implementation.
+; Exit stack layout (after internal INX/INX that pops divisor):
+;   0,X = quotient   (u16)
+;   2,X = remainder  (u16)
+;
+; Algorithm: restoring shift-and-subtract, 16 iterations.
+;   We treat the pair (2,X  remainder:quotient 0,X) as a single 32-bit
+;   shift register.  Each iteration:
+;     1. Shift 32-bit register left 1 bit:
+;          ASL quotient_slot   → old bit 15 goes to carry
+;          ROL remainder_slot  → carry comes in at LSB
+;     2. Attempt subtraction: remainder - divisor
+;          If no borrow (remainder ≥ divisor):
+;            keep new remainder, set quotient LSB (bit 0, now 0 after ASL) to 1
+;          Else restore remainder.
+;------------------------------------------------------------------------------
+        .export UMSLASHMOD_IMPL
+        .proc   UMSLASHMOD_IMPL
+        .a16
+        .i16
+                LDA     0,X             ; load divisor
+                STA     TMPA            ; TMPA = divisor
+                INX
+                INX                     ; pop divisor slot
+                ; Now: 0,X = ud_high (remainder register)
+                ;      2,X = ud_low  (quotient register)
+                PHY                     ; save IP
+                LDY     #16             ; 16 iterations
+
+@loop:
+                ASL     2,X             ; quotient  <<= 1; old bit15 → carry
+                ROL     0,X             ; remainder <<= 1; carry → bit0
+                LDA     0,X             ; current remainder
+                SEC
+                SBC     TMPA            ; remainder - divisor
+                BCC     @restore        ; borrow → remainder < divisor, skip
+                STA     0,X             ; update remainder
+                INC     2,X             ; set quotient LSB
+@restore:
+                DEY
+                BNE     @loop
+
+                ; 0,X = remainder, 2,X = quotient
+                PLY                     ; restore IP
+                RTS
+        .endproc
+
+;------------------------------------------------------------------------------
+; /MOD ( n1 n2 -- rem quot )   signed floored division
 ;------------------------------------------------------------------------------
         HEADER  "/MOD", SLASHMOD_ENTRY, SLASHMOD_CFA, 0, UMSLASHMOD_ENTRY
         CODEPTR SLASHMOD_CODE
         PUBLIC  SLASHMOD_CODE
         .a16
         .i16
-
-DIVIDEND        = 3             ; Stack offset to saved dividend (n1)
-DIVISOR         = 1             ; Stack offset to saved divisor (n2)
-                ; --- Step 1: Save signs ---
-                ; DIVIDEND,S = n1 (dividend), DIVISOR,S = n2 (divisor)
-                LDA     2,X             ; n1
-                PHA                     ; Save dividend as stack local
-                BPL     @n1_pos         ; Step 2: Take absolute value
-                EOR     #$FFFF          ; Negate n1
-                INC     A
-                STA     2,X             ; |n1| back to stack
-@n1_pos:
-                LDA     0,X             ; n2
-                PHA                     ; Save divisor as stack local
-                BPL     @n2_pos         ; Step 2: Take absolute value
-                EOR     #$FFFF          ; Negate n2
-                INC     A
-                STA     0,X             ; |n2| back to stack
-@n2_pos:
-                ; Stack: 0,X=|n2|  2,X=|n1|
-                ; --- Step 3: Sign-extend |n1| to 32 bits ---
-                ; UMSLASHMOD expects: ( ud_high ud_low divisor -- rem quot )
-                ;   0,X = divisor  = |n2|
-                ;   2,X = ud_low   = |n1|
-                ;   4,X = ud_high  = 0
-                ; We currently have: 0,X=|n2|  2,X=|n1|
-                LDA     0,X             ; Save |n2| (divisor)
-                DEX
-                DEX                     ; Push one extra cell
-                STA     0,X             ; |n2| (divisor) to 0,X
-                LDA     4,X             ; get |n1|
-                STA     2,X             ; |n1| → ud_low at 2,X
-                STZ     4,X             ; 4,X = 0 (ud_high)
-                ; Stack: 0,X=|n2|(divisor)  2,X=|n1|(ud_low)  4,X=0(ud_high)
-                ; --- Step 4: Unsigned division ---
-                PHY
-                LDY     #RTS_CFA_LIST
-                JSR     UMSLASHMOD_CODE
-                PLY
-                ; UMSLASHMOD pops divisor (INX/INX) internally
-                ; Stack after: 0,X=quotient  2,X=remainder
-                ; --- Step 5: Apply signs ---
-                ; Remainder gets sign of n1 (DIVIDEND,S)
-                LDA     DIVIDEND,S
-                BPL     @rem_pos        ; n1 positive → remainder positive
-                LDA     2,X
-                BEQ     @rem_pos        ; Zero remainder stays zero
-                EOR     #$FFFF
-                INC     A
-                STA     2,X             ; Negate remainder
-@rem_pos:
-                ; Quotient gets sign of n1 XOR n2
-                LDA     DIVIDEND,S
-                EOR     DIVISOR,S       ; XOR signs
-                BPL     @quot_pos       ; Same sign → quotient positive
-                LDA     0,X
-                BEQ     @quot_pos       ; Zero quotient stays zero
-                EOR     #$FFFF
-                INC     A
-                STA     0,X             ; Negate quotient
-@quot_pos:
-                PLA                     ; Clean off stack locals
-                PLA
+                JSR     SLASHMOD_IMPL
                 NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; SLASHMOD_IMPL  –  signed 16÷16 → 16r 16q   ANS Forth floored division
+; Called via JSR from /MOD and MOD.
+;
+; Entry stack:
+;   0,X = n2  (divisor,  signed 16-bit)
+;   2,X = n1  (dividend, signed 16-bit)
+;
+; Exit stack:
+;   0,X = quotient   (floored toward −∞)
+;   2,X = remainder  (sign matches divisor)
+;
+; ANS floored vs. truncated:
+;   Truncated: remainder has sign of dividend.
+;   Floored:   remainder has sign of divisor; quotient is floor(n1/n2).
+;   When signs of n1 and n2 differ AND remainder ≠ 0:
+;     floored_quot = truncated_quot - 1
+;     floored_rem  = truncated_rem  + n2
+;
+; Method:
+;   1. Save original signed n1, n2 on hardware stack.
+;   2. Take |n1|, |n2|; call UMSLASHMOD_IMPL for unsigned truncated division.
+;   3. Apply floored-division sign correction.
+;
+; Hardware stack frame after PHY + two PHA:
+;   1,S = n2  (saved divisor,  pushed last)
+;   3,S = n1  (saved dividend, pushed first)
+;   5,S = saved IP (pushed by PHY)
+;------------------------------------------------------------------------------
+        PUBLIC  SLASHMOD_IMPL
+        .a16
+        .i16
+
+SDIV_N1 = 3                     ; offset to saved n1 in hardware stack frame
+SDIV_N2 = 1                     ; offset to saved n2
+
+                ; Step 1: save originals on hardware stack
+                LDA     2,X             ; n1 (dividend)
+                PHA                     ; → 3,S
+                LDA     0,X             ; n2 (divisor)
+                PHA                     ; → 1,S
+
+                ; Step 2: replace stack values with absolute values
+                LDA     2,X             ; n1
+                BPL     @n1_pos
+                EOR     #$FFFF
+                INC     A               ; |n1|
+@n1_pos:        STA     2,X
+
+                LDA     0,X             ; n2
+                BPL     @n2_pos
+                EOR     #$FFFF
+                INC     A               ; |n2|
+@n2_pos:        STA     0,X
+
+                ; Step 3: build ( divisor ud_high ud_low ) for UMSLASHMOD_IMPL
+                ; Current stack:  0,X = |n2|   2,X = |n1|
+                ; UMSLASHMOD_IMPL (after INX/INX pops divisor) sees:
+                ;   0,X = ud_high  (remainder register)
+                ;   2,X = ud_low   (quotient register)
+                ; So we need to push: 0,X=|n2|  2,X=0  4,X=|n1|
+                DEX
+                DEX                     ; allocate one new cell
+                LDA     2,X             ; |n2| = divisor
+                STA     SCRATCH0
+                LDA     4,X             ; |n1| = ud_low (dividend)
+                STA     4,X             ; stays at 4,X  (no-op but explicit)
+                STZ     2,X             ; ud_high = 0
+                LDA     SCRATCH0
+                STA     0,X             ; divisor at 0,X
+                ; Result: 0,X=|n2|  2,X=0  4,X=|n1|
+
+                ; Step 4: unsigned division
+                JSR     UMSLASHMOD_IMPL
+                ; After JSR UMSLASHMOD_IMPL:
+                ; 0,X = |quotient|
+                ; 2,X = |remainder|
+
+                ; remainder sign = sign of divisor (n2)
+                LDA     SDIV_N2,S
+                BPL     @rem_positive
+                LDA     2,X             ; remainder
+                BEQ     @rem_positive
+                EOR     #$FFFF
+                INC     A
+                STA     2,X             ; negate remainder
+@rem_positive:
+
+                ; floor correction if signs differ and remainder nonzero
+                LDA     SDIV_N1,S
+                EOR     SDIV_N2,S
+                BPL     @same_sign
+                LDA     2,X             ; remainder
+                BEQ     @same_sign
+                DEC     0,X             ; quotient -= 1
+                LDA     2,X
+                CLC
+                ADC     SDIV_N2,S       ; remainder += n2
+                STA     2,X
+
+@same_sign:
+                ; negate quotient if signs differed
+                LDA     SDIV_N1,S
+                EOR     SDIV_N2,S
+                BPL     @quot_positive
+                LDA     0,X             ; quotient
+                BEQ     @quot_positive
+                EOR     #$FFFF
+                INC     A
+                STA     0,X             ; negate quotient
+@quot_positive:
+                ; ANS /MOD: ( n1 n2 -- rem quot )
+                ; need TOS=quot=0,X  NOS=rem=2,X but currently reversed
+                LDA     0,X             ; remainder
+                STA     SCRATCH0
+                LDA     2,X             ; quotient
+                STA     0,X             ; TOS = quotient
+                LDA     SCRATCH0
+                STA     2,X             ; NOS = remainder
+                PLA
+                PLA
+                RTS
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; / ( n1 n2 -- quot ) signed division
 ;------------------------------------------------------------------------------
         HEADER  "/", SLASH_ENTRY, SLASH_CFA, 0, SLASHMOD_ENTRY
-        CODEPTR SLASH_CODE
-        PUBLIC  SLASH_CODE
-        .a16
-        .i16
-                PHY
-                LDY     #RTS_CFA_LIST
-                JSR     SLASHMOD_CODE
-                PLY
-
-                ; Stack: NOS=rem TOS=quot → NIP
-                LDA     0,X             ; quot
-                INX
-                INX
-                STA     0,X
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   SLASHMOD_CFA
+        .word   NIP_CFA
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MOD ( n1 n2 -- rem )
@@ -621,20 +691,10 @@ DIVISOR         = 1             ; Stack offset to saved divisor (n2)
 ;       Depends on SLASHMOD_CODE - replace both with verified implementations.
 ;------------------------------------------------------------------------------
         HEADER  "MOD", MOD_ENTRY, MOD_CFA, 0, SLASH_ENTRY
-        CODEPTR MOD_CODE
-        PUBLIC  MOD_CODE
-        .a16
-        .i16
-                PHY
-                LDY     #RTS_CFA_LIST
-                JSR     SLASHMOD_CODE
-                PLY
-
-                ; Stack: NOS=rem TOS=quot → DROP
-                INX
-                INX
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   SLASHMOD_CFA
+        .word   DROP_CFA
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; NEGATE ( n -- -n )
@@ -3121,12 +3181,7 @@ print_udec:
         .i16
                 PHX                     ; Save PSP
 
-                TXA                     ; Compute depth
-                EOR     #$FFFF          ; Two's complement
-                INC     A
-                CLC
-                ADC     #PSP_INIT       ; PSP_INIT - result / 2
-                LSR     A               ; Divide by 2 (cells)
+                JSR     DEPTH_CODE::calc_depth
                 BEQ     @ds_done        ; no items on stack, we're done.
 
                 STA     SCRATCH0        ; print "<depth> "
@@ -3167,12 +3222,7 @@ print_udec:
                 JSR     hal_cputs
 
                 ; Print stack depth if nonzero
-                TXA
-                EOR     #$FFFF          ; Two's complement
-                INC     A
-                CLC
-                ADC     #PSP_INIT       ; PSP_INIT - result / 2
-                LSR     A               ; Divide by 2 (cells)
+                JSR     DEPTH_CODE::calc_depth
                 BEQ     @skip           ; no items on stack.
                 STA     SCRATCH0
                 JSR     DOT_CODE::print_udec
