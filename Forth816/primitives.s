@@ -623,46 +623,40 @@ calc_depth:     TXA
                 ; Step 4: unsigned division
                 JSR     UMSLASHMOD_IMPL
 
-                ; After UMSLASHMOD_IMPL: 0,X=|quot| 2,X=|rem|
+                ; 0,X = |rem|, 2,X = |quot| on entry to sign correction
 
-                ; Step 5: apply quotient sign (negate if signs differ)
+                ; Step 5: quotient sign
                 LDA     SDIV_N1,S
-                EOR     SDIV_N2,S       ; bit 15 set if signs differ
+                EOR     SDIV_N2,S
                 BPL     @quot_positive
-                LDA     0,X
+                LDA     2,X             ; quot
                 BEQ     @quot_positive
                 EOR     #$FFFF
                 INC     A
-                STA     0,X             ; quot = -|quot|
+                STA     2,X
 @quot_positive:
-
-                ; Step 6: apply remainder sign (negate if dividend negative)
-                LDA     SDIV_N1,S       ; sign of n1 (dividend)
+                ; Step 6: remainder sign (negate if dividend negative)
+                LDA     SDIV_N1,S
                 BPL     @rem_positive
-                LDA     2,X
+                LDA     0,X             ; rem
                 BEQ     @rem_positive
                 EOR     #$FFFF
                 INC     A
-                STA     2,X             ; rem = -|rem|
+                STA     0,X
 @rem_positive:
-
                 ; Step 7: floor correction
-                ; truncated→floored: if signs differed AND rem ≠ 0:
-                ;   quot -= 1
-                ;   rem  += n2  (original signed n2)
                 LDA     SDIV_N1,S
                 EOR     SDIV_N2,S
                 BPL     @done
-                LDA     2,X             ; remainder (now signed)
+                LDA     0,X             ; remainder (signed)
                 BEQ     @done
-                DEC     0,X             ; quot -= 1
-                LDA     2,X
+                DEC     2,X             ; quot -= 1
+                LDA     0,X
                 CLC
-                ADC     SDIV_N2,S       ; rem += signed n2
-                STA     2,X
-
+                ADC     SDIV_N2,S       ; rem += n2
+                STA     0,X
 @done:
-                ; swap so TOS=quot NOS=rem
+                ; 0,X=rem 2,X=quot → swap for ANS: TOS=quot NOS=rem
                 LDA     0,X
                 STA     SCRATCH0
                 LDA     2,X
