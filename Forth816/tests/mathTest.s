@@ -130,42 +130,42 @@ ENDPUBLIC
 	lda #$14
 	PUSH
 	jsr UMSTAR_CODE
-	TYPESTR_UDOT "UM* test $fffd * $0014 HIGH (expect 0013) = "
-	TYPESTR_UDOT "UM* test $fffd * $0014 LOW (expect FFC4) = "
+	TYPESTR_UDOT "UM* test $fffd * $0014 HIGH (expect 19) = "
+	TYPESTR_UDOT "UM* test $fffd * $0014 LOW (expect 65476) = "
 	rts
 .endproc
 
 .proc umSlashmodTest
+	lda #1025
+	PUSH
 	lda #$0000
 	PUSH
-	lda #$1025
-	PUSH
-	lda #$14
+	lda #14
 	PUSH
 	jsr UMSLASHMOD_CODE
-	TYPESTR_UDOT "UM/MOD test $00001025 UM/MOD $0014 HIGH (expect 00CE) = "
-	TYPESTR_UDOT "UM/MOD test $00001025 UM/MOD $0014 LOW (expect 000D) = "
-	lda #$0000
+	TYPESTR_UDOT "UM/MOD test $0000 1025 UM/MOD 14 HIGH (expect 73) = "
+	TYPESTR_UDOT "UM/MOD test $0000 1025 UM/MOD 14 LOW (expect 3) = "
+	lda #1025
 	PUSH
-	lda #$1025
+	lda #$0000
 	PUSH
 	lda #$fffd
 	PUSH
 	jsr UMSLASHMOD_CODE
-	TYPESTR_UDOT "UM/MOD test $00001025 UM/MOD $fffd HIGH (expect 0000) = "
-	TYPESTR_UDOT "UM/MOD test $00001025 UM/MOD $fffd LOW (expect 1025) = "
-	lda #$0009
-	PUSH
+	TYPESTR_UDOT "UM/MOD test 1025 UM/MOD -3 HIGH (expect 0000) = "
+	TYPESTR_UDOT "UM/MOD test 1025 UM/MOD -3 LOW (expect 1025) = "
 	lda #$0e79
+	PUSH
+	lda #$0009
 	PUSH
 	lda #$fffd
 	PUSH
 	jsr UMSLASHMOD_CODE
 	TYPESTR_UDOT "UM/MOD test $00090E70 UM/MOD $fffd HIGH (expect 0009) = "
 	TYPESTR_UDOT "UM/MOD test $00090E70 UM/MOD $fffd LOW (expect 0E8B) = "
-	lda #$ffff
-	PUSH
 	lda #$fffd
+	PUSH
+	lda #$ffff
 	PUSH
 	lda #$14
 	PUSH
