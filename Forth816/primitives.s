@@ -389,9 +389,11 @@ calc_depth:     TXA
                 INX
                 INX
                 STZ     SCRATCH0        ; product accumulator = 0
-                PHY
-                LDY     #16
-@loop:
+;               PHY
+;               LDY     #16
+;@loop:
+.macro SHIFTADD16
+.scope
                 LSR     TMPA            ; multiplier >>= 1; LSB → carry
                 BCC     @skip
                 LDA     SCRATCH0
@@ -400,11 +402,30 @@ calc_depth:     TXA
                 STA     SCRATCH0
 @skip:
                 ASL     TMPB            ; shift multiplicand, not the sum
-                DEY
-                BNE     @loop
+;               DEY
+;               BNE     @loop
+.endscope
+.endmacro
+                ; Unroll the loop for performance.
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
+                SHIFTADD16
                 LDA     SCRATCH0
                 STA     0,X
-                PLY
+;               PLY
                 NEXT
         ENDPUBLIC
 
@@ -431,10 +452,12 @@ calc_depth:     TXA
                 STZ     SCRATCH1        ; multiplicand high = 0
                 STZ     SCRATCH0        ; product low  = 0
                 STZ     2,X             ; product high = 0  (reuse NOS slot)
-                PHY                     ; save IP
-                LDY     #16             ; 16 iterations
-
-@loop:
+;               PHY                     ; save IP
+;               LDY     #16             ; 16 iterations
+;@loop:
+                ; Put the contents of an iteration in a macro.
+.macro SHIFTADD32
+.scope
                 LSR     TMPA            ; multiplier >>= 1; old LSB → carry
                 BCC     @skip           ; bit 0 was 0, nothing to add
 
@@ -450,26 +473,44 @@ calc_depth:     TXA
                 ; Shift 32-bit multiplicand left
                 ASL     TMPB            ; multiplicand_low <<= 1
                 ROL     SCRATCH1        ; multiplicand_high <<= 1
-
-                DEY
-                BNE     @loop
-
+;               DEY
+;               BNE     @loop
+.endscope
+.endmacro
+                ; Unroll the loop for performance.
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
+                SHIFTADD32
                 ; Place results on parameter stack:
                 ;   TOS = ud_high, NOS = ud_low
                 LDA     2,X             ; product high (already in 2,X)
                 STA     0,X             ; TOS = high
                 LDA     SCRATCH0
                 STA     2,X             ; NOS = low
-                PLY                     ; restore IP
+;               PLY                     ; restore IP
                 NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; UM/MOD ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
+; UNDEFINED if quotient overflows 16 bits (i.e. ud_high >= u)
 ; Entry stack: ( ud_low ud_high divisor -- )
 ;   0,X = divisor  (u)
-;   2,X = ud_low   (low cell of 32-bit dividend)
-;   4,X = ud_high  (high cell of 32-bit dividend)
+;   2,X = ud_high  (high cell of 32-bit dividend)
+;   4,X = ud_low   (low cell of 32-bit dividend)
 ;
 ; Exit stack: ( remainder quotient )
 ;   0,X = quotient
@@ -492,8 +533,8 @@ calc_depth:     TXA
 ;
 ; Entry stack layout (X = PSP before JSR):
 ;   0,X = divisor  (u16)
-;   2,X = ud_low   (low  cell of 32-bit dividend)
-;   4,X = ud_high  (high cell of 32-bit dividend)
+;   2,X = ud_high  (high cell of 32-bit dividend)
+;   4,X = ud_low   (low  cell of 32-bit dividend)
 ;
 ; Exit stack layout (after internal INX/INX that pops divisor):
 ;   0,X = quotient   (u16)
@@ -520,10 +561,11 @@ calc_depth:     TXA
                 INX                     ; pop divisor slot
                 ; Now: 0,X = ud_high (remainder register)
                 ;      2,X = ud_low  (quotient register)
-                PHY                     ; save IP
-                LDY     #16             ; 16 iterations
-
-@loop:
+;               PHY                     ; save IP
+;               LDY     #16             ; 16 iterations
+;@loop:
+.macro SHIFTSUB32
+.scope
                 ASL     2,X             ; quotient  <<= 1; old bit15 → carry
                 ROL     0,X             ; remainder <<= 1; carry → bit0
                 LDA     0,X             ; current remainder
@@ -533,11 +575,36 @@ calc_depth:     TXA
                 STA     0,X             ; update remainder
                 INC     2,X             ; set quotient LSB
 @restore:
-                DEY
-                BNE     @loop
-
+;               DEY
+;               BNE     @loop
+.endscope
+.endmacro
+                ; Unroll the loop for performance.
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
+                SHIFTSUB32
                 ; 0,X = remainder, 2,X = quotient
-                PLY                     ; restore IP
+                ; swap so TOS=quotient NOS=remainder
+                LDA     0,X
+                STA     SCRATCH0
+                LDA     2,X
+                STA     0,X
+                LDA     SCRATCH0
+                STA     2,X
+;               PLY                     ; restore IP
                 RTS
         .endproc
 
@@ -623,46 +690,40 @@ calc_depth:     TXA
                 ; Step 4: unsigned division
                 JSR     UMSLASHMOD_IMPL
 
-                ; 0,X = |rem|, 2,X = |quot| on entry to sign correction
+                ; 0,X = |quot|, 2,X = |rem| on entry to sign correction
 
                 ; Step 5: quotient sign
                 LDA     SDIV_N1,S
                 EOR     SDIV_N2,S
                 BPL     @quot_positive
-                LDA     2,X             ; quot
+                LDA     0,X             ; quot
                 BEQ     @quot_positive
                 EOR     #$FFFF
                 INC     A
-                STA     2,X
+                STA     0,X
 @quot_positive:
                 ; Step 6: remainder sign (negate if dividend negative)
                 LDA     SDIV_N1,S
                 BPL     @rem_positive
-                LDA     0,X             ; rem
+                LDA     2,X             ; rem
                 BEQ     @rem_positive
                 EOR     #$FFFF
                 INC     A
-                STA     0,X
+                STA     2,X
 @rem_positive:
                 ; Step 7: floor correction
                 LDA     SDIV_N1,S
                 EOR     SDIV_N2,S
                 BPL     @done
-                LDA     0,X             ; remainder (signed)
+                LDA     2,X             ; remainder (signed)
                 BEQ     @done
-                DEC     2,X             ; quot -= 1
-                LDA     0,X
+                DEC     0,X             ; quot -= 1
+                LDA     2,X
                 CLC
                 ADC     SDIV_N2,S       ; rem += n2
-                STA     0,X
+                STA     2,X
 @done:
                 ; 0,X=rem 2,X=quot → swap for ANS: TOS=quot NOS=rem
-                LDA     0,X
-                STA     SCRATCH0
-                LDA     2,X
-                STA     0,X
-                LDA     SCRATCH0
-                STA     2,X
                 PLA
                 PLA
                 RTS
