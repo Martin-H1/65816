@@ -369,13 +369,13 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
 ; * ( a b -- a*b ) 16x16 -> 16 (low word)
 ;
-; Two's-complement low-word multiplication gives the same bit pattern for
+; Two's-complement word multiplication gives the same bit pattern for
 ; both signed and unsigned inputs, so no sign handling is needed.
-;
 ; Algorithm: shift-and-add, 16 iterations.
-;   TMPA      = multiplier   (shifted right, 1 bit per iteration)
-;   A         = multiplicand (shifted left,  1 bit per iteration)
-;   SCRATCH0  = running 16-bit product (accumulator)
+;
+; Note: While UM* DROP returns the same result, it's slightly more
+; expensive. Also use of page zero variables is waranted for efficiency.
+; https://forth-standard.org/standard/core/Times
 ;------------------------------------------------------------------------------
         HEADER  "*", STAR_ENTRY, STAR_CFA, 0, MINUS_ENTRY
         CODEPTR STAR_CODE
@@ -410,7 +410,7 @@ calc_depth:     TXA
 
 ;------------------------------------------------------------------------------
 ; UM* ( u1 u2 -- ud )   unsigned 16×16 → 32-bit product
-;   On exit: NOS = ud_low, TOS = ud_high   (ANS Forth convention)
+; On exit: NOS = ud_low, TOS = ud_high   (ANS Forth convention)
 ;
 ; Algorithm: shift-and-add over a 32-bit accumulator.
 ;   TMPA      = multiplier   (16-bit, shifted right)
@@ -474,6 +474,7 @@ calc_depth:     TXA
 ; Exit stack: ( remainder quotient )
 ;   0,X = quotient
 ;   2,X = remainder
+; https://forth-standard.org/standard/core/UMDivMOD
 ;------------------------------------------------------------------------------
         HEADER  "UM/MOD", UMSLASHMOD_ENTRY, UMSLASHMOD_CFA, 0, UMSTAR_ENTRY
         CODEPTR UMSLASHMOD_CODE
@@ -3119,7 +3120,9 @@ print_udec:
                 INX
                 INX
                 JSR     print_chex
-                NEXT
+                LDA     #SPACE
+                JSR     hal_putch
+        NEXT
 
         ; print_ahex - prints lower eight bits of the accumulator in hex
         ; Inputs:
