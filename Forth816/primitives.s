@@ -451,7 +451,7 @@ calc_depth:     TXA
                 STA     TMPB
                 STZ     SCRATCH1        ; multiplicand high = 0
                 STZ     SCRATCH0        ; product low  = 0
-                STZ     2,X             ; product high = 0  (reuse NOS slot)
+                STZ     0,X             ; product high = 0  (reuse TOS slot)
 ;               PHY                     ; save IP
 ;               LDY     #16             ; 16 iterations
 ;@loop:
@@ -461,14 +461,14 @@ calc_depth:     TXA
                 LSR     TMPA            ; multiplier >>= 1; old LSB → carry
                 BCC     @skip           ; bit 0 was 0, nothing to add
 
-                ; Add 32-bit multiplicand (SCRATCH1:TMPB) to prod (2,X:SCRATCH0)
+                ; Add 32-bit multiplicand (SCRATCH1:TMPB) to prod (0,X:SCRATCH0)
                 CLC
                 LDA     SCRATCH0
                 ADC     TMPB            ; product_low  += multiplicand_low
                 STA     SCRATCH0
-                LDA     2,X
+                LDA     0,X
                 ADC     SCRATCH1        ; product_high += multiplicand_high + c
-                STA     2,X
+                STA     0,X
 @skip:
                 ; Shift 32-bit multiplicand left
                 ASL     TMPB            ; multiplicand_low <<= 1
@@ -496,8 +496,6 @@ calc_depth:     TXA
                 SHIFTADD32
                 ; Place results on parameter stack:
                 ;   TOS = ud_high, NOS = ud_low
-                LDA     2,X             ; product high (already in 2,X)
-                STA     0,X             ; TOS = high
                 LDA     SCRATCH0
                 STA     2,X             ; NOS = low
 ;               PLY                     ; restore IP
@@ -597,7 +595,7 @@ calc_depth:     TXA
                 SHIFTSUB32
                 SHIFTSUB32
                 ; 0,X = remainder, 2,X = quotient
-                ; swap so TOS=quotient NOS=remainder
+                ; swap to ANS order TOS=quotient NOS=remainder
                 LDA     0,X
                 STA     SCRATCH0
                 LDA     2,X
@@ -679,12 +677,8 @@ calc_depth:     TXA
                 DEX
                 DEX                     ; allocate one new cell
                 LDA     2,X             ; |n2| = divisor
-                STA     SCRATCH0
-                LDA     4,X             ; |n1| = ud_low (dividend)
-                STA     4,X             ; stays at 4,X  (no-op but explicit)
-                STZ     2,X             ; ud_high = 0
-                LDA     SCRATCH0
                 STA     0,X             ; divisor at 0,X
+                STZ     2,X             ; ud_high = 0
                 ; Result: 0,X=|n2|  2,X=0  4,X=|n1|
 
                 ; Step 4: unsigned division
@@ -723,7 +717,7 @@ calc_depth:     TXA
                 ADC     SDIV_N2,S       ; rem += n2
                 STA     2,X
 @done:
-                ; 0,X=rem 2,X=quot → swap for ANS: TOS=quot NOS=rem
+                ; 0,X=rem 2,X=quot
                 PLA
                 PLA
                 RTS
