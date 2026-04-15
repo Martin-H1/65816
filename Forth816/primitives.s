@@ -3711,14 +3711,33 @@ DOES_BODY:
         .word   ' '
         .word   WORD_CFA                ; ( addr )
         .word   FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
-        .word   DUP_CFA                 ; Check for zero error condition
-        .word   ZEROEQ_CFA
         .word   ZBRANCH_CFA
         .word   TICK_ERR                ; branch to error if not found
-        .word   DROP_CFA
         .word   EXIT_CFA                ; ( xt )
 TICK_ERR:
-        .word   DROP_CFA                ; ( addr )
+        .word   UNDEFINED_WORD_CFA      ; Issue error and reset stack.
+
+;------------------------------------------------------------------------------
+; ['] Interpretation: Undefined. Compilation: ( "<spaces>name" -- )
+; Skip leading space delimiters. Parse name delimited by a space. Find name.
+; Append the run-time semantics given below to the current definition.
+; An ambiguous condition exists if name is not found.
+; Run-time: ( -- xt )
+; Place name's execution token xt on the stack. The execution token returned by
+; the compiled phrase "['] X" is the same value returned by "' X" outside of
+; compilation state.
+; https://forth-standard.org/standard/core/BracketTick
+;------------------------------------------------------------------------------
+        HEADER  "[']", BRACKET_TICK_ENTRY, BRACKET_TICK_CFA, 0, TICK_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA                 ; Space delimeter
+        .word   ' '
+        .word   WORD_CFA                ; ( addr )
+        .word   FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
+        .word   ZBRANCH_CFA
+        .word   TICK_ERR                ; branch to error if not found
+        .word   EXIT_CFA                ; ( xt )
+TICK_ERR:
         .word   UNDEFINED_WORD_CFA      ; Issue error and reset stack.
 
 ;==============================================================================
@@ -3739,7 +3758,7 @@ TICK_ERR:
 ; the resolution of orig.
 ; https://forth-standard.org/standard/core/IF
 ;------------------------------------------------------------------------------
-        HEADER  "IF", IF_ENTRY, IF_CFA, 0, TICK_ENTRY
+        HEADER  "IF", IF_ENTRY, IF_CFA, 0, BRACKET_TICK_ENTRY
         CODEPTR DOCOL
         .word   EXIT_CFA                ;
 
