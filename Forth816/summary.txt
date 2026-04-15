@@ -196,13 +196,9 @@ pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 
 
 TODO items carried forward:
-
-STAR_CODE, UMSTAR_CODE, UMSLASHMOD_CODE, SLASHMOD_CODE, MOD_CODE — known edge
-case failures, need verified implementations.
-.S needs fixing to print in ANS order (bottom to top) with depth prefix <n>.
-' (tick) not yet implemented.
-IF/THEN/ELSE, BEGIN/UNTIL/WHILE/REPEAT, DO/LOOP control flow words not yet
-implemented.
+' (tick) is implemented but doesn't work.
+IF/THEN/ELSE, BEGIN/UNTIL/WHILE/REPEAT, DO/LOOP control flow word stubs
+are written, but not yet implemented.
 $ hex prefix for number literals not yet supported in NUMBER/INTERPRET.
 S", .", ABORT" string words are stubs needing full implementation.
 FIND CFA offset calculation may need verification for words with padding.
