@@ -734,8 +734,6 @@ calc_depth:     TXA
 
 ;------------------------------------------------------------------------------
 ; MOD ( n1 n2 -- rem )
-; TODO: Failing unit tests on edge cases (negative/large numbers).
-;       Depends on SLASHMOD_CODE - replace both with verified implementations.
 ;------------------------------------------------------------------------------
         HEADER  "MOD", MOD_ENTRY, MOD_CFA, 0, SLASH_ENTRY
         CODEPTR DOCOL
@@ -2969,7 +2967,7 @@ INTERPRET_LOOP:
         ; Check for empty word - if length 0, input exhausted
         .word   DUP_CFA                 ; ( addr addr )
         .word   CFETCH_CFA              ; ( addr len )
-        .word   ZEROEQ_CFA             ; ( addr flag )
+        .word   ZEROEQ_CFA              ; ( addr flag )
         .word   ZBRANCH_CFA
         .word   INTERPRET_NOTEMPTY
         .word   DROP_CFA                ; ( ) discard addr
@@ -3012,7 +3010,6 @@ INTERPRET_COMPILE_LIT:
 
 INTERPRET_NOTANUMBER:
         ; Neither a word nor a number
-        ;.word   DROP_CFA                ; discard the addr
         .word   UNDEFINED_WORD_CFA
         .word   BRANCH_CFA
         .word   INTERPRET_LOOP          ; unreachable but tidy
@@ -3702,6 +3699,28 @@ DOES_BODY:
         .word   COMPILECOMMA_CFA        ; compile (DOES>) into definition
         .word   EXIT_CFA                ; return from DOES> itself
 
+;------------------------------------------------------------------------------
+; ' ( -- xt ) implicit input from TIB. Skips leading space delimiters. Parse
+; the name delimited by a space. Finds name and return xt, the execution token
+; for name. An ambiguous condition exists if name is not found.
+; https://forth-standard.org/standard/core/Tick
+;------------------------------------------------------------------------------
+        HEADER  "'", TICK_ENTRY, TICK_CFA, 0, DOES_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA                 ; Space delimeter
+        .word   ' '
+        .word   WORD_CFA                ; ( addr )
+        .word   FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
+        .word   DUP_CFA                 ; Check for zero error condition
+        .word   ZEROEQ_CFA
+        .word   ZBRANCH_CFA
+        .word   TICK_ERR                ; branch to error if not found
+        .word   DROP_CFA
+        .word   EXIT_CFA                ; ( xt )
+TICK_ERR:
+        .word   DROP_CFA                ; ( addr )
+        .word   UNDEFINED_WORD_CFA      ; Issue error and reset stack.
+
 ;==============================================================================
 ; Stub declarations for words referenced in QUIT_BODY colon definition
 ; that are not yet implemented (WORDS, defining words etc.)
@@ -3710,11 +3729,139 @@ DOES_BODY:
 
 ; Stub defining words - to be fully implemented
 
+;------------------------------------------------------------------------------
+; IF Interpretation: Undefined. Compilation: ( C: -- orig )
+; Put the location of a new unresolved forward reference orig onto the control
+; flow stack. Append the run-time semantics below to the current definition.
+; The semantics are incomplete until orig is resolved by THEN or ELSE.
+; Run-time: ( x -- )
+; If all bits of x are zero, continue execution at the location specified by
+; the resolution of orig.
+; https://forth-standard.org/standard/core/IF
+;------------------------------------------------------------------------------
+        HEADER  "IF", IF_ENTRY, IF_CFA, 0, TICK_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA                ;
+
+;------------------------------------------------------------------------------
+; ELSE Interpretation: Undefined. Compilation: ( C: orig1 -- orig2 )
+; Put the location of a new unresolved forward reference orig2 onto the control
+; flow stack. Append the run-time semantics given below to the current
+; definition. The semantics will be incomplete until orig2 is resolved by THEN.
+; Resolve the forward reference orig1 using the location following the
+; appended run-time semantics.
+; Run-time: ( -- )
+; Continue execution at the location given by the resolution of orig2.
+; https://forth-standard.org/standard/core/ELSE
+;------------------------------------------------------------------------------
+        HEADER  "ELSE", ELSE_ENTRY, ELSE_CFA, 0, IF_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA                ;
+
+;------------------------------------------------------------------------------
+; THEN Interpretation: Undefined. Compilation: ( C: orig --  )
+; Append the run-time semantics given below to the current definition. Resolve
+; the forward reference orig using the location of the appended run-time
+; semantics.
+; Run-time: ( -- )
+; Continue execution.
+; https://forth-standard.org/standard/core/THEN
+;------------------------------------------------------------------------------
+        HEADER  "THEN", THEN_ENTRY, THEN_CFA, 0, ELSE_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA                ;
+
+;------------------------------------------------------------------------------
+; BEGIN Interpretation: Undefined. Compilation: ( C: -- dest )
+; Put the next location for a transfer of control, dest, onto the control flow
+; stack. Append the run-time semantics given below to the current definition.
+; Run-time:( -- )
+; Continue execution.
+; https://forth-standard.org/standard/core/BEGIN
+;------------------------------------------------------------------------------
+        HEADER  "BEGIN", BEGIN_ENTRY, BEGIN_CFA, 0, THEN_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA                ;
+
+;------------------------------------------------------------------------------
+; UNTIL Interpretation: Undefined. Compilation: ( C: dest -- )
+; Append the run-time semantics given below to the current definition, resolving
+; the backward reference dest.
+; Run-time: ( x -- )
+; If all bits of x are 0, continue execution at the location specified by dest.
+; https://forth-standard.org/standard/core/UNTIL
+;------------------------------------------------------------------------------
+        HEADER  "UNTIL", UNTIL_ENTRY, UNTIL_CFA, 0, BEGIN_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA                ;
+
+
+;------------------------------------------------------------------------------
+; WHILE Interpretation: Undefined. Compilation: ( C: dest -- orig dest )
+; Put the location of a new unresolved forward reference orig onto the control
+; flow stack, under the existing dest. Append the run-time semantics given
+; below to the current definition. The semantics are incomplete until orig and
+; dest are resolved (e.g., by REPEAT).
+; Run-time: ( x -- )
+; If all bits of x are zero, continue execution at the location specified by
+; the resolution of orig.
+; https://forth-standard.org/standard/core/WHILE
+;------------------------------------------------------------------------------
+        HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, 0, UNTIL_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA                ;
+
+;------------------------------------------------------------------------------
+; REPEAT Interpretation: Undefined. Compilation: ( C: orig dest -- )
+; Append the run-time semantics given below to the current definition,
+; resolving the backward reference dest. Resolve the forward reference orig
+; using the location following the appended run-time semantics.
+; Run-time: ( -- )
+; Continue execution at the location given by dest.
+; https://forth-standard.org/standard/core/REPEAT
+;------------------------------------------------------------------------------
+        HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, 0, WHILE_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA                ;
+
+;------------------------------------------------------------------------------
+; DO Interpretation: Undefined. Compilation: ( C: -- do-sys )
+; Place do-sys onto the control-flow stack. Append the run-time semantics given
+; below to the current definition. The semantics are incomplete until resolved
+; by a consumer of do-sys such as LOOP.
+; Run-time: ( n1 | u1 n2 | u2 -- ) ( R: -- loop-sys )
+; Set up loop control parameters with index n2 | u2 and limit n1 | u1.
+; An ambiguous condition exists if n1 | u1 and n2 | u2 are not both the same
+; type. Anything already on the return stack becomes unavailable until the
+; loop-control parameters are discarded.
+; https://forth-standard.org/standard/core/DO
+;------------------------------------------------------------------------------
+        HEADER  "DO", DO_ENTRY, DO_CFA, 0, REPEAT_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA                ;
+
+;------------------------------------------------------------------------------
+; LOOP Interpretation: Undefined. Compilation: ( C: do-sys -- )
+; Append the run-time semantics given below to the current definition. Resolve
+; the destination of all unresolved occurrences of LEAVE between the location
+; given by do-sys and the next location for a transfer of control, to execute
+; the words following the LOOP.
+; Run-time: ( -- ) ( R: loop-sys1 -- | loop-sys2 )
+; An ambiguous condition exists if the loop control parameters are unavailable.
+; Add one to the loop index. If the loop index is then equal to the loop limit,
+; discard the loop parameters and continue execution immediately following the
+; loop. Otherwise continue execution at the beginning of the loop.
+; https://forth-standard.org/standard/core/LOOP
+;------------------------------------------------------------------------------
+        HEADER  "LOOP", LOOP_ENTRY, LOOP_CFA, 0, DO_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA                ;
+
 ; String literal words - stubs
 ; Note: HEADER macro can't handle quote chars in names - written manually
 ; ." ( -- ) output string literal
 DOTQUOTE_ENTRY:
-        .word   DOES_ENTRY             ; Link field
+        .word   LOOP_ENTRY             ; Link field
         .byte   F_IMMEDIATE | 2        ; Flags + length (2 chars)
         .byte   $2E, $22               ; '.' '"'
         .align  2
