@@ -3728,17 +3728,14 @@ TICK_ERR:
 ; compilation state.
 ; https://forth-standard.org/standard/core/BracketTick
 ;------------------------------------------------------------------------------
-        HEADER  "[']", BRACKET_TICK_ENTRY, BRACKET_TICK_CFA, 0, TICK_ENTRY
+        HEADER  "[']", BRACKETTICK_ENTRY, BRACKETTICK_CFA, F_IMMEDIATE, TICK_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; Space delimeter
-        .word   ' '
-        .word   WORD_CFA                ; ( addr )
-        .word   FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
-        .word   ZBRANCH_CFA
-        .word   TICK_ERR                ; branch to error if not found
-        .word   EXIT_CFA                ; ( xt )
-TICK_ERR:
-        .word   UNDEFINED_WORD_CFA      ; Issue error and reset stack.
+        .word   TICK_CFA                ; execute ' -> xt on stack
+        .word   LIT_CFA                 ; execute LIT -> pushes the next cell...
+        .word   LIT_CFA                 ; ...which is the value LIT_CFA itself
+        .word   COMMA_CFA               ; compile LIT_CFA into dictionary
+        .word   COMMA_CFA               ; compile xt into dictionary
+        .word   EXIT_CFA
 
 ;==============================================================================
 ; Stub declarations for words referenced in QUIT_BODY colon definition
@@ -3758,9 +3755,32 @@ TICK_ERR:
 ; the resolution of orig.
 ; https://forth-standard.org/standard/core/IF
 ;------------------------------------------------------------------------------
-        HEADER  "IF", IF_ENTRY, IF_CFA, 0, BRACKET_TICK_ENTRY
+        HEADER  "IF", IF_ENTRY, IF_CFA, F_IMMEDIATE, BRACKETTICK_ENTRY
         CODEPTR DOCOL
-        .word   EXIT_CFA                ;
+        .word   LIT_CFA                 ; compile ZBRANCH into definition
+        .word   ZBRANCH_CFA
+        .word   COMMA_CFA
+        .word   HERE_CFA                ; push address of placeholder
+        .word   LIT_CFA                 ; compile placeholder 0
+        .word   0
+        .word   COMMA_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; THEN Interpretation: Undefined. Compilation: ( C: orig --  )
+; Append the run-time semantics given below to the current definition. Resolve
+; the forward reference orig using the location of the appended run-time
+; semantics.
+; Run-time: ( -- )
+; Continue execution.
+; https://forth-standard.org/standard/core/THEN
+;------------------------------------------------------------------------------
+        HEADER  "THEN", THEN_ENTRY, THEN_CFA, F_IMMEDIATE, IF_ENTRY
+        CODEPTR DOCOL
+        .word   HERE_CFA                ; ( addr here )
+        .word   SWAP_CFA                ; ( here addr )
+        .word   STORE_CFA               ; backpatch placeholder
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ELSE Interpretation: Undefined. Compilation: ( C: orig1 -- orig2 )
@@ -3773,22 +3793,20 @@ TICK_ERR:
 ; Continue execution at the location given by the resolution of orig2.
 ; https://forth-standard.org/standard/core/ELSE
 ;------------------------------------------------------------------------------
-        HEADER  "ELSE", ELSE_ENTRY, ELSE_CFA, 0, IF_ENTRY
+        HEADER  "ELSE", ELSE_ENTRY, ELSE_CFA, F_IMMEDIATE, THEN_ENTRY
         CODEPTR DOCOL
-        .word   EXIT_CFA                ;
-
-;------------------------------------------------------------------------------
-; THEN Interpretation: Undefined. Compilation: ( C: orig --  )
-; Append the run-time semantics given below to the current definition. Resolve
-; the forward reference orig using the location of the appended run-time
-; semantics.
-; Run-time: ( -- )
-; Continue execution.
-; https://forth-standard.org/standard/core/THEN
-;------------------------------------------------------------------------------
-        HEADER  "THEN", THEN_ENTRY, THEN_CFA, 0, ELSE_ENTRY
-        CODEPTR DOCOL
-        .word   EXIT_CFA                ;
+        .word   LIT_CFA                 ; compile BRANCH into definition
+        .word   BRANCH_CFA
+        .word   COMMA_CFA
+        .word   HERE_CFA                ; push address of new placeholder
+        .word   LIT_CFA                 ; compile placeholder 0
+        .word   0
+        .word   COMMA_CFA
+        .word   SWAP_CFA                ; ( new-addr if-addr )
+        .word   HERE_CFA                ; ( new-addr if-addr here )
+        .word   SWAP_CFA                ; ( new-addr here if-addr )
+        .word   STORE_CFA              ; backpatch IF's placeholder
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; BEGIN Interpretation: Undefined. Compilation: ( C: -- dest )
@@ -3798,9 +3816,10 @@ TICK_ERR:
 ; Continue execution.
 ; https://forth-standard.org/standard/core/BEGIN
 ;------------------------------------------------------------------------------
-        HEADER  "BEGIN", BEGIN_ENTRY, BEGIN_CFA, 0, THEN_ENTRY
+        HEADER  "BEGIN", BEGIN_ENTRY, BEGIN_CFA, F_IMMEDIATE, ELSE_ENTRY
         CODEPTR DOCOL
-        .word   EXIT_CFA                ;
+        .word   HERE_CFA                ; push current DP as loop top
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; UNTIL Interpretation: Undefined. Compilation: ( C: dest -- )
@@ -3810,10 +3829,13 @@ TICK_ERR:
 ; If all bits of x are 0, continue execution at the location specified by dest.
 ; https://forth-standard.org/standard/core/UNTIL
 ;------------------------------------------------------------------------------
-        HEADER  "UNTIL", UNTIL_ENTRY, UNTIL_CFA, 0, BEGIN_ENTRY
+        HEADER  "UNTIL", UNTIL_ENTRY, UNTIL_CFA, F_IMMEDIATE, BEGIN_ENTRY
         CODEPTR DOCOL
-        .word   EXIT_CFA                ;
-
+        .word   LIT_CFA                 ; compile ZBRANCH
+        .word   ZBRANCH_CFA
+        .word   COMMA_CFA
+        .word   COMMA_CFA               ; compile loop top address
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; WHILE Interpretation: Undefined. Compilation: ( C: dest -- orig dest )
