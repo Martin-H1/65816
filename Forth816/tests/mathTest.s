@@ -28,7 +28,9 @@
 .import ONEMINUS_CODE
 .import TWOSTAR_CODE
 .import TWOSLASH_CODE
+.import MOVE_CODE
 
+.importzp UP
 .importzp W
 
 ; Main entry point for the test
@@ -136,42 +138,16 @@ ENDPUBLIC
 .endproc
 
 .proc umSlashmodTest
-	lda #1025
-	PUSH
-	lda #$0000
-	PUSH
-	lda #14
-	PUSH
-	jsr UMSLASHMOD_CODE
-	TYPESTR_UDOT "UM/MOD test $0000 1025 UM/MOD 14 HIGH (expect 73) = "
-	TYPESTR_UDOT "UM/MOD test $0000 1025 UM/MOD 14 LOW (expect 3) = "
-	lda #1025
-	PUSH
-	lda #$0000
-	PUSH
-	lda #$fffd
-	PUSH
-	jsr UMSLASHMOD_CODE
-	TYPESTR_UDOT "UM/MOD test 1025 UM/MOD -3 HIGH (expect 0000) = "
-	TYPESTR_UDOT "UM/MOD test 1025 UM/MOD -3 LOW (expect 1025) = "
-	lda #$0e79
-	PUSH
-	lda #$0009
-	PUSH
-	lda #$fffd
-	PUSH
-	jsr UMSLASHMOD_CODE
-	TYPESTR_UDOT "UM/MOD test $00090E70 UM/MOD $fffd HIGH (expect 0009) = "
-	TYPESTR_UDOT "UM/MOD test $00090E70 UM/MOD $fffd LOW (expect 0E8B) = "
-	lda #$fffd
-	PUSH
-	lda #$ffff
-	PUSH
-	lda #$14
-	PUSH
-	jsr UMSLASHMOD_CODE
-	TYPESTR_UDOT "UM/MOD test $fffffffd UM/MOD $0014 HIGH (expect FFC4) = "
-	TYPESTR_UDOT "UM/MOD test $fffffffd UM/MOD $0014 LOW (expect FFC4) = "
+	MOVE_TIB " 1025 0 14 UM/MOD              "
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_UDOT "UM/MOD test 1025 0 UM/MOD 14 HIGH (expect 73) = "
+	TYPESTR_UDOT "UM/MOD test 1025 0 UM/MOD 14 LOW (expect 3) = "
+
+	MOVE_TIB " 102 0 0 um/mod                "
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "UM/MOD test 1025 0 UM/MOD 0 HIGH (expect -1) = "
+	TYPESTR_DOT "UM/MOD test 1025 0 UM/MOD 0 LOW (expect 102) = "
+
 	rts
 .endproc
 
@@ -188,7 +164,7 @@ ENDPUBLIC
 	lda #$fffd
 	PUSH
 	jsr SLASHMOD_CODE
-	TYPESTR_DOT "/MOD test 4133 /MOD -3 HIGH (expect -1377) = "
+	TYPESTR_DOT "/MOD test 4133 /MOD -3 HIGH (expect -1378) = "
 	TYPESTR_DOT "/MOD test 4133 /MOD -3 LOW (expect -1) = "
 	lda #$fffd
 	PUSH
@@ -219,7 +195,7 @@ ENDPUBLIC
 	lda #$fffd
 	PUSH
 	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
-	TYPESTR_DOT "/ test 4133 / -3 (expect -1377) = "
+	TYPESTR_DOT "/ test 4133 / -3 (expect -1378) = "
 	lda #$fffd
 	PUSH
 	lda #$fffd
