@@ -3773,14 +3773,6 @@ TICK_ERR:
         .word   COMMA_CFA               ; compile xt into dictionary
         .word   EXIT_CFA
 
-;==============================================================================
-; Stub declarations for words referenced in QUIT_BODY colon definition
-; that are not yet implemented (WORDS, defining words etc.)
-; These allow the project to assemble; implement fully in a later pass.
-;==============================================================================
-
-; Stub defining words - to be fully implemented
-
 ;------------------------------------------------------------------------------
 ; IF Interpretation: Undefined. Compilation: ( C: -- orig )
 ; Put the location of a new unresolved forward reference orig onto the control
@@ -3884,9 +3876,16 @@ TICK_ERR:
 ; the resolution of orig.
 ; https://forth-standard.org/standard/core/WHILE
 ;------------------------------------------------------------------------------
-        HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, 0, UNTIL_ENTRY
+HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, F_IMMEDIATE, UNTIL_ENTRY
         CODEPTR DOCOL
-        .word   EXIT_CFA                ;
+        .word   LIT_CFA                 ; compile ZBRANCH
+        .word   ZBRANCH_CFA
+        .word   COMMA_CFA
+        .word   HERE_CFA                ; push placeholder address
+        .word   LIT_CFA                 ; compile placeholder 0
+        .word   0
+        .word   COMMA_CFA
+        .word   EXIT_CFA                ; stack: ( begin-addr while-addr )
 
 ;------------------------------------------------------------------------------
 ; REPEAT Interpretation: Undefined. Compilation: ( C: orig dest -- )
@@ -3897,9 +3896,17 @@ TICK_ERR:
 ; Continue execution at the location given by dest.
 ; https://forth-standard.org/standard/core/REPEAT
 ;------------------------------------------------------------------------------
-        HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, 0, WHILE_ENTRY
+HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         CODEPTR DOCOL
-        .word   EXIT_CFA                ;
+        .word   LIT_CFA                 ; compile BRANCH
+        .word   BRANCH_CFA
+        .word   COMMA_CFA
+        .word   SWAP_CFA                ; ( while-addr begin-addr )
+        .word   COMMA_CFA               ; compile begin-addr as branch target
+        .word   HERE_CFA                ; ( while-addr here )
+        .word   SWAP_CFA                ; ( here while-addr )
+        .word   STORE_CFA               ; backpatch WHILE placeholder
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DO Interpretation: Undefined. Compilation: ( C: -- do-sys )
@@ -3913,9 +3920,13 @@ TICK_ERR:
 ; loop-control parameters are discarded.
 ; https://forth-standard.org/standard/core/DO
 ;------------------------------------------------------------------------------
-        HEADER  "DO", DO_ENTRY, DO_CFA, 0, REPEAT_ENTRY
+        HEADER  "DO", DO_ENTRY, DO_CFA, F_IMMEDIATE, REPEAT_ENTRY
         CODEPTR DOCOL
-        .word   EXIT_CFA                ;
+        .word   LIT_CFA                 ; compile (DO)
+        .word   DODO_CFA
+        .word   COMMA_CFA
+        .word   HERE_CFA                ; push loop top address
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; LOOP Interpretation: Undefined. Compilation: ( C: do-sys -- )
@@ -3930,9 +3941,21 @@ TICK_ERR:
 ; loop. Otherwise continue execution at the beginning of the loop.
 ; https://forth-standard.org/standard/core/LOOP
 ;------------------------------------------------------------------------------
-        HEADER  "LOOP", LOOP_ENTRY, LOOP_CFA, 0, DO_ENTRY
+        HEADER  "LOOP", LOOP_ENTRY, LOOP_CFA, F_IMMEDIATE, DO_ENTRY
         CODEPTR DOCOL
-        .word   EXIT_CFA                ;
+        .word   LIT_CFA                 ; compile (LOOP)
+        .word   DOLOOP_CFA
+        .word   COMMA_CFA
+        .word   COMMA_CFA               ; compile loop top address
+        .word   EXIT_CFA
+
+;==============================================================================
+; Stub declarations for words referenced in QUIT_BODY colon definition
+; that are not yet implemented (WORDS, defining words etc.)
+; These allow the project to assemble; implement fully in a later pass.
+;==============================================================================
+
+; Stub defining words - to be fully implemented
 
 ; String literal words - stubs
 ; Note: HEADER macro can't handle quote chars in names - written manually
