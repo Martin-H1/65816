@@ -138,13 +138,23 @@ ENDPUBLIC
 .endproc
 
 .proc umSlashmodTest
-	MOVE_TIB " 1025 0 14 UM/MOD              "
-	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	lda #1025
+	PUSH
+	lda #0
+	PUSH
+	lda #14
+	PUSH
+	jsr UMSLASHMOD_CODE
 	TYPESTR_UDOT "UM/MOD test 1025 0 UM/MOD 14 HIGH (expect 73) = "
 	TYPESTR_UDOT "UM/MOD test 1025 0 UM/MOD 14 LOW (expect 3) = "
 
-	MOVE_TIB " 102 0 0 um/mod                "
-	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	lda #1025
+	PUSH
+	lda #0
+	PUSH
+	lda #0
+	PUSH
+	jsr UMSLASHMOD_CODE
 	TYPESTR_DOT "UM/MOD test 1025 0 UM/MOD 0 HIGH (expect -1) = "
 	TYPESTR_DOT "UM/MOD test 1025 0 UM/MOD 0 LOW (expect 102) = "
 
