@@ -1,7 +1,10 @@
 include ../common.mk
 
+CA65FLAGS = -D UNROLL -I include
+
 all: release debug
 
+debug: CA65FLAGS += -D DEBUG 
 debug: bin bin/debug bin/debug/forth816.bin bin/debug/forth816.srec
 
 release: bin bin/release bin/release/forth816.rom
@@ -14,6 +17,7 @@ bin/debug/forth816.bin: obj/debug/hal_mench.o obj/debug/forth.o obj/debug/primit
 bin/release/forth816.rom: obj/release/forth.o obj/release/hal_mench.o obj/release/primitives.o
 	$(LD65) -C forth.cfg -o bin/release/forth816.rom -m bin/release/forth816.map $^
 
+tests: CA65FLAGS += -I .
 tests: tests/bin/acceptTest.srec tests/bin/compilerTest.srec \
 	tests/bin/compareTest.srec tests/bin/interpretTest.srec \
 	tests/bin/ioTest.srec tests/bin/mathTest.srec \
@@ -52,6 +56,7 @@ decode:
 clean:
 	-$(RM) bin$(SEP)debug$(SEP)*.map
 	-$(RM) bin$(SEP)debug$(SEP)*.bin
+	-$(RM) bin$(SEP)debug$(SEP)*.srec
 	-$(RM) bin$(SEP)release$(SEP)*.map
 	-$(RM) bin$(SEP)release$(SEP)*.rom
 	-$(RM) obj$(SEP)debug$(SEP)*.lst

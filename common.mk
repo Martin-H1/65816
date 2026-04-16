@@ -53,10 +53,10 @@ tests/bin:
 	$(CA65) --cpu 65816 -I include $< -l $*.lst -o $@
 
 obj/debug/%.o : %.s obj obj/debug
-	$(CA65) --cpu 65816 -D DEBUG -I include $< -l obj/debug/$*.lst -o $@
+	$(CA65) --cpu 65816 $(CA65FLAGS) $< -l obj/debug/$*.lst -o $@
 
 obj/release/%.o : %.s obj obj/release
-	$(CA65) --cpu 65816 -I include $< -l obj/release/$*.lst -o $@
+	$(CA65) --cpu 65816 $(CA65FLAGS) $< -l obj/release/$*.lst -o $@
 
 tests/obj/%.o : tests/%.s tests/obj tests/bin
-	$(CA65) --cpu 65816 -I . $< -l tests/obj/$*.lst -o $@
+	$(CA65) --cpu 65816 $(CA65FLAGS) $< -l tests/obj/$*.lst -o $@
