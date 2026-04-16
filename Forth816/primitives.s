@@ -389,11 +389,14 @@ calc_depth:     TXA
                 INX
                 INX
                 STZ     SCRATCH0        ; product accumulator = 0
-;               PHY
-;               LDY     #16
-;@loop:
+.ifndef UNROLL
+                PHY
+                LDY     #16
+@loop:
+.else
 .macro SHIFTADD16
 .scope
+.endif
                 LSR     TMPA            ; multiplier >>= 1; LSB → carry
                 BCC     @skip
                 LDA     SCRATCH0
@@ -402,8 +405,10 @@ calc_depth:     TXA
                 STA     SCRATCH0
 @skip:
                 ASL     TMPB            ; shift multiplicand, not the sum
-;               DEY
-;               BNE     @loop
+.ifndef UNROLL
+                DEY
+                BNE     @loop
+.else
 .endscope
 .endmacro
                 ; Unroll the loop for performance.
@@ -423,9 +428,12 @@ calc_depth:     TXA
                 SHIFTADD16
                 SHIFTADD16
                 SHIFTADD16
+.endif
                 LDA     SCRATCH0
                 STA     0,X
-;               PLY
+.ifndef UNROLL
+                PLY
+.endif
                 NEXT
         ENDPUBLIC
 
@@ -452,12 +460,15 @@ calc_depth:     TXA
                 STZ     SCRATCH1        ; multiplicand high = 0
                 STZ     SCRATCH0        ; product low  = 0
                 STZ     0,X             ; product high = 0  (reuse TOS slot)
-;               PHY                     ; save IP
-;               LDY     #16             ; 16 iterations
-;@loop:
+.ifndef UNROLL
+                PHY                     ; save IP
+                LDY     #16             ; 16 iterations
+@loop:
+.else
                 ; Put the contents of an iteration in a macro.
 .macro SHIFTADD32
 .scope
+.endif
                 LSR     TMPA            ; multiplier >>= 1; old LSB → carry
                 BCC     @skip           ; bit 0 was 0, nothing to add
 
@@ -473,8 +484,10 @@ calc_depth:     TXA
                 ; Shift 32-bit multiplicand left
                 ASL     TMPB            ; multiplicand_low <<= 1
                 ROL     SCRATCH1        ; multiplicand_high <<= 1
-;               DEY
-;               BNE     @loop
+.ifndef UNROLL
+                DEY
+                BNE     @loop
+.else
 .endscope
 .endmacro
                 ; Unroll the loop for performance.
@@ -494,11 +507,14 @@ calc_depth:     TXA
                 SHIFTADD32
                 SHIFTADD32
                 SHIFTADD32
+.endif
                 ; Place results on parameter stack:
                 ;   TOS = ud_high, NOS = ud_low
                 LDA     SCRATCH0
                 STA     2,X             ; NOS = low
-;               PLY                     ; restore IP
+.ifndef UNROLL
+                PLY                     ; restore IP
+.endif
                 NEXT
         ENDPUBLIC
 
@@ -559,11 +575,14 @@ calc_depth:     TXA
                 INX                     ; pop divisor slot
                 ; Now: 0,X = ud_high (remainder register)
                 ;      2,X = ud_low  (quotient register)
-;               PHY                     ; save IP
-;               LDY     #16             ; 16 iterations
-;@loop:
+.ifndef UNROLL
+                PHY                     ; save IP
+                LDY     #16             ; 16 iterations
+@loop:
+.else
 .macro SHIFTSUB32
 .scope
+.endif
                 ASL     2,X             ; quotient  <<= 1; old bit15 → carry
                 ROL     0,X             ; remainder <<= 1; carry → bit0
                 LDA     0,X             ; current remainder
@@ -573,8 +592,10 @@ calc_depth:     TXA
                 STA     0,X             ; update remainder
                 INC     2,X             ; set quotient LSB
 @restore:
-;               DEY
-;               BNE     @loop
+.ifndef UNROLL
+                DEY
+                BNE     @loop
+.else
 .endscope
 .endmacro
                 ; Unroll the loop for performance.
@@ -594,6 +615,7 @@ calc_depth:     TXA
                 SHIFTSUB32
                 SHIFTSUB32
                 SHIFTSUB32
+.endif
                 ; 0,X = remainder, 2,X = quotient
                 ; swap to ANS order TOS=quotient NOS=remainder
                 LDA     0,X
@@ -602,7 +624,9 @@ calc_depth:     TXA
                 STA     0,X
                 LDA     SCRATCH0
                 STA     2,X
-;               PLY                     ; restore IP
+.ifndef UNROLL
+                PLY                     ; restore IP
+.endif
                 RTS
         .endproc
 
