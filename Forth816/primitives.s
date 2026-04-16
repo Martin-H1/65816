@@ -751,19 +751,31 @@ calc_depth:     TXA
 ; / ( n1 n2 -- quot ) signed division
 ;------------------------------------------------------------------------------
         HEADER  "/", SLASH_ENTRY, SLASH_CFA, 0, SLASHMOD_ENTRY
-        CODEPTR DOCOL
-        .word   SLASHMOD_CFA
-        .word   NIP_CFA
-        .word   EXIT_CFA
+        CODEPTR SLASH_CODE
+        PUBLIC  SLASH_CODE
+        .a16
+        .i16
+                JSR     SLASHMOD_IMPL
+                LDA     0,X             ; b (TOS)
+                INX
+                INX
+                STA     0,X             ; Overwrite a with b
+                NEXT
+        ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; MOD ( n1 n2 -- rem )
 ;------------------------------------------------------------------------------
         HEADER  "MOD", MOD_ENTRY, MOD_CFA, 0, SLASH_ENTRY
-        CODEPTR DOCOL
-        .word   SLASHMOD_CFA
-        .word   DROP_CFA
-        .word   EXIT_CFA
+        CODEPTR MOD_CODE
+        PUBLIC  MOD_CODE
+        .a16
+        .i16
+                JSR     SLASHMOD_IMPL
+                INX
+                INX
+                NEXT
+        ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; NEGATE ( n -- -n )
