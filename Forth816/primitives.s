@@ -2189,191 +2189,368 @@ HEX_BODY:
         .word   STORE_CFA
         .word   EXIT_CFA
 
-;==============================================================================
-; NUMBER ( addr -- n flag )
-;
-; Convert a counted string at addr to a signed integer using the current BASE.
-; flag is TRUE ($FFFF) on success, FALSE ($0000) on error. The counted string
-; format is the format produced by WORD.
-;
-; Supported input:
-;   Optional leading '-' for negation
-;   Digits 0-9, A-F (uppercase) interpreted in current BASE
-;   Any digit >= BASE, or unrecognised character, causes failure
-;   Empty string (length = 0) causes failure
-;
-; Stack effect: ( addr -- n TRUE ) on success
-;               ( addr -- addr FALSE ) on failure [addr preserved for error msg]
-;==============================================================================
-
-        HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, HEX_ENTRY
-        CODEPTR NUMBER_CODE
-        PUBLIC  NUMBER_CODE
+;------------------------------------------------------------------------------
+; >NUMBER ( ud c-addr u -- ud c-addr u )
+; Converts as many characters as possible from string into ud accumulator.
+; Stops at first unconvertible character or when u reaches zero.
+; TODO: ud is currently 16-bit single cell. Upgrade to true 32-bit double
+;       when double number support is added.
+;------------------------------------------------------------------------------
+        HEADER  ">NUMBER", TONUMBER_ENTRY, TONUMBER_CFA, 0, HEX_ENTRY
+        CODEPTR TONUMBER_CODE
+        PUBLIC  TONUMBER_CODE
         .a16
         .i16
 
-        LOC_COUNT   = 1         ; hw stack offset for character count
-        LOC_PTR     = 3         ; hw stack offset for current char pointer
-        LOC_SIGN    = 5         ; hw stack offset for sign value
-        LOC_BASE    = 7         ; hw stack offset for base value
-        LOC_RESULT  = 9         ; hw stack offset for result
-        LOC_PRODUCT = 11        ; hw stack offset for product
-        LOC_SIZE = LOC_PRODUCT + 1
+        LOC_U       = 1         ; character count
+        LOC_ADDR    = 3         ; current char pointer
+        LOC_UDHI    = 5         ; high cell of ud (0 until double support)
+        LOC_UDLO    = 7         ; low cell of ud
+        LOC_BASE    = 9         ; cached BASE
+        LOC_SIZE    = LOC_BASE + 1
 
-                PHD                     ; Save DP
-                PHY                     ; Save IP
+                PHD
+                PHY
 
-                TSC                     ; Reserve space for stack locals
+                TSC
                 SEC
                 SBC     #LOC_SIZE
                 TCS
-                TCD                     ; No page zero access until return!
+                TCD
 
-                ;----------------------------------------------------------
-                ; Fetch BASE using UP page zero pointer into LOC_BASE
-                ;----------------------------------------------------------
-                LDA     a:UP            ; Initialize pointer to user area
-                STA     LOC_PTR         ; Borrow pointer to hold UP
+                ;--------------------------------------------------------------
+                ; Cache BASE
+                ;--------------------------------------------------------------
+                LDA     a:UP
+                STA     LOC_ADDR        ; borrow LOC_ADDR to hold UP temporarily
                 LDY     #U_BASE
-                LDA     (LOC_PTR),Y     ; BASE
-                STA     LOC_BASE        ; LOC_BASE = BASE
-                STZ     LOC_SIGN        ; LOC_SIGN = 0, assume positive
-                STZ     LOC_RESULT      ; Initial value is zero.
+                LDA     (LOC_ADDR),Y
+                STA     LOC_BASE
 
-                ;----------------------------------------------------------
-                ; Load address, read length byte, set up char pointer.
-                ;----------------------------------------------------------
-                LDA     a:0,X           ; addr (counted string)
-                STA     LOC_PTR
+                ;--------------------------------------------------------------
+                ; Load stack args into frame
+                ; Stack on entry: ( ud_lo ud_hi c-addr u ) TOS=u
+                ;--------------------------------------------------------------
+                LDA     a:0,X           ; u
+                STA     LOC_U
+                LDA     a:2,X           ; c-addr
+                STA     LOC_ADDR
+                LDA     a:4,X           ; ud_hi
+                STA     LOC_UDHI
+                LDA     a:6,X           ; ud_lo
+                STA     LOC_UDLO
 
-                SEP     #$20            ; 8-bit for byte fetch
-                .a8
-                LDA     (LOC_PTR)       ; length byte
-                REP     #$20
-                .a16
-                AND     #$00FF
-                BEQ     @fail_return    ; Empty string -> fail
-                STA     LOC_COUNT       ; LOC_COUNT = character count
-
-                ; Advance pointer to first character (addr+1)
-                INC     LOC_PTR
-
-                ;----------------------------------------------------------
-                ; Check for leading '-'.
-                ;----------------------------------------------------------
-                SEP     #$20
-                .a8
-                LDA     (LOC_PTR)       ; Peek at first char
-                REP     #$20
-                .a16
-                AND     #$00FF
-                CMP     #'-'
-                BNE     @digit_loop
-
-                ; Leading minus: set sign, advance pointer, decrement count
-                DEC     LOC_SIGN        ; Was 0, now -1, sign = negative
-                INC     LOC_PTR         ; advance char pointer
-                DEC     LOC_COUNT       ; one fewer char to process
-                BEQ     @fail_return    ; '-' alone is not a valid number
-
-                ;----------------------------------------------------------
-                ; Digit conversion loop.
-                ;----------------------------------------------------------
+                ;--------------------------------------------------------------
+                ; Main conversion loop
+                ;--------------------------------------------------------------
 @digit_loop:
-                ; Fetch current character
+                LDA     LOC_U
+                BEQ     @done           ; u = 0, done
+
+                ; Fetch character
                 SEP     #$20
                 .a8
-                LDA     (LOC_PTR)
+                LDA     (LOC_ADDR)
                 REP     #$20
                 .a16
                 AND     #$00FF
 
-                ; Convert ASCII to digit value
+                ; Lowercase to uppercase conversion
+                CMP     #'a'
+                BCC     @not_lower
+                CMP     #'z' + 1
+                BCS     @not_lower
+                AND     #$FFDF          ; clear bit 5 -> uppercase
+@not_lower:
+                ; Convert to digit value
                 CMP     #'0'
-                BCC     @fail_return    ; < '0' -> invalid
+                BCC     @done           ; < '0' -> stop
                 CMP     #'9' + 1
                 BCC     @is_decimal
                 CMP     #'A'
-                BCC     @fail_return    ; between '9' and 'A' -> invalid
+                BCC     @done           ; between '9' and 'A' -> stop
                 CMP     #'F' + 1
-                BCS     @fail_return    ; > 'F' -> invalid
-                ; Hex letter A-F
+                BCS     @done           ; > 'F' -> stop
                 SEC
-                SBC     #'A' - 10       ; A->10, B->11, ... F->15
+                SBC     #'A' - 10       ; A->10 ... F->15
                 BRA     @check_base
-
 @is_decimal:
                 SEC
                 SBC     #'0'            ; '0'->0 ... '9'->9
 
 @check_base:
-                ; Digit value is in A. Reject if >= BASE.
-                CMP     LOC_BASE        ; digit - BASE
-                BCS     @fail_return    ; digit >= BASE -> invalid
+                CMP     LOC_BASE
+                BCS     @done           ; digit >= BASE -> stop
 
-                ; RESULT = RESULT * BASE + digit
-                ; Multiply by using repeated addition
-                PHA                     ; Save digit on hw stack temporarily.
+                ; ud = ud * BASE + digit
+                ; First: ud_lo * BASE via UM*
+                PHA                     ; save digit on hw stack
 
-                ; Multiply: use Y as loop counter (IP already saved)
-                LDY     LOC_BASE
-                STZ     LOC_PRODUCT     ; product accumulator = 0
-@mul_loop:
-                LDA     LOC_PRODUCT
-                CLC
-                ADC     LOC_RESULT      ; product += LOC_RESULT
-                STA     LOC_PRODUCT
-                DEY
-                BNE     @mul_loop
-
-                ; PRODUCT = T * BASE; add digit
-                PLA                     ; digit back into A
-                CLC
-                ADC     LOC_PRODUCT
-                STA     LOC_RESULT
-
-                ; Advance pointer and loop
-                INC     LOC_PTR
-                DEC     LOC_COUNT
-                BNE     @digit_loop
-
-                ;----------------------------------------------------------
-                ; All digits processed successfully.
-                ; Apply sign.
-                ;----------------------------------------------------------
-                LDA     LOC_SIGN        ; sign flag
-                BEQ     @positive
-                ; Negate result
-                LDA     LOC_RESULT
-                EOR     #$FFFF
-                INC     A
-                STA     LOC_RESULT
-@positive:
-                ; Replace TOS (addr) with result, push TRUE flag
-                LDA     LOC_RESULT
-                STA     a:0,X           ; TOS = result using absolute addressing
-                LDA     #$FFFF          ; TRUE
-                BRA     @return
-
-                ;----------------------------------------------------------
-                ; Failure path: leave original addr on stack, push FALSE.
-                ;----------------------------------------------------------
-@fail_return:
-                ; addr is still at 0,X (untouched), set status FALSE
-                LDA     #0              ; FALSE
-
-@return:        DEX
+                DEX                     ; push ud_lo
                 DEX
-                STA     a:0,X           ; Push status code
-                ; Tear down hw stack locals, restore IP and DP
-                TSC                     ; Drop locals
+                LDA     LOC_UDLO
+                STA     a:0,X
+                DEX                     ; push BASE
+                DEX
+                LDA     LOC_BASE
+                STA     a:0,X
+
+                PHD
+                LDA     #$0000          ; set Direct Page to $0000
+                TCD
+                LDY     #RTS_CFA_LIST   ; Use the RTS_CFA trampoline.
+                JSR     UMSTAR_CODE     ; ( ud_lo ud_hi )
+                PLD
+
+                ; Add digit to low cell, propagate carry to high cell
+                PLA                     ; restore digit
+                CLC
+                ADC     a:2,X           ; add to ud_lo (NOS)
+                STA     LOC_UDLO
+                BCC     @no_carry
+                INC     LOC_UDHI        ; carry into ud_hi (TOS)
+@no_carry:
+                INX
+                INX
+                INX
+                INX                     ; clean up UM* result from stack
+
+                ; Advance pointer, decrement count
+                INC     LOC_ADDR
+                DEC     LOC_U
+                BRA     @digit_loop
+
+                ;--------------------------------------------------------------
+                ; Done: write results back to parameter stack
+                ; Stack on exit: ( ud_lo ud_hi c-addr u ) TOS=u
+                ;--------------------------------------------------------------
+@done:
+                LDA     LOC_UDLO
+                STA     a:6,X
+                LDA     LOC_UDHI
+                STA     a:4,X
+                LDA     LOC_ADDR
+                STA     a:2,X
+                LDA     LOC_U
+                STA     a:0,X
+
+                TSC
                 CLC
                 ADC     #LOC_SIZE
                 TCS
-                PLY                     ; Restore IP
-                PLD                     ; Restore DP
+                PLY
+                PLD
                 NEXT
         ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; NUMBER? ( c-addr -- n true | c-addr false )
+; Handles prefixes: - (negative), $ (hex), # (decimal), % (binary)
+; Restores BASE after conversion.
+;------------------------------------------------------------------------------
+        HEADER  "NUMBER?", NUMBERQ_ENTRY, NUMBERQ_CFA, 0, TONUMBER_ENTRY
+        CODEPTR NUMBERQ_CODE
+        PUBLIC  NUMBERQ_CODE
+        .a16
+        .i16
+
+        LOC_ADDR    = 1         ; original c-addr (for fail return)
+        LOC_PTR     = 3         ; current char pointer
+        LOC_COUNT   = 5         ; remaining character count
+        LOC_SIGN    = 7         ; 0=positive, $FFFF=negative
+        LOC_BASE    = 9         ; saved original BASE
+        LOC_TMPBASE = 11        ; working base for this conversion
+        LOC_UP      = 13        ; local UP to avoid refetching
+        LOC_SIZE    = LOC_UP + 1
+
+                PHD
+                PHY
+
+                TSC
+                SEC
+                SBC     #LOC_SIZE
+                TCS
+                TCD
+
+                ;--------------------------------------------------------------
+                ; Save original addr, load length, set up pointer
+                ;--------------------------------------------------------------
+                LDA     a:0,X           ; c-addr
+                STA     LOC_ADDR
+
+                SEP     #$20
+                .a8
+                LDA     (LOC_ADDR)      ; length byte
+                REP     #$20
+                .a16
+                AND     #$00FF
+                BNE     @skip
+                JMP     @fail_return    ; empty string -> fail
+@skip:          STA     LOC_COUNT
+
+                ; Advance past length byte
+                LDA     LOC_ADDR
+                INC     A
+                STA     LOC_PTR
+
+                ;--------------------------------------------------------------
+                ; Cache BASE, init working base and sign
+                ;--------------------------------------------------------------
+                LDA     a:UP
+                STA     LOC_UP
+                LDY     #U_BASE
+                LDA     (LOC_UP),Y
+                STA     LOC_BASE        ; save original BASE
+                STA     LOC_TMPBASE     ; working base defaults to BASE
+                STZ     LOC_SIGN        ; assume positive
+
+                ;--------------------------------------------------------------
+                ; Check for prefix characters
+                ;--------------------------------------------------------------
+                SEP     #$20
+                .a8
+                LDA     (LOC_PTR)       ; peek first char
+                REP     #$20
+                .a16
+                AND     #$00FF
+
+                CMP     #'-'
+                BNE     @check_dollar
+                DEC     LOC_SIGN        ; 0 -> $FFFF = negative
+
+                INC     LOC_PTR         ; Consume '-' char, advance pointer
+                DEC     LOC_COUNT       ; one fewer char to process
+                BEQ     @fail_return    ; '-' alone is not a valid number
+
+                SEP     #$20
+                .a8
+                LDA     (LOC_PTR)       ; peek next char
+                REP     #$20
+                .a16
+                AND     #$00FF
+
+@check_dollar:
+                CMP     #'$'
+                BNE     @check_hash
+                LDA     #16
+                STA     LOC_TMPBASE
+                BRA     @advance_prefix
+
+@check_hash:
+                CMP     #'#'
+                BNE     @check_percent
+                LDA     #10
+                STA     LOC_TMPBASE
+                BRA     @advance_prefix
+
+@check_percent:
+                CMP     #'%'
+                BNE     @no_prefix
+                LDA     #2
+                STA     LOC_TMPBASE
+
+@advance_prefix:
+                INC     LOC_PTR
+                DEC     LOC_COUNT
+                BEQ     @fail_return    ; prefix alone is not valid
+
+                ; Handle minus after base prefix (e.g. $-FF not supported,
+                ; but -$ is already handled above)
+
+@no_prefix:
+                ;--------------------------------------------------------------
+                ; Temporarily write working base into BASE in user area
+                ;--------------------------------------------------------------
+                LDY     #U_BASE
+                LDA     LOC_TMPBASE
+                STA     (LOC_UP),Y      ; BASE = working base
+
+                ;--------------------------------------------------------------
+                ; Set up stack for >NUMBER: ( 0 0 c-addr u )
+                ; We need 4 cells below current TOS.
+                ; Current TOS (0,X) = original c-addr, replace with u
+                ; then push c-addr, ud_hi, ud_lo below.
+                ;--------------------------------------------------------------
+                LDA     #0
+                STA     a:0,X           ; ud_lo
+                DEX
+                DEX
+                STA     a:0,X           ; stack: ( ud_lo ud_hi c-addr u )
+                DEX
+                DEX
+                LDA     LOC_PTR         ; c-addr
+                STA     a:0,X
+                DEX
+                DEX
+                LDA     LOC_COUNT       ; u
+                STA     a:0,X           ; TOS = u
+                LDY     #RTS_CFA_LIST   ; RTS Trampoline
+                JSR     TONUMBER_CODE   ; ( ud_lo ud_hi c-addr u )
+
+                ;--------------------------------------------------------------
+                ; Restore original BASE
+                ;--------------------------------------------------------------
+                LDY     #U_BASE
+                LDA     LOC_BASE
+                STA     (LOC_UP),Y
+
+                ;--------------------------------------------------------------
+                ; Check u = 0 (all chars consumed = success)
+                ;--------------------------------------------------------------
+                LDA     a:0,X           ; u
+                TAY
+                INX                     ; drop u
+                INX
+                INX                     ; drop c-addr
+                INX
+                INX                     ; drop ud_hi (single cell for now)
+                INX
+                TYA                     ; TOS = ud_lo = result
+                BNE     @fail_return    ; unconverted chars remain -> fail
+
+                ;--------------------------------------------------------------
+                ; Apply sign
+                ;--------------------------------------------------------------
+                LDA     LOC_SIGN
+                BEQ     @positive
+                LDA     a:0,X
+                EOR     #$FFFF
+                INC     A
+                STA     a:0,X
+@positive:
+                LDA     #FORTH_TRUE
+                BRA     @return
+
+@fail_return:
+                LDA     LOC_ADDR        ; original c-addr
+                STA     a:0,X           ; restore TOS
+                LDA     #0              ; FALSE
+
+@return:
+                DEX
+                DEX
+                STA     a:0,X           ; push flag
+                TSC
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY
+                PLD
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; NUMBER ( c-addr -- n )
+; Calls NUMBER? and throws on failure.
+;------------------------------------------------------------------------------
+        HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, NUMBERQ_ENTRY
+        CODEPTR DOCOL
+        .word   NUMBERQ_CFA             ; ( n true | c-addr false )
+        .word   ZBRANCH_CFA
+        .word   NUMBER_ERR
+        .word   EXIT_CFA
+NUMBER_ERR:
+        .word   UNDEFINED_WORD_CFA      ; or a more specific error
 
 ;------------------------------------------------------------------------------
 ; COMPARE
@@ -3021,9 +3198,7 @@ INTERPRET_NOTEMPTY:
 
         ; Not found - drop the zero and try NUMBER
         .word   DROP_CFA                ; ( addr )
-        .word   NUMBER_CFA              ; ( n TRUE | addr FALSE )
-        .word   ZBRANCH_CFA
-        .word   INTERPRET_NOTANUMBER
+        .word   NUMBER_CFA              ; ( n | throws addr )
 
         ; It's a number - check STATE
         .word   STATE_CFA               ; ( n addr-of-STATE )
@@ -3043,12 +3218,6 @@ INTERPRET_COMPILE_LIT:
         .word   COMPILECOMMA_CFA        ; compile the number value itself
         .word   BRANCH_CFA
         .word   INTERPRET_LOOP
-
-INTERPRET_NOTANUMBER:
-        ; Neither a word nor a number
-        .word   UNDEFINED_WORD_CFA
-        .word   BRANCH_CFA
-        .word   INTERPRET_LOOP          ; unreachable but tidy
 
 INTERPRET_FOUND:
         ; ( xt 1 | xt -1 ) - check STATE
@@ -4324,7 +4493,7 @@ DOABORTQ_CFA:
         PUBLIC  TRACEOUT
         .a16
         .i16
-                LDA     TRACE_EN
+                LDA     a:TRACE_EN
                 BEQ     @done           ; FORTH_FALSE = 0, skip if off
                 TYA                     ; Print IP (Y) as 4-digit hex
                 JSR     DOTHEX_CODE::print_chex
