@@ -76,7 +76,7 @@ byte value $22.
 Word defintions end in NEXT, so a word definition can't JSR directly to another
 word definition. That's because the JSR requires and RTS return. When this is
 required, this is worked around by using the RTS_CFA_LIST trampoline.
-Calling SLASHMOD_CODE is example of this pattern.
+TONUMBER_CODE calling UMSTAR_CODE is example of this pattern.
 
 The 65816 supports stack relative addressing which is used to create stack local
 variables within a procedure. This reduces the need for direct page space, and
@@ -89,6 +89,10 @@ procedure's stack frame. This is useful for using direct page addressing modes
 with stack locals. This technique is used in the ACCEPT_CODE function and in
 the preferred coding style sample. My coding prompts will contain detailed
 requirements around using this technique.
+
+However, any primitive that uses zero page variables must have D=$0000, and
+any caller that has D pointing to a stack frame must save/restore D around
+such calls. TONUMBER_CODE is an example of this technique.
 
 Here are additional 65816 gotchas:
 
