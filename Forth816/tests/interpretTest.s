@@ -16,10 +16,12 @@
 .include "macrosdbg.inc"
 
 .import COMPARE_CODE
+.import DROP_CODE
 .import MOVE_CODE
 .import WORD_CODE
 .import FIND_CODE
-.import NUMBER_CODE
+.import TONUMBER_CODE
+.import NUMBERQ_CODE
 .import INTERPRET_CODE
 .import TRACEOFF_CODE
 .import TRACEON_CODE
@@ -36,6 +38,7 @@ PUBLIC MAIN
 	jsr wordsTest
 	jsr wordTest
 	jsr compareTest
+	jsr tonumberTest
 	jsr numberTest
 	jsr findTest
 	jsr interpretTest
@@ -185,13 +188,116 @@ compare3:
 compare4:
 	.asciiz "cdefghi"
 
+.macro TONUMARGS str
+.scope
+	lda #0000
+	PUSH
+	PUSH
+	lda #@addr
+	PUSH
+	lda #.strlen(str)
+	PUSH
+	BRA @over
+@addr:	.asciiz str
+@over:
+.endscope
+.endmacro
+
+.proc tonumberTest
+	TYPESTR ">NUMBER test input=''"
+	TONUMARGS ""
+	jsr TONUMBER_CODE
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	jsr DROP_CODE
+	jsr DROP_CODE
+	TYPESTR_DOT ", Result="
+
+	TYPESTR ">NUMBER test input='--'"
+	TONUMARGS "--"
+	jsr TONUMBER_CODE
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	jsr DROP_CODE
+	jsr DROP_CODE
+	TYPESTR_DOT ", Result="
+
+	TYPESTR ">NUMBER test input='12G'"
+	TONUMARGS "12G"
+	jsr TONUMBER_CODE
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	jsr DROP_CODE
+	jsr DROP_CODE
+	TYPESTR_DOT ", Result="
+
+	TYPESTR ">NUMBER test input='0'"
+	TONUMARGS "0"
+	jsr TONUMBER_CODE
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	jsr DROP_CODE
+	jsr DROP_CODE
+	TYPESTR_DOT ", Result="
+
+	TYPESTR ">NUMBER test input='-10'"
+	TONUMARGS "-10"
+	jsr TONUMBER_CODE
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	jsr DROP_CODE
+	jsr DROP_CODE
+	TYPESTR_DOT ", Result="
+
+	TYPESTR ">NUMBER test input='500'"
+	TONUMARGS "500"
+	jsr TONUMBER_CODE
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	jsr DROP_CODE
+	jsr DROP_CODE
+	TYPESTR_DOT ", Result="
+
+	phy
+	ldy #U_BASE
+	lda #16
+	sta (UP),y
+	ply
+
+	TYPESTR ">NUMBER test input='7FF'"
+	TONUMARGS "7FF"
+	jsr TONUMBER_CODE
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	jsr DROP_CODE
+	jsr DROP_CODE
+	TYPESTR_DOT ", Result="
+
+	TYPESTR ">NUMBER test input='DEAD'"
+	TONUMARGS "DEAD"
+	jsr TONUMBER_CODE
+	TYPESTR ", Status="
+	JSR DOT_CODE
+	jsr DROP_CODE
+	jsr DROP_CODE
+	TYPESTR_DOTHEX ", Result="
+
+	phy
+	ldy #U_BASE
+	lda #10
+	sta (UP),y
+	ply
+
+	rts
+.endproc
+
 .proc numberTest
 	; Invalid input returning error flag
 	LPPUTS numsg1		; empty string test
 	lda #error1
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -202,7 +308,7 @@ compare4:
 	lda #error2
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -213,7 +319,7 @@ compare4:
 	lda #error3
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -224,7 +330,7 @@ compare4:
 	lda #error4
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -237,7 +343,7 @@ compare4:
 	lda #num1
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -249,7 +355,7 @@ compare4:
 	lda #num2
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -260,24 +366,18 @@ compare4:
 	lda #num3
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
 	jsr DOT_CODE
 	jsr CR_CODE
 
-	phy
-	ldy #U_BASE
-	lda #16
-	sta (UP),y
-	ply
-
 	LPPUTS numsg1
 	lda #hex1
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -288,7 +388,7 @@ compare4:
 	lda #hex2
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -299,7 +399,7 @@ compare4:
 	lda #hex3
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -310,7 +410,7 @@ compare4:
 	lda #hex4
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
@@ -321,18 +421,12 @@ compare4:
 	lda #hex5
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBER_CODE
+	jsr NUMBERQ_CODE
 	LPPUTS numsg2
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
 	jsr DOTHEX_CODE
 	jsr CR_CODE
-
-	phy
-	ldy #U_BASE
-	lda #10
-	sta (UP),y
-	ply
 
 	;Boundary values like $7FFF and $8000
 	rts
@@ -348,10 +442,10 @@ num1:	PString "0"
 num2:	PString "-10"
 num3:	PString "500"
 hex1:	PString "7FF"
-hex2:	PString "-7FF"
-hex3:	PString "DEAD"
-hex4:	PString "7FFF"
-hex5:	PString "8000"
+hex2:	PString "-$7FF"
+hex3:	PString "$DEAD"
+hex4:	PString "$7FFF"
+hex5:	PString "$8000"
 
 .proc findTest
 	; Word that doesn't exist
