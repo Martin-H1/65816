@@ -2182,7 +2182,6 @@ DOSQUOTE_CFA:
         PUBLIC  DOSQUOTE_CODE
         .a16
         .i16
-
                 LDA     0,Y             ; fetch u
                 STA     SCRATCH0        ; save u
                 INY
@@ -2220,7 +2219,6 @@ SQUOTE_CFA:
         CODEPTR DOCOL
 
         ; --- parse the string (both modes need it) ---
-.word DOTS_CFA
         .word   LIT_CFA
         .word   '"'
         .word   PARSE_CFA               ; ( c-addr u )
@@ -2267,6 +2265,231 @@ SQUOTE_INTERP:                          ; ( c-addr u )
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; (.") ( -- )
+; Runtime code for ."
+;------------------------------------------------------------------------------
+DOTQUOTE_ENTRY:
+        .word   SQUOTE_ENTRY            ; Link field
+        .byte   F_HIDDEN | 3            ; Flags + length (3 chars)
+        .byte   $28, $2E, $22           ; '(' '.' '"'
+        .align  2
+DOTQUOTE_CFA:
+        CODEPTR DOTQUOTE_CODE
+        PUBLIC  DOTQUOTE_CODE
+        .a16
+        .i16
+                ; Y = IP, points to length cell inline in caller's thread
+                LDA     0,Y             ; fetch u
+                STA     SCRATCH0        ; save u
+                INY
+                INY                     ; IP now points to first char byte
+
+                ; Push ( c-addr u ) then call TYPE
+                DEX
+                DEX
+                TYA
+                STA     a:0,X           ; push c-addr = IP
+
+                DEX
+                DEX
+                LDA     SCRATCH0
+                STA     a:0,X           ; push u
+
+                ; Advance IP past string bytes, aligned to even
+                TYA                     ; A = IP
+                CLC
+                ADC     SCRATCH0        ; IP + u
+                INC     A               ; round up
+                AND     #$FFFE          ; align to even
+                TAY                     ; IP updated
+
+                ; Call TYPE via trampoline
+                PHY                     ; save updated IP
+                LDY     #RTS_CFA_LIST
+                JSR     TYPE_CODE
+                PLY                     ; restore IP
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; ." ( -- )
+; https://forth-standard.org/standard/core/Dotq
+;------------------------------------------------------------------------------
+DOTQUOTE_OUTER_ENTRY:
+        .word   DOTQUOTE_ENTRY          ; Link field
+        .byte   F_IMMEDIATE | 2         ; Flags + length (2 chars)
+        .byte   $2E, $22                ; '.' '"'
+        .align  2
+DOTQUOTE_OUTER_CFA:
+        CODEPTR DOCOL
+
+        ; --- parse the string (both modes need it) ---
+        .word   LIT_CFA
+        .word   '"'
+        .word   PARSE_CFA               ; ( c-addr u )
+
+        ; --- check STATE ---
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZBRANCH_CFA
+        .word   DOTQUOTE_INTERP
+
+        ; --- compile mode ---
+        .word   LIT_CFA
+        .word   DOTQUOTE_CFA            ; compile (.")
+        .word   COMMA_CFA
+        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
+        .word   NIP_CFA                 ; ( c-addr u u )
+        .word   COMMA_CFA               ; compile u
+        .word   LIT_CFA
+        .word   0
+        .word   DODO_CFA                ; loop u times
+DOTQUOTE_CLOOP:
+        .word   DUP_CFA
+        .word   I_CFA
+        .word   PLUS_CFA
+        .word   CFETCH_CFA
+        .word   CCOMMA_CFA
+        .word   DOLOOP_CFA
+        .word   DOTQUOTE_CLOOP
+        .word   DROP_CFA
+        .word   ALIGN_CFA
+        .word   EXIT_CFA
+
+        ; --- interpret mode ---
+DOTQUOTE_INTERP:                        ; ( c-addr u )
+        .word   TYPE_CFA                ; print string directly
+        .word   EXIT_CFA
+
+
+;------------------------------------------------------------------------------
+; 
+; 
+;------------------------------------------------------------------------------
+DABORTQUOTE_ENTRY:
+        .word   DOTQUOTE_ENTRY          ; Link field
+        .byte   F_HIDDEN | 8            ; Flags + length (7 chars)
+        .byte   "(ABORT", $22, ")"      ; '(' 'A' 'B' 'O' 'R' 'T' '"' ')'
+        .align  2
+DABORTQUOTE_CFA:
+        CODEPTR DABORTQUOTE_CODE
+        PUBLIC  DABORTQUOTE_CODE
+        .a16
+        .i16
+                ; Pop flag
+                LDA     a:0,X
+                INX
+                INX
+
+                ; If false skip over inline string
+                CMP     #0
+                BEQ     @skip
+
+                ; True: fetch u from inline string header
+                LDA     0,Y             ; fetch u
+                STA     SCRATCH0        ; save u
+                INY
+                INY                     ; IP -> first char
+
+                ; Push ( c-addr u )
+                DEX
+                DEX
+                TYA
+                STA     a:0,X           ; c-addr = IP
+
+                DEX
+                DEX
+                LDA     SCRATCH0
+                STA     a:0,X           ; u
+
+                ; Advance IP past string bytes, aligned to even
+                TYA                     ; A = IP
+                CLC
+                ADC     SCRATCH0        ; IP + u
+                INC     A               ; round up
+                AND     #$FFFE          ; align to even
+                TAY                     ; IP updated
+
+                ; Print string via TYPE trampoline
+                PHY                     ; save updated IP
+                LDY     #RTS_CFA_LIST
+                JSR     TYPE_CODE
+                PLY                     ; restore IP (not strictly needed)
+
+                ; ABORT never returns
+                JMP     ABORT_CODE
+
+@skip:
+                ; Skip over inline string
+                LDA     0,Y             ; fetch u
+                STA     SCRATCH0
+                INY
+                INY                     ; past length cell
+                TYA
+                CLC
+                ADC     SCRATCH0        ; IP + u
+                INC     A               ; round up
+                AND     #$FFFE          ; align to even
+                TAY
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; 
+; 
+;------------------------------------------------------------------------------
+ABORTQUOTE_ENTRY:
+        .word   DABORTQUOTE_ENTRY       ; Link field
+        .byte   F_IMMEDIATE | 6         ; Flags + length (6 chars)
+        .byte   "ABORT", $22            ; 'A' 'B' 'O' 'R' 'T' '"'
+        .align  2
+ABORTQUOTE_CFA:
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   '"'
+        .word   PARSE_CFA               ; ( c-addr u )
+        .word   LIT_CFA
+        .word   DABORTQUOTE_CFA         ; compile (ABORT")
+        .word   COMMA_CFA
+        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
+        .word   NIP_CFA                 ; ( c-addr u u )
+        .word   COMMA_CFA               ; compile u
+        .word   LIT_CFA
+        .word   0
+        .word   DODO_CFA
+ABORTQUOTE_CLOOP:
+        .word   DUP_CFA
+        .word   I_CFA
+        .word   PLUS_CFA
+        .word   CFETCH_CFA
+        .word   CCOMMA_CFA
+        .word   DOLOOP_CFA
+        .word   ABORTQUOTE_CLOOP
+        .word   DROP_CFA
+        .word   ALIGN_CFA
+        .word   EXIT_CFA
+
+HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   ' '
+        .word   WORD_CFA                ; ( c-addr ) counted string
+        .word   LIT_CFA
+        .word   1
+        .word   PLUS_CFA                ; ( c-addr+1 ) skip length byte
+        .word   CFETCH_CFA              ; ( char ) first character
+        .word   EXIT_CFA
+
+HEADER  "[CHAR]", BRACKCHAR_ENTRY, BRACKCHAR_CFA, F_IMMEDIATE, CHAR_ENTRY
+        CODEPTR DOCOL
+        .word   CHAR_CFA                ; ( char )
+        .word   LIT_CFA
+        .word   LIT_CFA
+        .word   COMMA_CFA               ; compile LIT
+        .word   COMMA_CFA               ; compile char value
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; WORD ( char -- addr ) parse word delimited by char from input
 ; Returns counted string at HERE
 ;
@@ -2280,7 +2503,7 @@ SQUOTE_INTERP:                          ; ( c-addr u )
 ;   LOC_UP    = 13,S  local UP
 ;   (saved IP at 15,S, pushed first by PHY)
 ;------------------------------------------------------------------------------
-        HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, SQUOTE_ENTRY
+        HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, BRACKCHAR_ENTRY
         CODEPTR WORD_CODE
         PUBLIC  WORD_CODE
         .a16
@@ -4394,350 +4617,6 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 
 ; Stub defining words - to be fully implemented
 
-; String literal words - stubs
-; Note: HEADER macro can't handle quote chars in names - written manually
-; ." ( -- ) output string literal
-DOTQUOTE_ENTRY:
-        .word   LOOP_ENTRY             ; Link field
-        .byte   F_IMMEDIATE | 2        ; Flags + length (2 chars)
-        .byte   $2E, $22               ; '.' '"'
-        .align  2
-DOTQUOTE_CFA:
-        CODEPTR DOTQUOTE_CODE
-        PUBLIC  DOTQUOTE_CODE
-        .a16
-        .i16
-                ; Full impl: if interpreting emit string, if compiling compile it
-                NEXT
-        ENDPUBLIC
-
-; ABORT" ( flag -- ) abort with message if flag non-zero
-ABORTQ_ENTRY:
-	.word   DOTQUOTE_ENTRY         ; Link field
-        .byte   F_IMMEDIATE | 6        ; Flags + length (6 chars)
-        .byte   "ABORT", $22           ; 'A' 'B' 'O' 'R' 'T' '"'
-        .align  2
-ABORTQ_CFA:
-        CODEPTR ABORTQ_CODE
-        PUBLIC  ABORTQ_CODE
-        .a16
-        .i16
-        ; ABORT" is an immediate word used like:
-        ;   flag ABORT" error message"
-        ;
-        ; At compile time (STATE=1):
-        ;   Compiles a call to (ABORT") followed by an inline
-        ;   counted string. At runtime, (ABORT") checks the flag;
-        ;   if true it prints the string and calls ABORT.
-        ;
-        ; At interpret time (STATE=0):
-        ;   Reads the string from the input stream, checks TOS;
-        ;   if true, prints the string and calls ABORT.
-        ;
-        ; Check STATE
-                LDA     UP
-                CLC
-                ADC     #U_STATE
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
-                BNE     @compiling_abortq
-                JMP     @interpreting
-@compiling_abortq:
-
-        ;----------------------------------------------------------
-        ; COMPILE TIME: compile (ABORT") + inline counted string
-        ;----------------------------------------------------------
-@compiling:
-                ; Compile a call to the runtime word (ABORT")
-                LDA     UP
-                CLC
-                ADC     #U_DP
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; DP
-                STA     SCRATCH1
-                LDA     #DOABORTQ_CFA
-                STA     (SCRATCH1)      ; Compile (ABORT") CFA
-                LDA     SCRATCH1
-                CLC
-                ADC     #2
-                LDA     UP
-                CLC
-                ADC     #U_DP
-                STA     SCRATCH0
-                LDA     SCRATCH1
-                CLC
-                ADC     #2
-                STA     (SCRATCH0)      ; DP += 2
-
-                ; Now copy string from input stream to dictionary
-                ; Parse up to closing "
-                LDA     UP
-                CLC
-                ADC     #U_TIB
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; TIB base
-                STA     TMPB
-                LDA     UP
-                CLC
-                ADC     #U_TOIN
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; >IN
-                TAY
-                ; Skip opening space after ABORT"
-                INY
-                ; Get DP again as dest
-                LDA     UP
-                CLC
-                ADC     #U_DP
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
-                STA     SCRATCH0        ; SCRATCH0 = dest (count byte)
-                LDA     SCRATCH0
-                INC     A
-                STA     SCRATCH1        ; SCRATCH1 = dest chars
-                LDA     UP
-                CLC
-                ADC     #U_SOURCELEN
-                STA     TMPA
-                LDA     (TMPA)
-                STA     TMPA            ; TMPA = source length
-                STZ     W               ; W = char count
-
-@cq_copy:       CPY     TMPA
-                BCS     @cq_done
-                LDA     TMPB
-                STA     TMPA            ; clobbers srclen - noted limitation
-                SEP     #$20
-                .a8
-                LDA     (TMPA),Y
-                CMP     #'"'
-                REP     #$20
-                .a16
-                BEQ     @cq_end
-                SEP     #$20
-                .a8
-                STA     (SCRATCH1)
-                REP     #$20
-                .a16
-                INC     SCRATCH1
-                INC     W
-                INY
-                BRA     @cq_copy
-@cq_end:        INY                     ; Skip closing "
-@cq_done:
-                ; Store count byte
-                SEP     #$20
-                .a8
-                LDA     W
-                STA     (SCRATCH0)
-                REP     #$20
-                .a16
-                ; Update >IN
-                LDA     UP
-                CLC
-                ADC     #U_TOIN
-                STA     TMPA
-                TYA
-                STA     (TMPA)
-                ; Update DP past the string (+1 for count byte, +len, align)
-                LDA     W               ; char count
-                INC     A               ; +1 for count byte
-                CLC
-                ADC     SCRATCH0        ; new DP
-                ; Align to word boundary
-                AND     #$FFFE
-                INC     A
-                INC     A               ; round up
-                LDA     UP
-                CLC
-                ADC     #U_DP
-                STA     TMPA
-                LDA     SCRATCH0
-                CLC
-                ADC     W
-                INC     A               ; count byte
-                STA     (TMPA)          ; DP updated
-                NEXT
-
-        ;----------------------------------------------------------
-        ; INTERPRET TIME: read string, check flag, maybe abort
-        ;----------------------------------------------------------
-@interpreting:
-                ; Pop flag from stack
-                LDA     0,X
-                INX
-                INX
-                CMP     #$0000          ; Test flag (INX clobbers zero flag)
-                BEQ     @no_abort       ; Flag = 0: do nothing
-
-                ; Flag non-zero: print message and ABORT
-                ; Parse string from input up to closing "
-                LDA     UP
-                CLC
-                ADC     #U_TIB
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
-                STA     TMPB
-                LDA     UP
-                CLC
-                ADC     #U_TOIN
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
-                TAY
-                INY                     ; Skip space
-                LDA     UP
-                CLC
-                ADC     #U_SOURCELEN
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
-                STA     TMPA
-@iq_emit:
-                CPY     TMPA
-                BCS     @iq_done
-                LDA     TMPB
-                STA     SCRATCH0
-                SEP     #MEM16
-                .A8
-                LDA     (SCRATCH0),Y
-                CMP     #'"'
-                REP     #MEM16
-                .A16
-                BEQ     @iq_done
-                ; Emit this char via HAL
-                AND     #$00FF
-                JSR     hal_putch
-                INY
-                BRA     @iq_emit
-@iq_done:
-                ; Emit CR+LF then ABORT
-                LDA     #$0D
-                JSR     hal_putch
-                LDA     #$0A
-                JSR     hal_putch
-                ; Jump to ABORT (resets stacks and goes to QUIT)
-                JMP     ABORT_CODE
-
-@no_abort:
-                ; Skip past the string in the input stream
-                LDA     UP
-                CLC
-                ADC     #U_TIB
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
-                STA     TMPB
-                LDA     UP
-                CLC
-                ADC     #U_TOIN
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
-                TAY
-                INY
-                LDA     UP
-                CLC
-                ADC     #U_SOURCELEN
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
-                STA     TMPA
-@skip_str:      CPY     TMPA
-                BCS     @skip_done
-                LDA     TMPB
-                STA     SCRATCH0
-                SEP     #$20
-                .a8
-                LDA     (SCRATCH0),Y
-                REP     #$20
-                .a16
-                AND     #$00FF
-                INY
-                CMP     #'"'
-                BNE     @skip_str
-@skip_done:
-                LDA     UP
-                CLC
-                ADC     #U_TOIN
-                STA     SCRATCH0
-                TYA
-                STA     (SCRATCH0)      ; Update >IN
-                NEXT
-        ENDPUBLIC
-
-;------------------------------------------------------------------------------
-; (ABORT") ( flag -- ) runtime helper compiled by ABORT"
-;
-; Checks flag. If non-zero, prints the inline counted string
-; that immediately follows in the code stream, then calls ABORT.
-; If zero, skips over the inline string and continues.
-;------------------------------------------------------------------------------
-; (ABORT") ( flag -- ) runtime helper compiled by ABORT"
-DOABORTQ_ENTRY:
-        .word   ABORTQ_ENTRY           ; Link field
-        .byte   F_HIDDEN | 8           ; Flags + length (8 chars)
-        .byte   "(ABORT", $22, ")"     ; '(' 'A' 'B' 'O' 'R' 'T' '"' ')'
-        .align  2
-DOABORTQ_CFA:
-        CODEPTR DOABORTQ_CODE
-        PUBLIC  DOABORTQ_CODE
-        .a16
-        .i16
-                LDA     0,X             ; flag
-                INX
-                INX
-                CMP     #$0000          ; Test flag (INX clobbers zero flag)
-                BEQ     @skip           ; Zero: skip string, continue
-
-                ; Non-zero: print the inline counted string
-                ; IP (Y) points to the count byte of the inline string
-                SEP     #MEM16
-                .A8
-                LDA     0,Y             ; Length byte
-                REP     #MEM16
-                .A16
-                AND     #$00FF
-                STA     SCRATCH0        ; Char count
-                INY                     ; Y now points to first char
-                BEQ     @printed        ; Zero length: skip emit loop
-@emit_loop:
-                SEP     #MEM16
-                .A8
-                LDA     0,Y             ; Fetch char at IP
-                REP     #MEM16
-                .A16
-                AND     #$00FF
-                JSR     hal_putch       ; Send via HAL
-                INY
-                DEC     SCRATCH0
-                BNE     @emit_loop
-@printed:
-                ; Emit CR+LF then ABORT
-                LDA     #$0D
-                JSR     hal_putch
-                LDA     #$0A
-                JSR     hal_putch
-                ; ABORT: reset stacks and restart QUIT
-                ; (IP is now garbage - ABORT_CODE will overwrite it)
-                JMP     ABORT_CODE
-
-@skip:
-                ; Skip over the inline counted string
-                ; IP (Y) points to count byte
-                SEP     #$20
-                .a8
-                LDA     0,Y             ; Length
-                REP     #$20
-                .a16
-                AND     #$00FF
-                INC     A               ; +1 for count byte itself
-                ; Align: round up to next even address
-                STY     SCRATCH0        ; Save IP (Y can't be used as ADC operand)
-                CLC
-                ADC     SCRATCH0        ; new IP = old IP + length + 1
-                BIT     #1
-                BEQ     @aligned
-                INC     A
-@aligned:       TAY                     ; IP = past the string
-                NEXT
-        ENDPUBLIC
-
 .ifdef DEBUG
 ;------------------------------------------------------------------------------
 ; TRACEOUT ( -- ) Prints current IP to console in hex.
@@ -4758,7 +4637,7 @@ DOABORTQ_CFA:
 ;------------------------------------------------------------------------------
 ; TRACEON ( -- ) enable execution tracing
 ;------------------------------------------------------------------------------
-        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, ABORTQ_ENTRY
+        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, LOOP_ENTRY
         CODEPTR TRACEON_CODE
         PUBLIC  TRACEON_CODE
         .a16
@@ -4789,5 +4668,5 @@ DOABORTQ_CFA:
 .ifdef DEBUG
 	LAST_WORD = TRACEOFF_ENTRY
 .else
-	LAST_WORD = DOABORTQ_ENTRY
+	LAST_WORD = LOOP_ENTRY
 .endif
