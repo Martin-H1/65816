@@ -213,15 +213,13 @@ make tests
 ### What needs completion
 The following words have stubs and need full implementation:
 
-1. **`." S"`** - String literal compilation
+1. Refactoring WORD to use PARSE.
 
-2. Refactoring WORD to use PARSE.
+2. Conditional statements ?DUP, CASE, OF, ENDOF, and ENDCASE.
 
-3. Conditional statements ?DUP, ABORT", CASE, OF, ENDOF, and ENDCASE.
+3. Flow control words like +LOOP, LEAVE, AGAIN, WHILE, REPEAT, and RECURSE.
 
-4. Flow control words like +LOOP, LEAVE, AGAIN, WHILE, REPEAT, and RECURSE.
-
-5. Double precision mathematics.
+4. Double precision mathematics.
 
 ### Extending for your SBC
 - Change HAL code for your UART chip

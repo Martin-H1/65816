@@ -196,13 +196,10 @@ hex IP values in trace output to symbol names with offsets. Parses the "Exports
 list by name" section. Subtracts 2 from addresses to compensate for NEXT
 pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 
-.S output should match GForth format: <depth> bottom ... top.
-
-
 TODO items carried forward:
-' (tick) is implemented but doesn't work.
-IF/THEN/ELSE, BEGIN/UNTIL/WHILE/REPEAT, DO/LOOP control flow word stubs
-are written, but not yet implemented.
-$ hex prefix for number literals not yet supported in NUMBER/INTERPRET.
-S", .", ABORT" string words are stubs needing full implementation.
-FIND CFA offset calculation may need verification for words with padding.
+* FIND CFA offset calculation may need verification for words with padding.
+* +LOOP edge cases with negative/large steps need fixing
+* Double number support (>NUMBER upgrade)
+* Conditional statements ?DUP, CASE, OF, ENDOF, and ENDCASE.
+* Additional flow control words: LEAVE, AGAIN, and RECURSE.
+* Refactoring WORD to use PARSE.
