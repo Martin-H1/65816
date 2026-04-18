@@ -97,6 +97,7 @@ F_LENMASK       = $1F
         .global SPACES_CFA
 
 ; Dictionary/compile words
+        .global ALIGN_CFA
         .global HERE_CFA
         .global ALLOT_CFA
         .global COMMA_CFA
@@ -129,9 +130,14 @@ F_LENMASK       = $1F
         .global FIND_CFA
         .global UNDEFINED_WORD_CFA
         .global INTERPRET_CFA
+        .global TONUMBER_CFA
+        .global NUMBERQ_CFA
         .global NUMBER_CFA
+        .global PAD_CFA
         .global COUNT_CFA
+        .global PARSE_CFA
         .global DOTQUOTE_CFA
+        .global DOSQUOTE_CFA
         .global SQUOTE_CFA
 
 ; Output words

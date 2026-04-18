@@ -22,13 +22,17 @@ U_TIB           = $08           ; TIB address           (cell)
 U_TOIN          = $0A           ; >IN parse offset      (cell)
 U_SOURCELEN     = $0C           ; Source string length  (cell)
 U_HANDLER       = $0E           ; Exception handler     (cell)
+U_PAD           = $10           ; PAD address in user area
+
+; Scratch pad buffer
+PAD_BASE        = $0500         ; PAD at $0500
 
 ; Terminal Input Buffer
-TIB_BASE        = $0500
+TIB_BASE        = $0600
 TIB_SIZE        = $0100
 
 ; RAM dictionary
-DICT_BASE       = $0600
+DICT_BASE       = $0700         ; RAM dictionary
 
 ; ANS Forth boolean values
 FORTH_TRUE      = $FFFF

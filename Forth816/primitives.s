@@ -1789,9 +1789,28 @@ calc_depth:     TXA
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
+; ALIGN ( -- )
+; Align dictionary pointer (DP) to next even address if not already aligned.
+;------------------------------------------------------------------------------
+        HEADER  "ALIGN", ALIGN_ENTRY, ALIGN_CFA, 0, J_ENTRY
+        CODEPTR ALIGN_CODE
+        PUBLIC  ALIGN_CODE
+        .a16
+        .i16
+                PHY
+                LDY     #U_DP
+                LDA     (UP),Y          ; fetch DP
+                INC     A               ; round up
+                AND     #$FFFE          ; align to even
+                STA     (UP),Y          ; write back
+                PLY
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; HERE ( -- addr ) current dictionary pointer
 ;------------------------------------------------------------------------------
-        HEADER  "HERE", HERE_ENTRY, HERE_CFA, 0, J_ENTRY
+        HEADER  "HERE", HERE_ENTRY, HERE_CFA, 0, ALIGN_ENTRY
         CODEPTR HERE_CODE
         PUBLIC  HERE_CODE
         .a16
@@ -1971,6 +1990,24 @@ calc_depth:     TXA
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; PAD ( -- addr ) address of scratch pad area.
+;------------------------------------------------------------------------------
+        HEADER  "PAD", PAD_ENTRY, PAD_CFA, 0, SOURCE_ENTRY
+        CODEPTR PAD_CODE
+        PUBLIC  PAD_CODE
+        .a16
+        .i16
+                PHY
+                LDY     #U_PAD
+                LDA     (UP),Y
+                DEX
+                DEX
+                STA     0,X
+                PLY
+                NEXT
+        ENDPUBLIC
+
 ;==============================================================================
 ; SECTION 11: STRING AND PARSE WORDS
 ;==============================================================================
@@ -1978,7 +2015,7 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
 ; COUNT ( addr -- addr+1 len ) counted string to addr/len
 ;------------------------------------------------------------------------------
-        HEADER  "COUNT", COUNT_ENTRY, COUNT_CFA, 0, SOURCE_ENTRY
+        HEADER  "COUNT", COUNT_ENTRY, COUNT_CFA, 0, PAD_ENTRY
         CODEPTR COUNT_CODE
         PUBLIC  COUNT_CODE
         .a16
@@ -1999,6 +2036,237 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; PARSE ( char -- c-addr u )
+;------------------------------------------------------------------------------
+        HEADER  "PARSE", PARSE_ENTRY, PARSE_CFA, 0, COUNT_ENTRY
+        CODEPTR PARSE_CODE
+        PUBLIC  PARSE_CODE
+        .a16
+        .i16
+
+        LOC_CHAR    = 1         ; delimiter char
+        LOC_TIB     = 3         ; TIB base address
+        LOC_TOIN    = 5         ; >IN at entry
+        LOC_CURPTR  = 7         ; current scan pointer
+        LOC_ENDADDR = 9         ; TIB + SOURCE-LEN
+        LOC_UP      = 11        ; cached UP
+        LOC_SIZE    = LOC_UP + 1
+
+                PHD
+                PHY
+
+                TSC
+                SEC
+                SBC     #LOC_SIZE
+                TCS
+                TCD
+
+                ;--------------------------------------------------------------
+                ; Peek delimiter
+                ;--------------------------------------------------------------
+                LDA     a:0,X
+                AND     #$00FF
+                STA     LOC_CHAR
+
+                ;--------------------------------------------------------------
+                ; Cache UP, then load TIB, >IN, SOURCE-LEN
+                ;--------------------------------------------------------------
+                LDA     a:UP
+                STA     LOC_UP
+
+                LDY     #U_TIB
+                LDA     (LOC_UP),Y
+                STA     LOC_TIB
+
+                LDY     #U_TOIN
+                LDA     (LOC_UP),Y
+                STA     LOC_TOIN
+
+                ; CURPTR = TIB + >IN
+                LDA     LOC_TIB
+                CLC
+                ADC     LOC_TOIN
+                STA     LOC_CURPTR
+
+                ; ENDADDR = TIB + SOURCE-LEN
+                LDY     #U_SOURCELEN
+                LDA     (LOC_UP),Y
+                CLC
+                ADC     LOC_TIB
+                STA     LOC_ENDADDR
+
+                ;--------------------------------------------------------------
+                ; Scan loop
+                ;--------------------------------------------------------------
+@scan_loop:
+                LDA     LOC_CURPTR
+                CMP     LOC_ENDADDR
+                BCS     @end_of_input
+
+                ; Fetch char at CURPTR
+                SEP     #$20
+                .a8
+                LDA     (LOC_CURPTR)    ; fetch byte
+                REP     #$20
+                .a16
+                AND     #$00FF
+
+                CMP     LOC_CHAR
+                BEQ     @found
+
+                INC     LOC_CURPTR
+                BRA     @scan_loop
+
+@found:
+                INC     LOC_CURPTR      ; advance past delimiter
+                ; u = CURPTR - 1 - (TIB + TOIN)
+                LDA     LOC_CURPTR
+                DEC     A               ; ptr before delimiter
+                SEC
+                SBC     LOC_TIB
+                SEC
+                SBC     LOC_TOIN     ; u = offset from TIB+TOIN
+                BRA     @update_in
+
+@end_of_input:
+                ; u = SOURCE-LEN - TOIN = ENDADDR - TIB - STARTIN
+                LDA     LOC_ENDADDR
+                SEC
+                SBC     LOC_TIB
+                SEC
+                SBC     LOC_TOIN
+
+@update_in:
+                PHA                     ; save u
+
+                ; Write CURPTR back as >IN offset: >IN = CURPTR - TIB
+                LDA     LOC_CURPTR
+                SEC
+                SBC     LOC_TIB
+                LDY     #U_TOIN
+                STA     (LOC_UP),Y
+
+                ; c-addr = TIB + STARTIN
+                LDA     LOC_TIB
+                CLC
+                ADC     LOC_TOIN
+
+                STA     a:0,X           ; overwrite TOS with c-addr
+
+                PLA                     ; restore u
+                DEX
+                DEX
+                STA     a:0,X           ; push u (TOS)
+
+                TSC
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY
+                PLD
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; (S") runtime ( -- c-addr u )
+; IP points to length cell followed by string bytes.
+; Pushes c-addr and u, advances IP past string data.
+;------------------------------------------------------------------------------
+DOSQUOTE_ENTRY:
+        .word   PARSE_ENTRY            ; Link field
+        .byte   F_HIDDEN | 4           ; Flags + length (4 chars)
+        .byte   "(S", $22, ")"         ; '(' 'S' '"' ')'
+        .align  2
+DOSQUOTE_CFA:
+        CODEPTR DOSQUOTE_CODE
+        PUBLIC  DOSQUOTE_CODE
+        .a16
+        .i16
+
+                LDA     0,Y             ; fetch u
+                STA     SCRATCH0        ; save u
+                INY
+                INY                     ; IP -> first char
+
+                DEX
+                DEX
+                TYA
+                STA     a:0,X           ; push c-addr = IP
+
+                DEX
+                DEX
+                LDA     SCRATCH0        ; restore u
+                STA     a:0,X           ; push u
+
+                ; Advance IP past string: IP + u, aligned to even
+                TYA                     ; A = IP (c-addr)
+                CLC
+                ADC     SCRATCH0        ; IP + u
+                INC     A               ; round up
+                AND     #$FFFE          ; align to even
+                TAY                     ; IP updated
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; S"
+;------------------------------------------------------------------------------
+SQUOTE_ENTRY:
+        .word   DOSQUOTE_ENTRY          ; Link field
+        .byte   F_IMMEDIATE | 2         ; Flags + length (2 chars)
+        .byte   "S", $22                ; 'S' '"'
+        .align  2
+SQUOTE_CFA:
+        CODEPTR DOCOL
+
+        ; --- parse the string (both modes need it) ---
+.word DOTS_CFA
+        .word   LIT_CFA
+        .word   '"'
+        .word   PARSE_CFA               ; ( c-addr u )
+        ; --- check STATE ---
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZBRANCH_CFA
+        .word   SQUOTE_INTERP
+
+        ; --- compile mode ---
+        .word   LIT_CFA
+        .word   DOSQUOTE_CFA
+        .word   COMMA_CFA               ; compile (S")
+        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
+        .word   NIP_CFA                 ; ( c-addr u u )
+        .word   COMMA_CFA               ; compile u as length cell
+                                        ; ( c-addr u )
+        .word   LIT_CFA
+        .word   0
+        .word   DODO_CFA                ; runtime DO  ( limit index -- )
+SQUOTE_CLOOP:
+        .word   DUP_CFA
+        .word   I_CFA
+        .word   PLUS_CFA
+        .word   CFETCH_CFA
+        .word   CCOMMA_CFA
+        .word   DOLOOP_CFA
+        .word   SQUOTE_CLOOP
+        .word   DROP_CFA
+        .word   ALIGN_CFA
+        .word   EXIT_CFA
+
+        ; --- interpret mode ---
+SQUOTE_INTERP:                          ; ( c-addr u )
+        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
+        .word   PAD_CFA                 ; ( c-addr u c-addr u pad )
+        .word   ROT_CFA                 ; ( c-addr u u pad c-addr )
+        .word   SWAP_CFA                ; ( c-addr u u c-addr pad )
+        .word   ROT_CFA                 ; ( c-addr u c-addr pad u )
+        .word   MOVE_CFA                ; ( c-addr u )
+        .word   NIP_CFA                 ; ( u )
+        .word   PAD_CFA                 ; ( u pad )
+        .word   SWAP_CFA                ; ( pad u )
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; WORD ( char -- addr ) parse word delimited by char from input
 ; Returns counted string at HERE
 ;
@@ -2012,7 +2280,7 @@ calc_depth:     TXA
 ;   LOC_UP    = 13,S  local UP
 ;   (saved IP at 15,S, pushed first by PHY)
 ;------------------------------------------------------------------------------
-        HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, COUNT_ENTRY
+        HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, SQUOTE_ENTRY
         CODEPTR WORD_CODE
         PUBLIC  WORD_CODE
         .a16
@@ -4143,24 +4411,9 @@ DOTQUOTE_CFA:
                 NEXT
         ENDPUBLIC
 
-; S" ( -- addr len ) string literal
-SQUOTE_ENTRY:
-        .word   DOTQUOTE_ENTRY         ; Link field
-        .byte   F_IMMEDIATE | 2        ; Flags + length (2 chars)
-        .byte   $53, $22               ; 'S' '"'
-        .align  2
-SQUOTE_CFA:
-        CODEPTR SQUOTE_CODE
-        PUBLIC  SQUOTE_CODE
-        .a16
-        .i16
-                ; Stub
-                NEXT
-        ENDPUBLIC
-
 ; ABORT" ( flag -- ) abort with message if flag non-zero
 ABORTQ_ENTRY:
-	.word   SQUOTE_ENTRY             ; Link field
+	.word   DOTQUOTE_ENTRY         ; Link field
         .byte   F_IMMEDIATE | 6        ; Flags + length (6 chars)
         .byte   "ABORT", $22           ; 'A' 'B' 'O' 'R' 'T' '"'
         .align  2

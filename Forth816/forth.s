@@ -252,6 +252,11 @@ RTS_CFA_LIST:
                 LDY     #U_SOURCELEN
                 STA     (UP),Y          ; SOURCE-LEN = 0
 
+                ; --- User area: PAD = PAD_BASE ---
+                LDA     #PAD_BASE
+                LDY     #U_PAD
+                STA     (UP),Y
+
                 ; --- Jump to ABORT to reset stacks and start interpreter ---
                 ; ABORT_CODE is a machine code primitive that resets both
                 ; stacks and jumps directly into QUIT_BODY via NEXT.

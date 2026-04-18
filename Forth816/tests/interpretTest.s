@@ -18,6 +18,7 @@
 .import COMPARE_CODE
 .import DROP_CODE
 .import MOVE_CODE
+.import PARSE_CODE
 .import WORD_CODE
 .import FIND_CODE
 .import TONUMBER_CODE
@@ -36,6 +37,7 @@ PUBLIC MAIN
 	jsr TRACEOFF_CODE	; tracing initialization.
 
 	jsr wordsTest
+	jsr parseTest
 	jsr wordTest
 	jsr compareTest
 	jsr tonumberTest
@@ -46,6 +48,17 @@ PUBLIC MAIN
 	TYPESTRCR "interpret test - exit!"
 	rts
 ENDPUBLIC
+
+.proc parseTest
+	MOVE_TIB "   .c hello worldc                     "
+	lda #'c'
+	PUSH
+	jsr PARSE_CODE
+	TYPESTR "parse test='"
+	jsr TYPE_CODE
+	TYPESTR "'"
+	RTS
+.endproc
 
 .proc wordsTest
 	CALL_DOCOL WORDS_CFA	; RTS_CFA will return here.

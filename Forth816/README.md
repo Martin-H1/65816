@@ -37,7 +37,6 @@ summary.txt
 
 ```
 $0000-$007F     Zero Page / Direct Page
-                  $00  IP       Instruction Pointer
                   $02  W        Working register (current CFA)
                   $04  UP       User Pointer
                   $06  SCRATCH0 Scratch
@@ -56,9 +55,9 @@ $0400-$04FF     User Area
                   +$0A  >IN          parse offset
                   +$0C  SOURCE-LEN   current source length
                   +$0E  HANDLER      exception handler
-
-$0500-$05FF     Terminal Input Buffer (TIB)
-$0600-$7EFF     RAM Dictionary (user definitions grow upward)
+$0500-$05FF     Scratch PAD area
+$0600-$06FF     Terminal Input Buffer (TIB)
+$0700-$7EFF     RAM Dictionary (user definitions grow upward)
 $7F00-$7FFF     I/O Space (UART)
 $8000-$FFBF     ROM Kernel
 $FFE0-$FFFF     Hardware Vectors
@@ -207,6 +206,8 @@ make tests
 - WORD parser is complete.
 - Dictionary search (FIND)
 - System initialization and hardware vectors
+- 16-bit math funnctions
+- ":", ";", and basic conditional and flow control.
 - Extensive unit tests for primitive verification
 
 ### What needs completion
@@ -214,11 +215,13 @@ The following words have stubs and need full implementation:
 
 1. **`." S"`** - String literal compilation
 
-2. Enhancing number to support the $ hex prefix.
+2. Refactoring WORD to use PARSE.
 
-3. Conditional statements ?DUP, ABORT", IF, ELSE, THEN, CASE, OF, ENDOF, and ENDCASE
+3. Conditional statements ?DUP, ABORT", CASE, OF, ENDOF, and ENDCASE.
 
-4. Flow control words like DO, LOOP, +LOOP, LEAVE, BEGIN, UNTIL, AGAIN, WHILE, and REPEAT.
+4. Flow control words like +LOOP, LEAVE, AGAIN, WHILE, REPEAT, and RECURSE.
+
+5. Double precision mathematics.
 
 ### Extending for your SBC
 - Change HAL code for your UART chip
