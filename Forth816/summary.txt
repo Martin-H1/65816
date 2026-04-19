@@ -203,3 +203,4 @@ TODO items carried forward:
 * Conditional statements ?DUP, CASE, OF, ENDOF, and ENDCASE.
 * Additional flow control words: LEAVE, AGAIN, and RECURSE.
 * Refactoring WORD to use PARSE.
+* Add CELL, CELLS, and BL

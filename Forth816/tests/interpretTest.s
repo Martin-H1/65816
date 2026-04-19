@@ -310,8 +310,8 @@ compare4:
 	lda #error1
 	PUSH
 	jsr hal_lpputs
-	jsr NUMBERQ_CODE
 	LPPUTS numsg2
+	jsr NUMBERQ_CODE
 	jsr DOTHEX_CODE
 	LPPUTS numsg3
 	jsr DOT_CODE
@@ -341,6 +341,17 @@ compare4:
 
 	LPPUTS numsg1		; a number with trailing junk
 	lda #error4
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS numsg2
+	jsr DOTHEX_CODE
+	LPPUTS numsg3
+	jsr DOT_CODE
+	jsr CR_CODE
+
+	LPPUTS numsg1		; a word instead of a number
+	lda #error5
 	PUSH
 	jsr hal_lpputs
 	jsr NUMBERQ_CODE
@@ -451,6 +462,7 @@ error1:	PString ""
 error2:	PString "--"
 error3:	PString "fpp"
 error4:	PString "12G"
+error5:	PString "CELL"
 num1:	PString "0"
 num2:	PString "-10"
 num3:	PString "500"
