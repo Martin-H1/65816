@@ -2268,14 +2268,14 @@ SQUOTE_INTERP:                          ; ( c-addr u )
 ; (.") ( -- )
 ; Runtime code for ."
 ;------------------------------------------------------------------------------
-DOTQUOTE_ENTRY:
+DODOTQUOTE_ENTRY:
         .word   SQUOTE_ENTRY            ; Link field
         .byte   F_HIDDEN | 3            ; Flags + length (3 chars)
         .byte   $28, $2E, $22           ; '(' '.' '"'
         .align  2
-DOTQUOTE_CFA:
-        CODEPTR DOTQUOTE_CODE
-        PUBLIC  DOTQUOTE_CODE
+DODOTQUOTE_CFA:
+        CODEPTR DODOTQUOTE_CODE
+        PUBLIC  DODOTQUOTE_CODE
         .a16
         .i16
                 ; Y = IP, points to length cell inline in caller's thread
@@ -2315,12 +2315,12 @@ DOTQUOTE_CFA:
 ; ." ( -- )
 ; https://forth-standard.org/standard/core/Dotq
 ;------------------------------------------------------------------------------
-DOTQUOTE_OUTER_ENTRY:
-        .word   DOTQUOTE_ENTRY          ; Link field
+DOTQUOTE_ENTRY:
+        .word   DODOTQUOTE_ENTRY        ; Link field
         .byte   F_IMMEDIATE | 2         ; Flags + length (2 chars)
-        .byte   $2E, $22                ; '.' '"'
+        .byte   $2E, $22                ; ."
         .align  2
-DOTQUOTE_OUTER_CFA:
+DOTQUOTE_CFA:
         CODEPTR DOCOL
 
         ; --- parse the string (both modes need it) ---
@@ -2336,7 +2336,7 @@ DOTQUOTE_OUTER_CFA:
 
         ; --- compile mode ---
         .word   LIT_CFA
-        .word   DOTQUOTE_CFA            ; compile (.")
+        .word   DODOTQUOTE_CFA          ; compile (.")
         .word   COMMA_CFA
         .word   TWODUP_CFA              ; ( c-addr u c-addr u )
         .word   NIP_CFA                 ; ( c-addr u u )
@@ -2361,19 +2361,20 @@ DOTQUOTE_INTERP:                        ; ( c-addr u )
         .word   TYPE_CFA                ; print string directly
         .word   EXIT_CFA
 
-
 ;------------------------------------------------------------------------------
-; 
-; 
+; (ABORT") ( i * x x1 -- | i * x ) ( R: j * x -- | j * x )
+; POP x1 and if any bit is not zero, display the msg and perform an abort
+; sequence that includes the function of ABORT.
+; https://forth-standard.org/standard/core/ABORTq
 ;------------------------------------------------------------------------------
-DABORTQUOTE_ENTRY:
+DOABORTQUOTE_ENTRY:
         .word   DOTQUOTE_ENTRY          ; Link field
         .byte   F_HIDDEN | 8            ; Flags + length (7 chars)
-        .byte   "(ABORT", $22, ")"      ; '(' 'A' 'B' 'O' 'R' 'T' '"' ')'
+        .byte   "(ABORT", $22, ")"      ; (ABORT")
         .align  2
-DABORTQUOTE_CFA:
-        CODEPTR DABORTQUOTE_CODE
-        PUBLIC  DABORTQUOTE_CODE
+DOABORTQUOTE_CFA:
+        CODEPTR DOABORTQUOTE_CODE
+        PUBLIC  DOABORTQUOTE_CODE
         .a16
         .i16
                 ; Pop flag
@@ -2435,51 +2436,74 @@ DABORTQUOTE_CFA:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; 
-; 
+; ABORTQ Compilation: ( "msg<quote>" -- )
+; Parse the msg delimited by a ". Append the run-time semantics given below to
+; the current definition.
+; Run-time: ( i * x x1 -- | i * x ) ( R: j * x -- | j * x )
+; POP x1 and if any bit is not zero, display the msg and perform an abort
+; sequence that includes the function of ABORT.
+; https://forth-standard.org/standard/core/ABORTq
 ;------------------------------------------------------------------------------
 ABORTQUOTE_ENTRY:
-        .word   DABORTQUOTE_ENTRY       ; Link field
+        .word   DOABORTQUOTE_ENTRY      ; Link field
         .byte   F_IMMEDIATE | 6         ; Flags + length (6 chars)
-        .byte   "ABORT", $22            ; 'A' 'B' 'O' 'R' 'T' '"'
+        .byte   "ABORT", $22            ; ABORT"
         .align  2
 ABORTQUOTE_CFA:
         CODEPTR DOCOL
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZEROEQ_CFA              ; true if interpreting
+        .word   ZBRANCH_CFA
+        .word   ABORTQUOTE_COMPILE      ; skip error if compiling
+        .word   COMPILE_ONLY_ERROR_CFA  ; a specific error
+ABORTQUOTE_COMPILE:
         .word   LIT_CFA
         .word   '"'
         .word   PARSE_CFA               ; ( c-addr u )
         .word   LIT_CFA
-        .word   DABORTQUOTE_CFA         ; compile (ABORT")
+        .word   DOABORTQUOTE_CFA        ; compile (ABORT")
         .word   COMMA_CFA
         .word   TWODUP_CFA              ; ( c-addr u c-addr u )
         .word   NIP_CFA                 ; ( c-addr u u )
         .word   COMMA_CFA               ; compile u
         .word   LIT_CFA
         .word   0
-        .word   DODO_CFA
+        .word   DODO_CFA                ; U 0 DO
 ABORTQUOTE_CLOOP:
         .word   DUP_CFA
         .word   I_CFA
         .word   PLUS_CFA
-        .word   CFETCH_CFA
-        .word   CCOMMA_CFA
+        .word   CFETCH_CFA              ; fetch the character a I
+        .word   CCOMMA_CFA              ; compile it into the definition
         .word   DOLOOP_CFA
         .word   ABORTQUOTE_CLOOP
         .word   DROP_CFA
-        .word   ALIGN_CFA
+        .word   ALIGN_CFA               ; word align the definition
         .word   EXIT_CFA
 
+;------------------------------------------------------------------------------
+; CHAR ( "<spaces>name" -- char ) skip leading space delimiters. Parse name
+; delimited by a space. Put the value of its first character onto the stack.
+; https://forth-standard.org/standard/core/CHAR
+;------------------------------------------------------------------------------
 HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   ' '
-        .word   WORD_CFA                ; ( c-addr ) counted string
-        .word   LIT_CFA
-        .word   1
-        .word   PLUS_CFA                ; ( c-addr+1 ) skip length byte
+        .word   PARSE_CFA               ; ( c-addr u ) raw, no uppercasing
+        .word   DROP_CFA                ; ( c-addr ) discard length
         .word   CFETCH_CFA              ; ( char ) first character
         .word   EXIT_CFA
 
+;------------------------------------------------------------------------------
+; [CHAR] Compilation: ( "<spaces>name" -- )
+; Skip leading space delimiters. Parse name delimited by a space. Append the
+; run-time semantics given below to the current definition.
+; Run-time: ( -- char )
+; Place char, the value of the first character of name, on the stack.
+; https://forth-standard.org/standard/core/BracketCHAR
+;------------------------------------------------------------------------------
 HEADER  "[CHAR]", BRACKCHAR_ENTRY, BRACKCHAR_CFA, F_IMMEDIATE, CHAR_ENTRY
         CODEPTR DOCOL
         .word   CHAR_CFA                ; ( char )
@@ -3633,11 +3657,26 @@ QUIT_LOOP:
                 NEXT
         ENDPUBLIC
 
+HEADER  "COMPILE-ONLY-ERROR", COMPILE_ONLY_ERROR_ENTRY, COMPILE_ONLY_ERROR_CFA, F_HIDDEN, FIND_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   COMPILE_ONLY_MSG
+        .word   LIT_CFA
+        .word   COMPILE_ONLY_MSG_LEN
+        .word   TYPE_CFA
+        .word   ABORT_CFA
+        .word   EXIT_CFA
+
+COMPILE_ONLY_MSG:
+        .byte   "error: compile-only word"
+COMPILE_ONLY_MSG_LEN = * - COMPILE_ONLY_MSG
+        .align  2
+
 ;------------------------------------------------------------------------------
 ; UNDEFINED-WORD ( addr -- ) print error message and abort
 ; Called when INTERPRET cannot find or convert a word.
 ;------------------------------------------------------------------------------
-        HEADER  "UNDEFINED-WORD", UNDEFINED_WORD_ENTRY, UNDEFINED_WORD_CFA, 0, FIND_ENTRY
+        HEADER  "UNDEFINED-WORD", UNDEFINED_WORD_ENTRY, UNDEFINED_WORD_CFA, 0, COMPILE_ONLY_ERROR_ENTRY
         CODEPTR UNDEFINED_WORD_CODE
         PUBLIC  UNDEFINED_WORD_CODE
         .a16
@@ -4043,9 +4082,9 @@ WORDS_SKIP:
 ; LOC_SRC = addr+1 (first name char in WORD output)
 ; LOC_DST = addr+3 (first name char in final header)
 ;------------------------------------------------------------------------------
-        HEADER  "(CREATE)", PCREATE_ENTRY, PCREATE_CFA, F_HIDDEN, WORDS_ENTRY
-        CODEPTR PCREATE_CODE
-        PUBLIC  PCREATE_CODE
+        HEADER  "(CREATE)", DOCREATE_ENTRY, DOCREATE_CFA, F_HIDDEN, WORDS_ENTRY
+        CODEPTR DOCREATE_CODE
+        PUBLIC  DOCREATE_CODE
         .a16
         .i16
         LOC_NAMELEN = 1                 ; name length (2 bytes)
@@ -4174,7 +4213,7 @@ WORDS_SKIP:
 ;------------------------------------------------------------------------------
 ; REVEAL ( -- ) clear F_HIDDEN on the most recent dictionary entry
 ;------------------------------------------------------------------------------
-        HEADER  "REVEAL", REVEAL_ENTRY, REVEAL_CFA, 0, PCREATE_ENTRY
+        HEADER  "REVEAL", REVEAL_ENTRY, REVEAL_CFA, 0, DOCREATE_ENTRY
         CODEPTR REVEAL_CODE
         PUBLIC  REVEAL_CODE
         .a16
@@ -4207,7 +4246,7 @@ COLON_BODY:
         .word   LIT_CFA
         .word   ' '
         .word   WORD_CFA                ; ( addr ) parse name from input
-        .word   PCREATE_CFA             ; ( ) build header, update LATEST and DP
+        .word   DOCREATE_CFA            ; ( ) build header, update LATEST and DP
         .word   LIT_CFA
         .word   DOCOL                   ; code pointer for colon definitions
         .word   COMMA_CFA               ; write DOCOL at CFA
@@ -4239,7 +4278,7 @@ VARIABLE_BODY:
         .word   LIT_CFA
         .word   ' '
         .word   WORD_CFA                ; ( addr ) parse name
-        .word   PCREATE_CFA             ; ( ) build header
+        .word   DOCREATE_CFA            ; ( ) build header
         .word   LIT_CFA
         .word   DOVAR                   ; code pointer for variables
         .word   COMMA_CFA               ; write DOVAR at CFA
@@ -4259,7 +4298,7 @@ CONSTANT_BODY:
         .word   LIT_CFA
         .word   ' '
         .word   WORD_CFA                ; ( n addr ) parse name
-        .word   PCREATE_CFA             ; ( n ) build header
+        .word   DOCREATE_CFA            ; ( n ) build header
         .word   LIT_CFA
         .word   DOCON                   ; code pointer for constants
         .word   COMMA_CFA               ; write DOCON at CFA
@@ -4322,7 +4361,7 @@ CREATE_BODY:
         .word   LIT_CFA
         .word   ' '
         .word   WORD_CFA                ; ( addr ) parse name
-        .word   PCREATE_CFA             ; ( ) build header
+        .word   DOCREATE_CFA            ; ( ) build header
         .word   LIT_CFA
         .word   DOVAR                   ; code pointer
         .word   COMMA_CFA               ; write DOVAR at CFA
@@ -4337,9 +4376,9 @@ CREATE_BODY:
 ; Patches the most recently CREATED word to use DODOES behavior.
 ; W points to this word's CFA. IP (Y) points to the DOES> code.
 ;------------------------------------------------------------------------------
-        HEADER  "(DOES>)", PDOES_ENTRY, PDOES_CFA, F_HIDDEN, CREATE_ENTRY
-        CODEPTR PDOES_CODE
-        PUBLIC  PDOES_CODE
+        HEADER  "(DOES>)", DODOES_ENTRY, DODOES_CFA, F_HIDDEN, CREATE_ENTRY
+        CODEPTR DODOES_CODE
+        PUBLIC  DODOES_CODE
         .a16
         .i16
                 PHY                     ; Save IP
@@ -4387,11 +4426,11 @@ CREATE_BODY:
 ;------------------------------------------------------------------------------
 ; DOES> ( -- ) immediate: compile (DOES>) into current definition
 ;------------------------------------------------------------------------------
-        HEADER  "DOES>", DOES_ENTRY, DOES_CFA, F_IMMEDIATE, PDOES_ENTRY
+        HEADER  "DOES>", DOES_ENTRY, DOES_CFA, F_IMMEDIATE, DODOES_ENTRY
         CODEPTR DOCOL
 DOES_BODY:
         .word   LIT_CFA
-        .word   PDOES_CFA
+        .word   DODOES_CFA
         .word   COMPILECOMMA_CFA        ; compile (DOES>) into definition
         .word   EXIT_CFA                ; return from DOES> itself
 
@@ -4608,14 +4647,6 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         .word   COMMA_CFA
         .word   COMMA_CFA               ; compile loop top address
         .word   EXIT_CFA
-
-;==============================================================================
-; Stub declarations for words referenced in QUIT_BODY colon definition
-; that are not yet implemented (WORDS, defining words etc.)
-; These allow the project to assemble; implement fully in a later pass.
-;==============================================================================
-
-; Stub defining words - to be fully implemented
 
 .ifdef DEBUG
 ;------------------------------------------------------------------------------
