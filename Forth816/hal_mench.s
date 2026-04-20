@@ -158,6 +158,50 @@ PUBLIC hal_ungetch
 	rts
 ENDPUBLIC
 
+; hal_putahex - prints low eight bits of the accumulator in hex to the console.
+; Inputs:
+;   A - byte to print
+; Outputs:
+;   A - retained
+PUBLIC hal_putahex
+	pha
+	pha
+	lsr
+	lsr
+	lsr
+	lsr
+	jsr @print_nybble
+	pla
+	jsr @print_nybble
+	pla
+	rts
+
+@print_nybble:
+	and #LOWNIB
+	sed
+	clc
+	adc #$9990	        	; Produce $90-$99 or $00-$05
+	adc #$9940			; Produce $30-$39 or $41-$46
+	cld
+	jmp hal_putch
+ENDPUBLIC
+
+; hal_putchex - prints C as a 16 bit hex number to the console.
+; Inputs:
+;   C - number
+; Outputs:
+;   C - preserved
+PUBLIC hal_putchex
+	pha
+	pha
+	xba
+	jsr hal_putahex
+	pla
+	jsr hal_putahex
+	pla
+	rts
+ENDPUBLIC
+
 ; puts a character in A to console.
 ; Note: Resets DP to zero to allow monitor to work.
 PUBLIC hal_putch

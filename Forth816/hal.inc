@@ -22,6 +22,10 @@ HAL_INC = 1
 
 .import hal_ungetch	; returns a character to the terminal input buffer.
 
+.import hal_putahex     ; puts the low byte in C to console as hex
+
+.import hal_putchex     ; puts the word in C to console as hex
+
 .import hal_putch	; puts a character in A to console
 
 .import hal_setecho	; enable/disable character echo during line editing.

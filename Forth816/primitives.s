@@ -453,6 +453,11 @@ calc_depth:     TXA
         PUBLIC  UMSTAR_CODE
         .a16
         .i16
+                JSR UMSTAR_IMPL
+                NEXT
+        ENDPUBLIC
+
+        .proc UMSTAR_IMPL
                 LDA     0,X             ; u2 → TMPA (multiplier)
                 STA     TMPA
                 LDA     2,X             ; u1 → TMPB (multiplicand low)
@@ -515,8 +520,8 @@ calc_depth:     TXA
 .ifndef UNROLL
                 PLY                     ; restore IP
 .endif
-                NEXT
-        ENDPUBLIC
+                RTS
+        .endproc
 
 ;------------------------------------------------------------------------------
 ; UM/MOD ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
@@ -2716,7 +2721,11 @@ HEX_BODY:
         PUBLIC  TONUMBER_CODE
         .a16
         .i16
+                JSR     TONUMBER_IMPL
+                NEXT
+        ENDPUBLIC
 
+        .proc TONUMBER_IMPL
         LOC_U       = 1         ; character count
         LOC_ADDR    = 3         ; current char pointer
         LOC_UDHI    = 5         ; high cell of ud (0 until double support)
@@ -2813,8 +2822,7 @@ HEX_BODY:
                 PHD
                 LDA     #$0000          ; set Direct Page to $0000
                 TCD
-                LDY     #RTS_CFA_LIST   ; Use the RTS_CFA trampoline.
-                JSR     UMSTAR_CODE     ; ( ud_lo ud_hi )
+                JSR     UMSTAR_IMPL     ; ( ud_lo ud_hi )
                 PLD
 
                 ; Add digit to low cell, propagate carry to high cell
@@ -2855,8 +2863,8 @@ HEX_BODY:
                 TCS
                 PLY
                 PLD
-                NEXT
-        ENDPUBLIC
+                RTS
+        .endproc
 
 ;------------------------------------------------------------------------------
 ; NUMBER? ( c-addr -- n true | c-addr false )
@@ -2999,8 +3007,7 @@ HEX_BODY:
                 DEX
                 LDA     LOC_COUNT       ; u
                 STA     a:0,X           ; TOS = u
-                LDY     #RTS_CFA_LIST   ; RTS Trampoline
-                JSR     TONUMBER_CODE   ; ( ud_lo ud_hi c-addr u )
+                JSR     TONUMBER_IMPL   ; ( ud_lo ud_hi c-addr u )
 
                 ;--------------------------------------------------------------
                 ; Restore original BASE
