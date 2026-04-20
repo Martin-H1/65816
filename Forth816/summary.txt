@@ -92,7 +92,10 @@ requirements around using this technique.
 
 However, any primitive that uses zero page variables must have D=$0000, and
 any caller that has D pointing to a stack frame must save/restore D around
-such calls. TONUMBER_CODE is an example of this technique.
+such calls. TONUMBER_CODE is an example of this technique because it calls
+UMSTAR which uses page zero scratch variables. This includescalls via the
+RTS_CFA_LIST trampoline must be preceded by PHD/LDA #0/TCD and followed by
+PLD to ensure NEXT has D=$0000.
 
 Here are additional 65816 gotchas:
 
@@ -182,10 +185,9 @@ Result must be pushed to parameter stack before frame teardown since TSC
 clobbers A.
 Use $FF ^ F_HIDDEN not ~F_HIDDEN for byte complement — ca65 produces a large
 constant with ~.
-The FIG Forth "smudge bit" is equivalent to F_HIDDEN. Your REVEAL approach is
-cleaner than FIG's toggle-based SMUDGE.
+Any call via the trampoline must be preceded by PHD/LDA #0/TCD and followed by
+PLD to ensure NEXT has D=$0000.
 BRANCH and ZBRANCH use absolute addresses not offsets for branch targets.
-
 
 Debugging tools added:
 
@@ -200,7 +202,7 @@ TODO items carried forward:
 * FIND CFA offset calculation may need verification for words with padding.
 * +LOOP edge cases with negative/large steps need fixing
 * Double number support (>NUMBER upgrade)
-* Conditional statements ?DUP, CASE, OF, ENDOF, and ENDCASE.
-* Additional flow control words: LEAVE, AGAIN, and RECURSE.
+* Conditional statements CASE, OF, ENDOF, and ENDCASE.
+* Additional flow control words: LEAVE, and RECURSE.
 * Refactoring WORD to use PARSE.
-* Add CELL, CELLS, and BL
+

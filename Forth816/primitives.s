@@ -466,11 +466,6 @@ calc_depth:     TXA
         PUBLIC  UMSTAR_CODE
         .a16
         .i16
-                JSR UMSTAR_IMPL
-                NEXT
-        ENDPUBLIC
-
-        .proc UMSTAR_IMPL
                 LDA     0,X             ; u2 → TMPA (multiplier)
                 STA     TMPA
                 LDA     2,X             ; u1 → TMPB (multiplicand low)
@@ -533,8 +528,8 @@ calc_depth:     TXA
 .ifndef UNROLL
                 PLY                     ; restore IP
 .endif
-                RTS
-        .endproc
+                NEXT
+        ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; UM/MOD ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
@@ -2874,7 +2869,8 @@ HEX_BODY:
                 PHD
                 LDA     #$0000          ; set Direct Page to $0000
                 TCD
-                JSR     UMSTAR_IMPL     ; ( ud_lo ud_hi )
+                LDY     #RTS_CFA_LIST   ; use trampoline to RTS
+                JSR     UMSTAR_CODE     ; ( ud_lo ud_hi )
                 PLD
 
                 ; Add digit to low cell, propagate carry to high cell
