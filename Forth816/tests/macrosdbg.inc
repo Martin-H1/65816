@@ -29,6 +29,10 @@
 	lda #TIB_BASE
 	PUSH
 	lda #.strlen(str)
+	phy
+	ldy #U_SOURCELEN
+	sta (UP),Y			; SOURCE string length
+	ply
 	PUSH
 	jsr MOVE_CODE
 	phy
