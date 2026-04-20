@@ -16,6 +16,7 @@
 
 .import COLON_CODE
 .import MOVE_CODE
+.import TRACEON_CODE
 
 .importzp UP
 .importzp W
@@ -28,37 +29,101 @@ PUBLIC MAIN
 	jsr constantTest
 	jsr createDoesTest
 	jsr variableTest
+	jsr tickTest
+	jsr ifTest
+	jsr loopTest
+
+	; : test-nq 32 word number? . . ;
+	; test-nq cell
+	; create foo
+	; ' foo execute .s
+	; : konstant  create , does> @ ;
+	; 42 konstant answer
+	; answer .s
+	; : test-nq 32 word number? . . ;
+	; test-nq cell
+	; bl .                    \ should print 32
+	; 2 cells .               \ should print 4
+	; 3 cell+ .               \ should print 5
+	; 0 ?dup .s               \ should give <1> 0
+	; 5 ?dup .s               \ should give <2> 5 5
+	; : test-again  0 begin 1+ dup . dup 5 = until ;
+	; test-again              \ should print 1 2 3 4 5
 
 	TYPESTRCR "Compiler test - exit!"
 	rts
 ENDPUBLIC
 
 .proc colonTest
-	MOVE_TIB "  : foo 42 ; foo                "
+	MOVE_TIB ": foo 42 ; foo"
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
-	TYPESTR_DOT "Compile test of ': foo 32 ;  foo .' (expect 42) = "
+	TYPESTR_DOT "': foo 42 ; foo .' (expect 42) = "
 	rts
 .endproc
 
 .proc constantTest
-	MOVE_TIB "55 constant limit limit         "
+	MOVE_TIB "55 constant limit limit"
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
-	TYPESTR_DOT "Compile test of '55 constant limit limit' (expect 55) = "
+	TYPESTR_DOT "'55 constant limit limit' (expect 55) = "
 	rts
 .endproc
 
 .proc createDoesTest
-	MOVE_TIB ": kons create , does> @ ;   "
+	MOVE_TIB ": kons create , does> @ ;"
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
-	MOVE_TIB "55 kons limit   limit       "
+	MOVE_TIB "55 kons limit limit"
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
-	TYPESTR_DOT "Compile test of 'create does' (expect 55) = "
+	TYPESTR_DOT "'create does' (expect 55) = "
 	rts
 .endproc
 
 .proc variableTest
-	MOVE_TIB "VARIABLE DATE 12 DATE ! DATE @  "
+	MOVE_TIB "VARIABLE DATE 12 DATE ! DATE @"
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
-	TYPESTR_DOT "Compile test of 'VARIABLE DATE 12 DATE ! DATE @' (expect 12) = "
+	TYPESTR_DOT "'VARIABLE DATE 12 DATE ! DATE @' (expect 12) = "
+	rts
+.endproc
+
+.proc tickTest
+	MOVE_TIB "' dup"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOTHEX "'' dup .' (expect 4916) = "
+
+	MOVE_TIB ": bar ['] dup ; bar"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOTHEX "': bar ['] dup ; bar .' (expect 4916) = "
+
+	rts
+.endproc
+
+.proc ifTest
+	MOVE_TIB ": test1 1 if 99 then ; test1 "
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "': test1 1 if 99 then ; test1 .' (expect 99) = "
+
+	MOVE_TIB ": test2 0 0 if 99 then ; test2"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "': test2 0 if 99 then ; test2 .' (expect 0) = "
+
+	MOVE_TIB ": test3 1 if 99 else 42 then ; test3"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "': test3  1 if 99 else 42 then ; test3' (expect 99) = "
+
+	MOVE_TIB ": test4 0 if 99 else 42 then ; test4"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "': test4 0 if 99 else 42 then ; test4' (expect 42) = "
+
+	rts
+.endproc
+
+.proc loopTest
+	MOVE_TIB ": tst5  0 begin 1+ dup 5 = until ; tst5"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "': tst5  0 begin 1+ dup 5 = until ; tst5 .' (expect 5) = "
+
+	MOVE_TIB ": test7 0 5 0 do i + loop ; test7"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "': test7 0 5 0 do i + loop ; test7 .' (expect 10) = "
+
 	rts
 .endproc
