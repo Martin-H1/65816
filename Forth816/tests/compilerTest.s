@@ -32,21 +32,13 @@ PUBLIC MAIN
 	jsr tickTest
 	jsr ifTest
 	jsr loopTest
+	jsr cellsTest
+	jsr blDupTest
 
 	; : test-nq 32 word number? . . ;
 	; test-nq cell
-	; create foo
-	; ' foo execute .s
-	; : konstant  create , does> @ ;
-	; 42 konstant answer
-	; answer .s
 	; : test-nq 32 word number? . . ;
 	; test-nq cell
-	; bl .                    \ should print 32
-	; 2 cells .               \ should print 4
-	; 3 cell+ .               \ should print 5
-	; 0 ?dup .s               \ should give <1> 0
-	; 5 ?dup .s               \ should give <2> 5 5
 	; : test-again  0 begin 1+ dup . dup 5 = until ;
 	; test-again              \ should print 1 2 3 4 5
 
@@ -93,6 +85,13 @@ ENDPUBLIC
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
 	TYPESTR_DOTHEX "': bar ['] dup ; bar .' (expect 4916) = "
 
+	MOVE_TIB ": bar ['] dup ; bar"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOTHEX "': bar ['] dup ; bar .' (expect 4916) = "
+
+	; create foo
+	; ' foo execute .s
+
 	rts
 .endproc
 
@@ -124,6 +123,48 @@ ENDPUBLIC
 	MOVE_TIB ": test7 0 5 0 do i + loop ; test7"
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
 	TYPESTR_DOT "': test7 0 5 0 do i + loop ; test7 .' (expect 10) = "
+
+	rts
+.endproc
+
+.proc functionTest
+	MOVE_TIB ": kons create , does> @ ; 42 kons ans ans"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "': kons create , does> @ ; 4 kons ans ans' (expect 4) = "
+
+	rts
+.endproc
+
+.proc cellsTest
+	MOVE_TIB "cell"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "'cell .' (expect 2) = "
+
+	MOVE_TIB "2 cells"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "'2 cells .' (expect 4) = "
+
+	MOVE_TIB "3 cell+"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "'3 cell+ .' (expect 5) = "
+
+	rts
+.endproc
+
+.proc blDupTest
+	MOVE_TIB "bl"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "'bl .' (expect 32) = "
+
+	MOVE_TIB "0 ?dup"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "'0 ?dup' (expect 0) = "
+
+	TYPESTR "'5 ?dup .s' (expect 5 5) = "
+	MOVE_TIB "5 ?dup .s"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+
+	jsr CR_CODE
 
 	rts
 .endproc
