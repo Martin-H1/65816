@@ -59,9 +59,22 @@
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; ?DUP  ( x -- 0 | x x )
+; https://forth-standard.org/standard/core/qDUP
+;------------------------------------------------------------------------------
+        HEADER  "?DUP", QDUP_ENTRY, QDUP_CFA, 0, DUP_ENTRY
+        CODEPTR DOCOL
+        .word   DUP_CFA
+        .word   ZBRANCH_CFA
+        .word   QDUP_DONE
+        .word   DUP_CFA
+QDUP_DONE:
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; DROP ( a -- )
 ;------------------------------------------------------------------------------
-        HEADER  "DROP", DROP_ENTRY, DROP_CFA, 0, DUP_ENTRY
+        HEADER  "DROP", DROP_ENTRY, DROP_CFA, 0, QDUP_ENTRY
         CODEPTR DROP_CODE
         PUBLIC  DROP_CODE
         .a16
@@ -2509,13 +2522,52 @@ HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
 ; Place char, the value of the first character of name, on the stack.
 ; https://forth-standard.org/standard/core/BracketCHAR
 ;------------------------------------------------------------------------------
-HEADER  "[CHAR]", BRACKCHAR_ENTRY, BRACKCHAR_CFA, F_IMMEDIATE, CHAR_ENTRY
+        HEADER  "[CHAR]", BRACKCHAR_ENTRY, BRACKCHAR_CFA, F_IMMEDIATE, CHAR_ENTRY
         CODEPTR DOCOL
         .word   CHAR_CFA                ; ( char )
         .word   LIT_CFA
         .word   LIT_CFA
         .word   COMMA_CFA               ; compile LIT
         .word   COMMA_CFA               ; compile char value
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; BL ( -- ' ' )
+; https://forth-standard.org/standard/core/BL
+;------------------------------------------------------------------------------
+        HEADER  "BL", BL_ENTRY, BL_CFA, 0, BRACKCHAR_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   ' '
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; CELL ( -- 2 )
+;------------------------------------------------------------------------------
+        HEADER  "CELL", CELL_ENTRY, CELL_CFA, 0, BL_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   2
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; CELLS ( n -- 2 * n )
+;------------------------------------------------------------------------------
+        HEADER  "CELLS", CELLS_ENTRY, CELLS_CFA, 0, CELL_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   2
+        .word   STAR_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; CELL+ ( n -- 2 * n )
+;------------------------------------------------------------------------------
+        HEADER  "CELL+", CELLPLUS_ENTRY, CELLPLUS_CFA, 0, CELLS_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -2532,7 +2584,7 @@ HEADER  "[CHAR]", BRACKCHAR_ENTRY, BRACKCHAR_CFA, F_IMMEDIATE, CHAR_ENTRY
 ;   LOC_UP    = 13,S  local UP
 ;   (saved IP at 15,S, pushed first by PHY)
 ;------------------------------------------------------------------------------
-        HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, BRACKCHAR_ENTRY
+        HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, CELLPLUS_ENTRY
         CODEPTR WORD_CODE
         PUBLIC  WORD_CODE
         .a16
@@ -4572,6 +4624,16 @@ TICK_ERR:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+;------------------------------------------------------------------------------
+        HEADER  "AGAIN", AGAIN_ENTRY, AGAIN_CFA, F_IMMEDIATE, UNTIL_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   BRANCH_CFA
+        .word   COMMA_CFA              ; compile BRANCH
+        .word   COMMA_CFA              ; compile BEGIN address as target
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; WHILE Interpretation: Undefined. Compilation: ( C: dest -- orig dest )
 ; Put the location of a new unresolved forward reference orig onto the control
 ; flow stack, under the existing dest. Append the run-time semantics given
@@ -4582,7 +4644,7 @@ TICK_ERR:
 ; the resolution of orig.
 ; https://forth-standard.org/standard/core/WHILE
 ;------------------------------------------------------------------------------
-HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, F_IMMEDIATE, UNTIL_ENTRY
+HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, F_IMMEDIATE, AGAIN_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA                 ; compile ZBRANCH
         .word   ZBRANCH_CFA
