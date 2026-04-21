@@ -19,8 +19,9 @@ $0400 - $04FF   User Area
                 +$0A  >IN          parse offset
                 +$0C  SOURCE-LEN   current source length
                 +$0E  HANDLER      exception handler
-$0500-$05FF     Terminal Input Buffer (TIB)
-$0600-$7EFF     RAM Dictionary (user definitions grow upward)
+$0500 - $05FF   Scratch PAD area
+$0600 - $06FF   Terminal Input Buffer (TIB)
+$0700 - $7EFF   RAM Dictionary (user definitions grow upward) 
 $8000 - $FFFF   ROM (kernel primitives, core word set)
 
 The Forth is written using the CA65 assembler with the following register
@@ -205,14 +206,6 @@ TODO items carried forward:
 * Conditional statements CASE, OF, ENDOF, and ENDCASE.
 * Completing LEAVE support. Last session left LEAVE with bugs.
 * Refactoring WORD to use PARSE.
-* Stack underflow crashes the interpreter because it overwrites the User Area.
-  Underflow handling is important. But I am uncertain of the best method:
-    - Refactor INX/INX and DEX/DEX pairs to use the DROP and ADVANCE macros,
-      and add a limit check with JMP ABORT on error. Computationally expensive.
-    - Find a critical section of the interpreter and put bounds checking and
-      ABORT call there.
-    - Add a memory protection area between the bottom of the stack and the
-      user area. Let the user notice when TOS is negative.
 * Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
     - Replace INX/INX and DEX/DEX pairs with DROP and ADVANCE to hide cell size
     - ADC #2 / SBC #2 used for cell arithmetic
