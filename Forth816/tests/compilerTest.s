@@ -34,6 +34,7 @@ PUBLIC MAIN
 	jsr loopTest
 	jsr cellsTest
 	jsr blDupTest
+	jsr recurseTest
 
 	; : test-nq 32 word number? . . ;
 	; test-nq cell
@@ -166,5 +167,12 @@ ENDPUBLIC
 
 	jsr CR_CODE
 
+	rts
+.endproc
+
+.proc recurseTest
+	MOVE_TIB ": factorial dup 1 > if dup 1- recurse * then ; 5 factorial"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "': factorial dup 1 > if dup 1- recurse * then ; 5 factorial' (expect 120) = "
 	rts
 .endproc

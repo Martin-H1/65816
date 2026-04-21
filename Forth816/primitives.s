@@ -4713,6 +4713,37 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         .word   COMMA_CFA               ; compile loop top address
         .word   EXIT_CFA
 
+HEADER  "LATEST>CFA", LATESTCFA_ENTRY, LATESTCFA_CFA, 0, LOOP_ENTRY
+        CODEPTR DOCOL
+        .word   LATEST_CFA
+        .word   FETCH_CFA               ; ( entry )
+        .word   DUP_CFA                 ; ( entry entry )
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA                ; ( entry entry+2 )
+        .word   CFETCH_CFA              ; ( entry flags|len )
+        .word   LIT_CFA
+        .word   F_LENMASK
+        .word   AND_CFA                 ; ( entry namelen )
+        .word   SWAP_CFA                ; ( namelen entry )
+        .word   LIT_CFA
+        .word   3
+        .word   PLUS_CFA                ; ( namelen entry+3 )
+        .word   PLUS_CFA                ; ( entry+3+namelen )
+        .word   LIT_CFA
+        .word   1
+        .word   PLUS_CFA                ; ( +1 )
+        .word   LIT_CFA
+        .word   $FFFE
+        .word   AND_CFA                 ; ( CFA aligned )
+        .word   EXIT_CFA
+
+HEADER  "RECURSE", RECURSE_ENTRY, RECURSE_CFA, F_IMMEDIATE, LATESTCFA_ENTRY
+        CODEPTR DOCOL
+        .word   LATESTCFA_CFA           ; ( CFA of current word )
+        .word   COMMA_CFA               ; compile it into definition
+        .word   EXIT_CFA
+
 .ifdef DEBUG
 ;------------------------------------------------------------------------------
 ; TRACEOUT ( -- ) Prints current IP to console in hex.
@@ -4733,7 +4764,7 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 ;------------------------------------------------------------------------------
 ; TRACEON ( -- ) enable execution tracing
 ;------------------------------------------------------------------------------
-        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, LOOP_ENTRY
+        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, RECURSE_ENTRY
         CODEPTR TRACEON_CODE
         PUBLIC  TRACEON_CODE
         .a16
@@ -4764,5 +4795,5 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 .ifdef DEBUG
 	LAST_WORD = TRACEOFF_ENTRY
 .else
-	LAST_WORD = LOOP_ENTRY
+	LAST_WORD = RECURSE_ENTRY
 .endif
