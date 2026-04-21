@@ -203,6 +203,20 @@ TODO items carried forward:
 * +LOOP edge cases with negative/large steps need fixing
 * Double number support (>NUMBER upgrade)
 * Conditional statements CASE, OF, ENDOF, and ENDCASE.
-* Additional flow control words: LEAVE, and RECURSE.
+* Completing LEAVE support. Last session left LEAVE with bugs.
 * Refactoring WORD to use PARSE.
-
+* Stack underflow crashes the interpreter because it overwrites the User Area.
+  Underflow handling is important. But I am uncertain of the best method:
+    - Transition all pushes and pops to use the PUSH and POP macros and add a
+      limit check and JMP ABORT. Computationally expensive.
+    - Find a critical section of the interpreter and put bounds checking and
+      ABORT call there.
+    - Add a memory protection area between the bottom of the stack and the
+      user area. Let the user notice when TOS is negative.
+* Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
+    - All INX/INX and DEX/DEX pairs replaced by a macro
+    - ADC #2 / SBC #2 used for cell arithmetic
+    - Frame layout offsets like LOC_ADDR = 1, LOC_PTR = 3 etc.
+      these could be expressed as LOC_ADDR = 1, LOC_PTR = LOC_ADDR + CELL_SIZE
+    - The CFA alignment rounding in FIND and DOCREATE
+    - >NUMBER and NUMBER? stack manipulation
