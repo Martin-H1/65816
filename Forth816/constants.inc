@@ -11,6 +11,7 @@ CONSTANTS_INC = 1
 
 ; Stack addresses
 PSP_INIT        = $03FF         ; Parameter stack initial pointer
+PSP_EMPTY       = $0400         ; Parameter stack pointer underflow
 
 ; User area base and offsets
 UP_BASE         = $0400

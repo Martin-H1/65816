@@ -21,6 +21,7 @@ F_LENMASK       = $1F
 ;------------------------------------------------------------------------------
 
 ; Stack words
+        .global PSP_UNDERFLOW_HANDLER
         .global DUP_CFA
         .global DROP_CFA
         .global SWAP_CFA
