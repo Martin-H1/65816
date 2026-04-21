@@ -125,6 +125,12 @@ ENDPUBLIC
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
 	TYPESTR_DOT "': test7 0 5 0 do i + loop ; test7 .' (expect 10) = "
 
+
+	TYPESTR "test leave' (expect 0 1 2 3 4 5) = "
+	MOVE_TIB ": tstleave 10 0 do i dup . 5 = if leave then loop ; tstleave"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
 	rts
 .endproc
 

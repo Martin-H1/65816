@@ -23,6 +23,7 @@ U_TOIN          = $0A           ; >IN parse offset      (cell)
 U_SOURCELEN     = $0C           ; Source string length  (cell)
 U_HANDLER       = $0E           ; Exception handler     (cell)
 U_PAD           = $10           ; PAD address in user area
+U_LEAVECHAIN    = $12           ; leave chain for DO/LOOP
 
 ; Scratch pad buffer
 PAD_BASE        = $0500         ; PAD at $0500

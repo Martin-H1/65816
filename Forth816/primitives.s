@@ -304,7 +304,6 @@ calc_depth:     TXA
                 INX
                 INX                     ; drop n
                 STA     SCRATCH0        ; save n
-
                 CMP     #00             ; n=0, nothing to do
                 BEQ     @return
 
@@ -2071,6 +2070,23 @@ calc_depth:     TXA
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; LEAVE-CHAIN ( -- addr ) address of leave chain variable.
+;------------------------------------------------------------------------------
+        HEADER  "LEAVE-CHAIN", LEAVECHAIN_ENTRY, LEAVECHAIN_CFA, F_HIDDEN, PAD_ENTRY
+        CODEPTR LEAVECHAIN_CODE
+        PUBLIC  LEAVECHAIN_CODE
+        .a16
+        .i16
+                LDA     UP
+                CLC
+                ADC     #U_LEAVECHAIN
+                DEX
+                DEX
+                STA     0,X
+                NEXT
+        ENDPUBLIC
+
 ;==============================================================================
 ; SECTION 11: STRING AND PARSE WORDS
 ;==============================================================================
@@ -2078,7 +2094,7 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
 ; COUNT ( addr -- addr+1 len ) counted string to addr/len
 ;------------------------------------------------------------------------------
-        HEADER  "COUNT", COUNT_ENTRY, COUNT_CFA, 0, PAD_ENTRY
+        HEADER  "COUNT", COUNT_ENTRY, COUNT_CFA, 0, LEAVECHAIN_ENTRY
         CODEPTR COUNT_CODE
         PUBLIC  COUNT_CODE
         .a16
@@ -4736,10 +4752,20 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 ;------------------------------------------------------------------------------
         HEADER  "DO", DO_ENTRY, DO_CFA, F_IMMEDIATE, REPEAT_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; compile (DO)
+        .word   LIT_CFA
         .word   DODO_CFA
-        .word   COMMA_CFA
-        .word   HERE_CFA                ; push loop top address
+        .word   COMMA_CFA               ; compile (DO)
+        ; Save old LEAVE-CHAIN on stack, init to 0
+        .word   LEAVECHAIN_CFA          ; addr of LEAVE-CHAIN in user area
+        .word   DUP_CFA                 ; ( lc-addr lc-addr )
+        .word   FETCH_CFA               ; ( lc-addr old-lc )
+        .word   SWAP_CFA                ; ( old-lc lc-addr )
+        .word   LIT_CFA
+        .word   0
+        .word   SWAP_CFA                ; ( old-lc 0 lc-addr )
+        .word   STORE_CFA               ; LEAVE-CHAIN = 0
+                                        ; ( old-lc )
+        .word   HERE_CFA                ; ( old-lc begin-addr )
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -4757,13 +4783,64 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 ;------------------------------------------------------------------------------
         HEADER  "LOOP", LOOP_ENTRY, LOOP_CFA, F_IMMEDIATE, DO_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; compile (LOOP)
+        ; Stack: ( old-lc begin-addr )
+        .word   LIT_CFA
         .word   DOLOOP_CFA
-        .word   COMMA_CFA
-        .word   COMMA_CFA               ; compile loop top address
+        .word   COMMA_CFA               ; compile (LOOP)
+        .word   COMMA_CFA               ; compile begin-addr
+                                        ; ( old-lc )
+        ; Backpatch LEAVE-CHAIN
+        .word   LEAVECHAIN_CFA          ; ( old-lc lc-addr )
+        .word   FETCH_CFA               ; ( old-lc lc )
+LOOP_PATCH:
+        .word   DUP_CFA                 ; ( old-lc lc lc )
+        .word   ZBRANCH_CFA
+        .word   LOOP_DONE               ; lc=0, done
+        .word   DUP_CFA                 ; ( old-lc lc lc )
+        .word   FETCH_CFA               ; ( old-lc lc next-lc )
+        .word   SWAP_CFA                ; ( old-lc next-lc lc )
+        .word   HERE_CFA                ; ( old-lc next-lc lc here )
+        .word   SWAP_CFA                ; ( old-lc next-lc here lc )
+        .word   STORE_CFA               ; *lc = here
+                                        ; ( old-lc next-lc )
+        .word   BRANCH_CFA
+        .word   LOOP_PATCH
+LOOP_DONE:
+        .word   DROP_CFA                ; drop lc=0
+                                        ; ( old-lc )
+        ; Restore old LEAVE-CHAIN
+        .word   LEAVECHAIN_CFA          ; ( old-lc lc-addr )
+        .word   STORE_CFA               ; LEAVE-CHAIN = old-lc
         .word   EXIT_CFA
 
-HEADER  "LATEST>CFA", LATESTCFA_ENTRY, LATESTCFA_CFA, 0, LOOP_ENTRY
+;------------------------------------------------------------------------------
+; https://forth-standard.org/standard/core/LEAVE
+;------------------------------------------------------------------------------
+        HEADER  "LEAVE", LEAVE_ENTRY, LEAVE_CFA, F_IMMEDIATE, LOOP_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   UNLOOP_CFA
+        .word   COMMA_CFA               ; compile UNLOOP
+        .word   LIT_CFA
+        .word   BRANCH_CFA
+        .word   COMMA_CFA               ; compile BRANCH
+        ; Link new placeholder into LEAVE-CHAIN
+        .word   LEAVECHAIN_CFA          ; ( addr-of-LEAVE-CHAIN )
+        .word   DUP_CFA                 ; ( lc-addr lc-addr )
+        .word   FETCH_CFA               ; ( lc-addr old-lc )
+        .word   COMMA_CFA               ; compile old-lc as placeholder
+        .word   HERE_CFA                ; ( lc-addr here )
+        .word   LIT_CFA
+        .word   2
+        .word   MINUS_CFA               ; ( lc-addr placeholder-addr )
+        .word   SWAP_CFA                ; ( placeholder-addr lc-addr )
+        .word   STORE_CFA               ; LEAVE-CHAIN = placeholder-addr
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+;
+;------------------------------------------------------------------------------
+        HEADER  "LATEST>CFA", LATESTCFA_ENTRY, LATESTCFA_CFA, 0, LEAVE_ENTRY
         CODEPTR DOCOL
         .word   LATEST_CFA
         .word   FETCH_CFA               ; ( entry )
@@ -4788,6 +4865,9 @@ HEADER  "LATEST>CFA", LATESTCFA_ENTRY, LATESTCFA_CFA, 0, LOOP_ENTRY
         .word   AND_CFA                 ; ( CFA aligned )
         .word   EXIT_CFA
 
+;------------------------------------------------------------------------------
+;
+;------------------------------------------------------------------------------
 HEADER  "RECURSE", RECURSE_ENTRY, RECURSE_CFA, F_IMMEDIATE, LATESTCFA_ENTRY
         CODEPTR DOCOL
         .word   LATESTCFA_CFA           ; ( CFA of current word )
