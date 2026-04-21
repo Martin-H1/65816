@@ -288,6 +288,56 @@ calc_depth:     TXA
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; ROLL ( xu xu-1 ... x0 u -- xu-1 ... x0 xu )
+; Remove u. Rotate u+1 items on the top of the stack. An ambiguous condition
+; exists if there are less than u+2 items on the stack before ROLL is executed.
+;------------------------------------------------------------------------------
+        HEADER  "ROLL", ROLL_ENTRY, ROLL_CFA, 0, PICK_ENTRY
+        CODEPTR ROLL_CODE
+        PUBLIC  ROLL_CODE
+        .a16
+        .i16
+                PHY                     ; save IP
+
+                LDA     a:0,X           ; fetch n
+                INX
+                INX                     ; drop n
+                STA     SCRATCH0        ; save n
+
+                CMP     #00             ; n=0, nothing to do
+                BEQ     @return
+
+                ASL     SCRATCH0        ; SCRATCH0 = n*2 (byte offset)
+
+                ; Fetch x_n
+                TXA
+                CLC
+                ADC     SCRATCH0
+                STA     SCRATCH1        ; SCRATCH1 = addr of x_n
+                LDA     (SCRATCH1)      ; fetch x_n
+                PHA                     ; save on hw stack
+
+                ; Shift x_0..x_n-1 up by one cell
+@shift_loop:
+                LDA     SCRATCH1
+                SEC
+                SBC     #2
+                STA     SCRATCH1        ; point to next lower item
+                LDA     (SCRATCH1)      ; fetch it
+                LDY     #2
+                STA     (SCRATCH1),Y    ; store 2 bytes higher
+                TXA
+                CMP     SCRATCH1        ; reached PSP (x_0 position)?
+                BNE     @shift_loop
+
+                PLA                     ; restore x_n
+                STA     a:0,X           ; store at TOS (x_0 position)
+
+@return:        PLY                     ; restore IP
+                NEXT
+        ENDPUBLIC
+
 ;==============================================================================
 ; SECTION 2: RETURN STACK PRIMITIVES
 ;==============================================================================
@@ -295,7 +345,7 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
 ; >R ( a -- ) (R: -- a)
 ;------------------------------------------------------------------------------
-        HEADER  ">R", TOR_ENTRY, TOR_CFA, 0, PICK_ENTRY
+        HEADER  ">R", TOR_ENTRY, TOR_CFA, 0, ROLL_ENTRY
         CODEPTR TOR_CODE
         PUBLIC  TOR_CODE
         .a16
