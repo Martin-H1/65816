@@ -4773,17 +4773,15 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 ;------------------------------------------------------------------------------
 ; https://forth-standard.org/standard/core/LEAVE
 ;------------------------------------------------------------------------------
-        HEADER  "LEAVE", LEAVE_ENTRY, LEAVE_CFA, F_IMMEDIATE, LOOP_ENTRY
+        HEADER  "LEAVE", LEAVE_ENTRY, LEAVE_CFA, 0, LOOP_ENTRY
         CODEPTR LEAVE_CODE
         PUBLIC  LEAVE_CODE
         .a16
         .i16
-        LDA 5,S                ; LEAVE taarget
-	JSR hal_putchex
-                NEXT
                 PLA                     ; Discard index
                 PLA                     ; Discard limit
-                PLY                     ; Load new IP
+                PLY                     ; Load new IP (leave target)
+                NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
