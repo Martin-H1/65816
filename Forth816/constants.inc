@@ -13,8 +13,11 @@ CONSTANTS_INC = 1
 PSP_INIT        = $03FF         ; Parameter stack initial pointer
 PSP_EMPTY       = $0400         ; Parameter stack pointer underflow
 
+; Scratch pad buffer
+PAD_BASE        = $0400         ; PAD at $0400
+
 ; User area base and offsets
-UP_BASE         = $0400
+UP_BASE         = $0500
 U_BASE          = $00           ; Numeric base          (cell)
 U_STATE         = $02           ; Compile state         (cell, 0=interp)
 U_DP            = $04           ; Dictionary pointer    (cell)
@@ -25,9 +28,6 @@ U_SOURCELEN     = $0C           ; Source string length  (cell)
 U_HANDLER       = $0E           ; Exception handler     (cell)
 U_PAD           = $10           ; PAD address in user area
 U_LEAVECHAIN    = $12           ; leave chain for DO/LOOP
-
-; Scratch pad buffer
-PAD_BASE        = $0500         ; PAD at $0500
 
 ; Terminal Input Buffer
 TIB_BASE        = $0600

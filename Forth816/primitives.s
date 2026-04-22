@@ -278,7 +278,8 @@ calc_depth:     TXA
                 INC     A
                 CLC
                 ADC     #PSP_INIT       ; PSP_INIT - result / 2
-                LSR     A               ; Divide by 2 (cells)
+                CMP     #$8000          ; if bit 15 is set, carry = 1
+                ROR     A               ; Divide by 2 (cells)
                 RTS
 	ENDPUBLIC
 
@@ -4139,15 +4140,19 @@ print_udec:
 
                 ; Print stack depth if nonzero
                 JSR     DEPTH_CODE::calc_depth
+                PHA
                 BEQ     @skip           ; no items on stack.
                 STA     SCRATCH0
-                JSR     DOT_CODE::print_udec
+                JSR     DOT_CODE::print_sdec
 
 @skip:          LDA     #@crlf
                 JSR     hal_cputs
+                PLA
+                BMI     @underflow
                 NEXT
-        @prompt: .asciiz "ok "
-        @crlf: .byte C_RETURN, L_FEED, 0
+@underflow:     JMP     PSP_UNDERFLOW_HANDLER
+@prompt:        .asciiz " ok "
+@crlf:          .byte C_RETURN, L_FEED, 0
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------

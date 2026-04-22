@@ -21,20 +21,22 @@ MACROS_INC = 1
 .macro  NEXT
 .ifdef DEBUG
         JSR     TRACEOUT
+        ; --- Stack underflow guard ---
+        CPX     #PSP_EMPTY      ; PSP >= PSP_EMPTY?
+        .local @underflow
+        BCS     @underflow
 .endif
         LDA     0,Y             ; A = *IP (fetch CFA of next word)
         INY                     ; IP += 1
         INY                     ; IP += 2  (advance past this cell)
         STA     W               ; W = CFA
-        ; --- Stack underflow guard ---
-        CPX     #PSP_EMPTY      ; PSP >= PSP_EMPTY?
-        .local @underflow
-        BCS     @underflow
         LDA     (W)             ; A = *W (fetch code pointer)
         STA     SCRATCH0
         JMP     (SCRATCH0)      ; Jump to code
+.ifdef DEBUG
 @underflow:
         JMP     PSP_UNDERFLOW_HANDLER
+.endif
 .endmacro
 
 ;------------------------------------------------------------------------------
