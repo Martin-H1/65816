@@ -1723,6 +1723,10 @@ calc_depth:     TXA
         PUBLIC  DODO_CODE
         .a16
         .i16
+                LDA     0,Y             ; Load leave target
+                PHA                     ; Push leave target onto return stack
+                INY                     ; Advance past leave target
+                INY
                 LDA     2,X             ; limit
                 PHA                     ; Push limit onto return stack
                 LDA     0,X             ; index
@@ -1756,6 +1760,7 @@ calc_depth:     TXA
                 TAY                     ; IP = loop top
                 NEXT
 @done:                                  ; Drop limit, don't push index back
+                PLA                     ; Drop leave target
                 INY                     ; Skip branch target
                 INY
                 NEXT
@@ -1790,7 +1795,8 @@ calc_depth:     TXA
                 LDA     0,Y             ; Branch back
                 TAY
                 NEXT
-@done:          INY
+@done:          PLA                     ; Drop leave target
+                INY
                 INY
                 NEXT
         ENDPUBLIC
@@ -1805,6 +1811,7 @@ calc_depth:     TXA
         .i16
                 PLA                     ; Discard index
                 PLA                     ; Discard limit
+                PLA                     ; Discard leave target
                 NEXT
         ENDPUBLIC
 
@@ -1816,10 +1823,8 @@ calc_depth:     TXA
         PUBLIC  I_CODE
         .a16
         .i16
-                ; Return stack: TOS=index NOS=limit NOS2=saved_IP
-                ; Pop index, copy, push back
-                PLA                     ; index
-                PHA                     ; Push back
+                ; Return stack: TOS=index NOS=limit
+                LDA     1,S             ; Index I
                 DEX
                 DEX
                 STA     0,X
@@ -1834,30 +1839,14 @@ calc_depth:     TXA
         PUBLIC  J_CODE
         .a16
         .i16
-                ; Return stack (top to bottom):
-                ;   inner_index, inner_limit, saved_IP, outer_index, outer_limit
-                ; Pop 4 cells to get to outer index
-                PLA                     ; inner index
-                STA     SCRATCH0
-                PLA                     ; inner limit
-                STA     SCRATCH1
-                PLA                     ; saved IP
-                STA     TMPA
-                PLA                     ; outer index
-                STA     TMPB
-                ; Push them all back
-                PHA                     ; outer index back
-                LDA     TMPA
-                PHA
-                LDA     SCRATCH1
-                PHA
-                LDA     SCRATCH0
-                PHA
-                ; Push outer index to param stack
-                LDA     TMPB
+        LOC_J     = 7                   ; outer index
+        LOC_LEAVE = 5                   ; inner leave target
+        LOC_LIMIT = 3                   ; inner limit
+        LOC_I     = 1                   ; inner index
+                LDA     LOC_J,S         ; Peek J from RSP
                 DEX
                 DEX
-                STA     0,X
+                STA     0,X             ; Push outer index to param stack
                 NEXT
         ENDPUBLIC
 
@@ -2085,23 +2074,6 @@ calc_depth:     TXA
                 NEXT
         ENDPUBLIC
 
-;------------------------------------------------------------------------------
-; LEAVE-CHAIN ( -- addr ) address of leave chain variable.
-;------------------------------------------------------------------------------
-        HEADER  "LEAVE-CHAIN", LEAVECHAIN_ENTRY, LEAVECHAIN_CFA, F_HIDDEN, PAD_ENTRY
-        CODEPTR LEAVECHAIN_CODE
-        PUBLIC  LEAVECHAIN_CODE
-        .a16
-        .i16
-                LDA     UP
-                CLC
-                ADC     #U_LEAVECHAIN
-                DEX
-                DEX
-                STA     0,X
-                NEXT
-        ENDPUBLIC
-
 ;==============================================================================
 ; SECTION 11: STRING AND PARSE WORDS
 ;==============================================================================
@@ -2109,7 +2081,7 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
 ; COUNT ( addr -- addr+1 len ) counted string to addr/len
 ;------------------------------------------------------------------------------
-        HEADER  "COUNT", COUNT_ENTRY, COUNT_CFA, 0, LEAVECHAIN_ENTRY
+        HEADER  "COUNT", COUNT_ENTRY, COUNT_CFA, 0, PAD_ENTRY
         CODEPTR COUNT_CODE
         PUBLIC  COUNT_CODE
         .a16
@@ -2333,6 +2305,7 @@ SQUOTE_CFA:
         .word   LIT_CFA
         .word   0
         .word   DODO_CFA                ; runtime DO  ( limit index -- )
+        .word   0                       ; unused leave target
 SQUOTE_CLOOP:
         .word   DUP_CFA
         .word   I_CFA
@@ -2438,6 +2411,7 @@ DOTQUOTE_CFA:
         .word   LIT_CFA
         .word   0
         .word   DODO_CFA                ; loop u times
+        .word   0                       ; unused leave target
 DOTQUOTE_CLOOP:
         .word   DUP_CFA
         .word   I_CFA
@@ -2564,6 +2538,7 @@ ABORTQUOTE_COMPILE:
         .word   LIT_CFA
         .word   0
         .word   DODO_CFA                ; U 0 DO
+        .word   0                       ; unused leave target
 ABORTQUOTE_CLOOP:
         .word   DUP_CFA
         .word   I_CFA
@@ -4635,11 +4610,8 @@ TICK_ERR:
 
 ;------------------------------------------------------------------------------
 ; THEN Interpretation: Undefined. Compilation: ( C: orig --  )
-; Append the run-time semantics given below to the current definition. Resolve
-; the forward reference orig using the location of the appended run-time
-; semantics.
-; Run-time: ( -- )
-; Continue execution.
+; Resolve the IF forward reference orig using the HERE location.
+; Run-time: ( -- ) Continue execution.
 ; https://forth-standard.org/standard/core/THEN
 ;------------------------------------------------------------------------------
         HEADER  "THEN", THEN_ENTRY, THEN_CFA, F_IMMEDIATE, IF_ENTRY
@@ -4774,87 +4746,45 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         .word   LIT_CFA
         .word   DODO_CFA
         .word   COMMA_CFA               ; compile (DO)
-        ; Save old LEAVE-CHAIN on stack, init to 0
-        .word   LEAVECHAIN_CFA          ; addr of LEAVE-CHAIN in user area
-        .word   DUP_CFA                 ; ( lc-addr lc-addr )
-        .word   FETCH_CFA               ; ( lc-addr old-lc )
-        .word   SWAP_CFA                ; ( old-lc lc-addr )
-        .word   LIT_CFA
-        .word   0
-        .word   SWAP_CFA                ; ( old-lc 0 lc-addr )
-        .word   STORE_CFA               ; LEAVE-CHAIN = 0
-                                        ; ( old-lc )
-        .word   HERE_CFA                ; ( old-lc begin-addr )
+        .word   HERE_CFA                ; push leave target address
+        .word   LIT_CFA                 ; compile placeholder 0
+        .word   0                       ; leave target
+        .word   COMMA_CFA
+        .word   HERE_CFA                ; push loop address
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; LOOP Interpretation: Undefined. Compilation: ( C: do-sys -- )
-; Append the run-time semantics given below to the current definition. Resolve
-; the destination of all unresolved occurrences of LEAVE between the location
-; given by do-sys and the next location for a transfer of control, to execute
-; the words following the LOOP.
-; Run-time: ( -- ) ( R: loop-sys1 -- | loop-sys2 )
-; An ambiguous condition exists if the loop control parameters are unavailable.
-; Add one to the loop index. If the loop index is then equal to the loop limit,
-; discard the loop parameters and continue execution immediately following the
-; loop. Otherwise continue execution at the beginning of the loop.
+; Append DOLOOP to the current defintion, pop and compile back branch test
+; and target. Patch the LEAVE target in the DO byte code section.
 ; https://forth-standard.org/standard/core/LOOP
 ;------------------------------------------------------------------------------
         HEADER  "LOOP", LOOP_ENTRY, LOOP_CFA, F_IMMEDIATE, DO_ENTRY
         CODEPTR DOCOL
-        ; Stack: ( old-lc begin-addr )
-        .word   LIT_CFA
+        .word   LIT_CFA                 ; compile (LOOP)
         .word   DOLOOP_CFA
-        .word   COMMA_CFA               ; compile (LOOP)
-        .word   COMMA_CFA               ; compile begin-addr
-                                        ; ( old-lc )
-        ; Backpatch LEAVE-CHAIN
-        .word   LEAVECHAIN_CFA          ; ( old-lc lc-addr )
-        .word   FETCH_CFA               ; ( old-lc lc )
-LOOP_PATCH:
-        .word   DUP_CFA                 ; ( old-lc lc lc )
-        .word   ZBRANCH_CFA
-        .word   LOOP_DONE               ; lc=0, done
-        .word   DUP_CFA                 ; ( old-lc lc lc )
-        .word   FETCH_CFA               ; ( old-lc lc next-lc )
-        .word   SWAP_CFA                ; ( old-lc next-lc lc )
-        .word   HERE_CFA                ; ( old-lc next-lc lc here )
-        .word   SWAP_CFA                ; ( old-lc next-lc here lc )
-        .word   STORE_CFA               ; *lc = here
-                                        ; ( old-lc next-lc )
-        .word   BRANCH_CFA
-        .word   LOOP_PATCH
-LOOP_DONE:
-        .word   DROP_CFA                ; drop lc=0
-                                        ; ( old-lc )
-        ; Restore old LEAVE-CHAIN
-        .word   LEAVECHAIN_CFA          ; ( old-lc lc-addr )
-        .word   STORE_CFA               ; LEAVE-CHAIN = old-lc
+        .word   COMMA_CFA
+        .word   COMMA_CFA               ; compile loop top address
+        .word   HERE_CFA                ; ( while-addr here )
+        .word   SWAP_CFA                ; ( here while-addr )
+        .word   STORE_CFA               ; backpatch LEAVE placeholder
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; https://forth-standard.org/standard/core/LEAVE
 ;------------------------------------------------------------------------------
         HEADER  "LEAVE", LEAVE_ENTRY, LEAVE_CFA, F_IMMEDIATE, LOOP_ENTRY
-        CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   UNLOOP_CFA
-        .word   COMMA_CFA               ; compile UNLOOP
-        .word   LIT_CFA
-        .word   BRANCH_CFA
-        .word   COMMA_CFA               ; compile BRANCH
-        ; Link new placeholder into LEAVE-CHAIN
-        .word   LEAVECHAIN_CFA          ; ( addr-of-LEAVE-CHAIN )
-        .word   DUP_CFA                 ; ( lc-addr lc-addr )
-        .word   FETCH_CFA               ; ( lc-addr old-lc )
-        .word   COMMA_CFA               ; compile old-lc as placeholder
-        .word   HERE_CFA                ; ( lc-addr here )
-        .word   LIT_CFA
-        .word   2
-        .word   MINUS_CFA               ; ( lc-addr placeholder-addr )
-        .word   SWAP_CFA                ; ( placeholder-addr lc-addr )
-        .word   STORE_CFA               ; LEAVE-CHAIN = placeholder-addr
-        .word   EXIT_CFA
+        CODEPTR LEAVE_CODE
+        PUBLIC  LEAVE_CODE
+        .a16
+        .i16
+        LDA 5,S                ; LEAVE taarget
+	JSR hal_putchex
+                NEXT
+                PLA                     ; Discard index
+                PLA                     ; Discard limit
+                PLY                     ; Load new IP
+        ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ;
