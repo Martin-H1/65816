@@ -1982,9 +1982,26 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; CURDEF ( -- addr ) address of current definition pointer in user area.
+;------------------------------------------------------------------------------
+        HEADER  "CURDEF", CURDEF_ENTRY, CURDEF_CFA, 0, CCOMMA_ENTRY
+        CODEPTR CURDEF_CODE
+        PUBLIC  CURDEF_CODE
+        .a16
+        .i16
+                LDA     UP
+                CLC
+                ADC     #U_CURDEF
+                DEX
+                DEX
+                STA     0,X
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; LATEST ( -- addr ) address of LATEST variable in user area
 ;------------------------------------------------------------------------------
-        HEADER  "LATEST", LATEST_ENTRY, LATEST_CFA, 0, CCOMMA_ENTRY
+        HEADER  "LATEST", LATEST_ENTRY, LATEST_CFA, 0, CURDEF_ENTRY
         CODEPTR LATEST_CODE
         PUBLIC  LATEST_CODE
         .a16
@@ -3789,7 +3806,11 @@ QUIT_LOOP:
                 NEXT
         ENDPUBLIC
 
-HEADER  "COMPILE-ONLY-ERROR", COMPILE_ONLY_ERROR_ENTRY, COMPILE_ONLY_ERROR_CFA, F_HIDDEN, FIND_ENTRY
+;------------------------------------------------------------------------------
+; COMPILE-ONLY-ERROR - compiled into compile only words to give an error when
+; used interactively.
+;------------------------------------------------------------------------------
+        HEADER  "COMPILE-ONLY-ERROR", COMPILE_ONLY_ERROR_ENTRY, COMPILE_ONLY_ERROR_CFA, F_HIDDEN, FIND_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   COMPILE_ONLY_MSG
@@ -4325,6 +4346,11 @@ WORDS_SKIP:
 
                 ; --- Update user area ---
 
+                ; CURDEF = CFA of new definition (current LOC_DP)
+                LDY     #U_CURDEF
+                LDA     LOC_DP
+                STA     (LOC_UP),Y
+
                 ; LATEST = address of new entry header (original addr)
                 LDY     #U_LATEST
                 LDA     LOC_ENTRY
@@ -4785,7 +4811,6 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         .word   STORE_CFA               ; backpatch LEAVE placeholder
         .word   EXIT_CFA
 
-
 ;------------------------------------------------------------------------------
 ; https://forth-standard.org/standard/core/PlusLOOP
 ;------------------------------------------------------------------------------
@@ -4815,40 +4840,14 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-;
+; RECURSE ( -- ) Compiles a pointer of the current word into itself.
+; See: recursive
 ;------------------------------------------------------------------------------
-        HEADER  "LATEST>CFA", LATESTCFA_ENTRY, LATESTCFA_CFA, 0, LEAVE_ENTRY
+        HEADER  "RECURSE", RECURSE_ENTRY, RECURSE_CFA, F_IMMEDIATE, LEAVE_ENTRY
         CODEPTR DOCOL
-        .word   LATEST_CFA
-        .word   FETCH_CFA               ; ( entry )
-        .word   DUP_CFA                 ; ( entry entry )
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA                ; ( entry entry+2 )
-        .word   CFETCH_CFA              ; ( entry flags|len )
-        .word   LIT_CFA
-        .word   F_LENMASK
-        .word   AND_CFA                 ; ( entry namelen )
-        .word   SWAP_CFA                ; ( namelen entry )
-        .word   LIT_CFA
-        .word   3
-        .word   PLUS_CFA                ; ( namelen entry+3 )
-        .word   PLUS_CFA                ; ( entry+3+namelen )
-        .word   LIT_CFA
-        .word   1
-        .word   PLUS_CFA                ; ( +1 )
-        .word   LIT_CFA
-        .word   $FFFE
-        .word   AND_CFA                 ; ( CFA aligned )
-        .word   EXIT_CFA
-
-;------------------------------------------------------------------------------
-;
-;------------------------------------------------------------------------------
-HEADER  "RECURSE", RECURSE_ENTRY, RECURSE_CFA, F_IMMEDIATE, LATESTCFA_ENTRY
-        CODEPTR DOCOL
-        .word   LATESTCFA_CFA           ; ( CFA of current word )
-        .word   COMMA_CFA               ; compile it into definition
+        .word   CURDEF_CFA
+        .word   FETCH_CFA              ; ( cfa )
+        .word   COMMA_CFA              ; compile into definition
         .word   EXIT_CFA
 
 .ifdef DEBUG
