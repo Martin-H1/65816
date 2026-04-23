@@ -1775,28 +1775,49 @@ calc_depth:     TXA
         PUBLIC  DOPLUSLOOP_CODE
         .a16
         .i16
-                LDA     0,X             ; step
+                LOC_IP      = 1         ; saved IP (our PHY)
+                LOC_INDEX   = 3         ; index
+                LOC_LIMIT   = 5         ; limit
+                LOC_LEAVE   = 7         ; leave target
+                PHY                     ; Save IP
+
+                ; Pop step from parameter stack
+                LDA     0,X
                 INX
                 INX
-                STA     SCRATCH1
-                PLA                     ; index
+                STA     SCRATCH1        ; step
+
+                ; old_diff = index - limit
+                LDA     LOC_INDEX,S
+                SEC
+                SBC     LOC_LIMIT,S
+                STA     SCRATCH0        ; old_diff
+
+                ; new_index = index + step, update frame
+                LDA     LOC_INDEX,S
                 CLC
-                ADC     SCRATCH1        ; index + step
-                STA     SCRATCH0
-                PLA                     ; limit
-                ; Check if we crossed limit
-                ; Done when (index-limit) XOR (new_index-limit) sign differs
-                CMP     SCRATCH0
-                BEQ     @done           ; index == limit → done
-                STA     TMPA            ; Save limit
-                PHA                     ; Push limit back
-                LDA     SCRATCH0
-                PHA                     ; Push new index back
-                LDA     0,Y             ; Branch back
-                TAY
+                ADC     SCRATCH1
+                STA     LOC_INDEX,S     ; new_index stored back into frame
+
+                ; new_diff = new_index - limit
+                SEC
+                SBC     LOC_LIMIT,S
+
+                ; Sign change or zero crossing
+                EOR     SCRATCH0
+                BMI     @done           ; Sign changed → done
+
+                ; Continue
+                PLY                     ; Restore IP (points to branch target)
+                LDA     0,Y             ; Fetch branch target
+                TAY                     ; IP = loop top
                 NEXT
-@done:          PLA                     ; Drop leave target
-                INY
+@done:
+                PLY                     ; Restore IP
+                PLA                     ; Discard index
+                PLA                     ; Discard limit
+                PLA                     ; Discard leave-target
+                INY                     ; Skip branch target cell
                 INY
                 NEXT
         ENDPUBLIC
@@ -4764,10 +4785,25 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         .word   STORE_CFA               ; backpatch LEAVE placeholder
         .word   EXIT_CFA
 
+
+;------------------------------------------------------------------------------
+; https://forth-standard.org/standard/core/PlusLOOP
+;------------------------------------------------------------------------------
+        HEADER  "+LOOP", PLUSLOOP_ENTRY, PLUSLOOP_CFA, F_IMMEDIATE, LOOP_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA                 ; compile (+LOOP)
+        .word   DOPLUSLOOP_CFA
+        .word   COMMA_CFA
+        .word   COMMA_CFA               ; compile loop top address
+        .word   HERE_CFA                ; ( leave-addr here )
+        .word   SWAP_CFA                ; ( here leave-addr )
+        .word   STORE_CFA               ; backpatch LEAVE placeholder
+        .word   EXIT_CFA
+
 ;------------------------------------------------------------------------------
 ; https://forth-standard.org/standard/core/LEAVE
 ;------------------------------------------------------------------------------
-        HEADER  "LEAVE", LEAVE_ENTRY, LEAVE_CFA, 0, LOOP_ENTRY
+        HEADER  "LEAVE", LEAVE_ENTRY, LEAVE_CFA, 0, PLUSLOOP_ENTRY
         CODEPTR LEAVE_CODE
         PUBLIC  LEAVE_CODE
         .a16

@@ -32,6 +32,7 @@ PUBLIC MAIN
 	jsr tickTest
 	jsr ifTest
 	jsr loopTest
+	jsr plusLoopTest
 	jsr cellsTest
 	jsr blDupTest
 	jsr recurseTest
@@ -144,6 +145,50 @@ ENDPUBLIC
 
 	rts
 .endproc
+
+.proc plusLoopTest
+	TYPESTR "test-plus1 (expect 0 2 4) = "
+	MOVE_TIB ": test-plus1 6 0 do i . 2 +loop ; test-plus1"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
+	TYPESTR "test-plus2 (expect 0 2 4 6) = "
+	MOVE_TIB ": test-plus2 7 0 DO I . 2 +LOOP ; test-plus2"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
+
+	TYPESTR "test-plus3 (expect 0 1 2) = "
+	MOVE_TIB ": test-plus3 3 0 DO I . 1 +LOOP ; test-plus3"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
+	TYPESTR "test-plus4 (expect 3 2 1 0) = "
+	MOVE_TIB ": test-plus4 0 3 DO I . -1 +LOOP ; test-plus4"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
+	TYPESTR "test-plu5 (expect 5 3 1) = "
+	MOVE_TIB ": test-plus5 0 5 DO I . -2 +LOOP ; test-plus5"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
+	TYPESTR "test-plus6 (expect 0 2 4) = "
+	MOVE_TIB ": test-plus6 10 0 DO I . I 4 = IF LEAVE THEN 2 +LOOP ; test-plus6"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
+	TYPESTR "test-plus7 (expect 0 0 2 0 0 2 2 2) = "
+	MOVE_TIB ": test-plus7 4 0 DO 4 0 DO I . J . 2 +LOOP 2 +LOOP ; test-plus7"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
+	rts
+.endproc
+
+
+
+
 
 .proc functionTest
 	MOVE_TIB ": kons create , does> @ ; 42 kons ans ans"
