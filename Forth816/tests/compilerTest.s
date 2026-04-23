@@ -125,18 +125,23 @@ ENDPUBLIC
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
 	TYPESTR_DOT "': test7 0 5 0 do i + loop ; test7 .' (expect 10) = "
 
+	TYPESTR "'Test nested 3 0, 3 0' (expect 0 1 2 1 2 3 2 3 4) = "
+	MOVE_TIB ": nested 3 0 DO 3 0 DO I J + . LOOP LOOP ; nested"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
 	TYPESTR "test leave' (expect 0 1 2 3 4 5) = "
 	MOVE_TIB ": tstleave 10 0 do i dup . 5 = if leave then loop ; tstleave"
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
 	jsr CR_CODE
 
-	; Cases to support
-	;: test-leave2 10 0 do i dup . 3 = if leave then dup . 7 =
-	; if leave then loop ; test-leave2
-	; Should print 0 0 1 1 2 2 3 and exit at the first LEAVE when i=3.
-	; And test nested DO/LOOP with LEAVE:
-	; : test-leave3  3 0 do 3 0 do j i . . i j = if leave then loop loop ;
-	; test-leave3
+	TYPESTR "test3 (expect 0 1 2) = "
+	MOVE_TIB ": test-leave3 3 0 DO 3 0 DO I 1 = IF LEAVE THEN I J + . LOOP"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	MOVE_TIB "LOOP ; test-leave3"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
 	rts
 .endproc
 

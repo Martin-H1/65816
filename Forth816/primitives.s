@@ -4677,6 +4677,8 @@ TICK_ERR:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; AGAIN Interpretation: Undefined. Compilation: ( C: dest -- )
+; Resolve the unconditional baackward branch using dest.
 ;------------------------------------------------------------------------------
         HEADER  "AGAIN", AGAIN_ENTRY, AGAIN_CFA, F_IMMEDIATE, UNTIL_ENTRY
         CODEPTR DOCOL
@@ -4710,11 +4712,8 @@ HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, F_IMMEDIATE, AGAIN_ENTRY
 
 ;------------------------------------------------------------------------------
 ; REPEAT Interpretation: Undefined. Compilation: ( C: orig dest -- )
-; Append the run-time semantics given below to the current definition,
-; resolving the backward reference dest. Resolve the forward reference orig
-; using the location following the appended run-time semantics.
-; Run-time: ( -- )
-; Continue execution at the location given by dest.
+; Resolving the backward reference dest. Resolve the forward reference orig
+; as well.
 ; https://forth-standard.org/standard/core/REPEAT
 ;------------------------------------------------------------------------------
 HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
@@ -4731,14 +4730,9 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 
 ;------------------------------------------------------------------------------
 ; DO Interpretation: Undefined. Compilation: ( C: -- do-sys )
-; Place do-sys onto the control-flow stack. Append the run-time semantics given
-; below to the current definition. The semantics are incomplete until resolved
-; by a consumer of do-sys such as LOOP.
-; Run-time: ( n1 | u1 n2 | u2 -- ) ( R: -- loop-sys )
-; Set up loop control parameters with index n2 | u2 and limit n1 | u1.
-; An ambiguous condition exists if n1 | u1 and n2 | u2 are not both the same
-; type. Anything already on the return stack becomes unavailable until the
-; loop-control parameters are discarded.
+; Place do-sys onto the control-flow stack. Append DODO to the current
+; definition. The semantics are incomplete until resolved by a consumer of
+; do-sys such as LOOP.
 ; https://forth-standard.org/standard/core/DO
 ;------------------------------------------------------------------------------
         HEADER  "DO", DO_ENTRY, DO_CFA, F_IMMEDIATE, REPEAT_ENTRY
