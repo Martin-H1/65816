@@ -122,6 +122,13 @@ ENDPUBLIC
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
 	TYPESTR_DOT "': tst5  0 begin 1+ dup 5 = until ; tst5 .' (expect 5) = "
 
+	TYPESTR "test-begin-again (expect 0 1 2 3 4 0 1 2 3 4 0 3) = "
+	MOVE_TIB ": test-begin-again 0 BEGIN 1+ 5 0 DO I . DUP 3 = IF UNLOOP"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	MOVE_TIB "EXIT THEN LOOP AGAIN ; test-begin-again ."
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	jsr CR_CODE
+
 	MOVE_TIB ": test7 0 5 0 do i + loop ; test7"
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
 	TYPESTR_DOT "': test7 0 5 0 do i + loop ; test7 .' (expect 10) = "
