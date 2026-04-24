@@ -18,6 +18,8 @@
 .import COMPARE_CODE
 .import DROP_CODE
 .import MOVE_CODE
+.import SKIPCHAR_CODE
+.import PLACE_CODE
 .import PARSE_CODE
 .import WORD_CODE
 .import FIND_CODE
@@ -37,7 +39,10 @@ PUBLIC MAIN
 	jsr TRACEOFF_CODE	; tracing initialization.
 
 	jsr wordsTest
+	jsr skipCharTest
+	jsr placeTest
 	jsr parseTest
+	jsr parseNameTest
 	jsr wordTest
 	jsr compareTest
 	jsr tonumberTest
@@ -49,6 +54,38 @@ PUBLIC MAIN
 	rts
 ENDPUBLIC
 
+.proc skipCharTest
+	MOVE_TIB "   .c hello world"
+	lda #' '
+	PUSH
+	jsr SKIPCHAR_CODE
+	phy
+	ldy #U_TOIN
+	lda (UP),Y
+	PUSH
+	ply
+	TYPESTR_DOT "skip char test (expect 3) TOIN = "
+	rts
+.endproc
+
+.proc placeTest
+	lda #plsrc
+	PUSH
+	lda #.strlen("hi mom.")
+	PUSH
+	lda #pldst
+	PUSH
+	jsr PLACE_CODE
+
+	TYPESTR "place test (expect 'HI MOM.') = "
+	lda #pldst
+	jsr hal_lpputs
+	jsr CR_CODE
+	rts
+pldst:	.byte 00,"          "
+plsrc:	.asciiz "hi mom."
+.endproc
+
 .proc parseTest
 	MOVE_TIB "   .c hello worldc                     "
 	lda #'c'
@@ -57,6 +94,18 @@ ENDPUBLIC
 	TYPESTR "parse test='"
 	jsr TYPE_CODE
 	TYPESTR "'"
+	jsr CR_CODE
+	RTS
+.endproc
+
+.proc parseNameTest
+	MOVE_TIB "   hello world                     "
+
+	CALL_DOCOL PARSENAME_CFA	; RTS_CFA will return here.
+	TYPESTR "parse name test='"
+	jsr TYPE_CODE
+	TYPESTR "'"
+	jsr CR_CODE
 	RTS
 .endproc
 
@@ -70,11 +119,11 @@ ENDPUBLIC
 	MOVE_TIB "             can                "
 	lda #SPACE
 	PUSH
-	jsr WORD_CODE
+	CALL_DOCOL WORD_CFA	; RTS_CFA will return here.
 	lda $600
 	and #$00ff
 	PUSH
-	TYPESTR "Size="
+	TYPESTR "word test size="
 	jsr DOT_CODE
 	TYPESTR ", WORD='"
 	POP
@@ -85,7 +134,7 @@ ENDPUBLIC
 	MOVE_TIB "                             you"
 	lda #SPACE
 	PUSH
-	jsr WORD_CODE
+	CALL_DOCOL WORD_CFA	; RTS_CFA will return here.
 	TYPESTR "Size="
 	lda $600
 	and #$00ff
@@ -100,7 +149,7 @@ ENDPUBLIC
 	MOVE_TIB "read                            "
 	lda #SPACE
 	PUSH
-	jsr WORD_CODE
+	CALL_DOCOL WORD_CFA	; RTS_CFA will return here.
 	TYPESTR "Size="
 	lda $600
 	and #$00ff
@@ -115,7 +164,7 @@ ENDPUBLIC
 	MOVE_TIB "                                "
 	lda #SPACE
 	PUSH
-	jsr WORD_CODE
+	CALL_DOCOL WORD_CFA	; RTS_CFA will return here.
 	TYPESTR "Size="
 	lda $600
 	and #$00ff
@@ -130,7 +179,7 @@ ENDPUBLIC
 	MOVE_TIB " this                           "
 	lda #SPACE
 	PUSH
-	jsr WORD_CODE
+	CALL_DOCOL WORD_CFA	; RTS_CFA will return here.
 	TYPESTR "Size="
 	lda $600
 	and #$00ff

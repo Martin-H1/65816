@@ -2140,144 +2140,12 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; PARSE ( char -- c-addr u )
-;------------------------------------------------------------------------------
-        HEADER  "PARSE", PARSE_ENTRY, PARSE_CFA, 0, COUNT_ENTRY
-        CODEPTR PARSE_CODE
-        PUBLIC  PARSE_CODE
-        .a16
-        .i16
-
-        LOC_CHAR    = 1         ; delimiter char
-        LOC_TIB     = 3         ; TIB base address
-        LOC_TOIN    = 5         ; >IN at entry
-        LOC_CURPTR  = 7         ; current scan pointer
-        LOC_ENDADDR = 9         ; TIB + SOURCE-LEN
-        LOC_UP      = 11        ; cached UP
-        LOC_SIZE    = LOC_UP + 1
-
-                PHD
-                PHY
-
-                TSC
-                SEC
-                SBC     #LOC_SIZE
-                TCS
-                TCD
-
-                ;--------------------------------------------------------------
-                ; Peek delimiter
-                ;--------------------------------------------------------------
-                LDA     a:0,X
-                AND     #$00FF
-                STA     LOC_CHAR
-
-                ;--------------------------------------------------------------
-                ; Cache UP, then load TIB, >IN, SOURCE-LEN
-                ;--------------------------------------------------------------
-                LDA     a:UP
-                STA     LOC_UP
-
-                LDY     #U_TIB
-                LDA     (LOC_UP),Y
-                STA     LOC_TIB
-
-                LDY     #U_TOIN
-                LDA     (LOC_UP),Y
-                STA     LOC_TOIN
-
-                ; CURPTR = TIB + >IN
-                LDA     LOC_TIB
-                CLC
-                ADC     LOC_TOIN
-                STA     LOC_CURPTR
-
-                ; ENDADDR = TIB + SOURCE-LEN
-                LDY     #U_SOURCELEN
-                LDA     (LOC_UP),Y
-                CLC
-                ADC     LOC_TIB
-                STA     LOC_ENDADDR
-
-                ;--------------------------------------------------------------
-                ; Scan loop
-                ;--------------------------------------------------------------
-@scan_loop:
-                LDA     LOC_CURPTR
-                CMP     LOC_ENDADDR
-                BCS     @end_of_input
-
-                ; Fetch char at CURPTR
-                SEP     #$20
-                .a8
-                LDA     (LOC_CURPTR)    ; fetch byte
-                REP     #$20
-                .a16
-                AND     #$00FF
-
-                CMP     LOC_CHAR
-                BEQ     @found
-
-                INC     LOC_CURPTR
-                BRA     @scan_loop
-
-@found:
-                INC     LOC_CURPTR      ; advance past delimiter
-                ; u = CURPTR - 1 - (TIB + TOIN)
-                LDA     LOC_CURPTR
-                DEC     A               ; ptr before delimiter
-                SEC
-                SBC     LOC_TIB
-                SEC
-                SBC     LOC_TOIN     ; u = offset from TIB+TOIN
-                BRA     @update_in
-
-@end_of_input:
-                ; u = SOURCE-LEN - TOIN = ENDADDR - TIB - STARTIN
-                LDA     LOC_ENDADDR
-                SEC
-                SBC     LOC_TIB
-                SEC
-                SBC     LOC_TOIN
-
-@update_in:
-                PHA                     ; save u
-
-                ; Write CURPTR back as >IN offset: >IN = CURPTR - TIB
-                LDA     LOC_CURPTR
-                SEC
-                SBC     LOC_TIB
-                LDY     #U_TOIN
-                STA     (LOC_UP),Y
-
-                ; c-addr = TIB + STARTIN
-                LDA     LOC_TIB
-                CLC
-                ADC     LOC_TOIN
-
-                STA     a:0,X           ; overwrite TOS with c-addr
-
-                PLA                     ; restore u
-                DEX
-                DEX
-                STA     a:0,X           ; push u (TOS)
-
-                TSC
-                CLC
-                ADC     #LOC_SIZE
-                TCS
-                PLY
-                PLD
-                NEXT
-        ENDPUBLIC
-
-;------------------------------------------------------------------------------
 ; (S") runtime ( -- c-addr u )
 ; IP points to length cell followed by string bytes.
 ; Pushes c-addr and u, advances IP past string data.
 ;------------------------------------------------------------------------------
 DOSQUOTE_ENTRY:
-        .word   PARSE_ENTRY            ; Link field
+        .word   COUNT_ENTRY            ; Link field
         .byte   F_HIDDEN | 4           ; Flags + length (4 chars)
         .byte   "(S", $22, ")"         ; '(' 'S' '"' ')'
         .align  2
@@ -2660,171 +2528,289 @@ HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; WORD ( char -- addr ) parse word delimited by char from input
-; Returns counted string at HERE
-;
-; Stack frame locals (offsets from S after frame is built):
-;   LOC_IDX   = 1,S   parse index (>IN)
-;   LOC_LEN   = 3,S   source length
-;   LOC_TIB   = 5,S   TIB base address
-;   LOC_HERE  = 7,S   HERE (output buffer)
-;   LOC_DELIM = 9,S   delimiter char
-;   LOC_DST   = 11,S  destination pointer.
-;   LOC_UP    = 13,S  local UP
-;   (saved IP at 15,S, pushed first by PHY)
+; SKIP-CHAR ( char -- ) scans the TIB skipping instances of char and updates
+; TOIN in the user area.
 ;------------------------------------------------------------------------------
-        HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, CELLPLUS_ENTRY
-        CODEPTR WORD_CODE
-        PUBLIC  WORD_CODE
+        HEADER  "SKIP-CHAR", SKIPCHAR_ENTRY, SKIPCHAR_CFA, 0, CELLPLUS_ENTRY
+        CODEPTR SKIPCHAR_CODE
+        PUBLIC  SKIPCHAR_CODE
         .a16
         .i16
-                LOC_IDX   = 1
-                LOC_LEN   = 3
-                LOC_TIB   = 5
-                LOC_HERE  = 7
-                LOC_DELIM = 9
-                LOC_DEST  = 11
-                LOC_UP    = 13
-                LOC_SIZE  = LOC_UP + 1
+                PHY
 
-                ; --- Save DP, IP, and set up stack frame ---
-                PHD                     ; Save DP (at 13,S after frame built)
-                PHY                     ; Save IP (at 11,S after frame built)
-                TSC
-                SEC
-                SBC     #LOC_SIZE
-                TCS
-                TCD                     ; Set Direct Page to stack frame
-
-                ; Push delimiter (popped from parameter stack)
-                LDA     a:0,X           ; Peek TOS to get delimiter
-                STA     LOC_DELIM
-
-                LDA     a:UP            ; Initialize pointer to user area
-                STA     LOC_UP
-
-                ; Push HERE
-                LDY     #U_DP
-                LDA     (LOC_UP),Y      ; HERE
-                STA     LOC_HERE
-
-                ; Push TIB base
+                ; Cache TIB base
                 LDY     #U_TIB
-                LDA     (LOC_UP),Y      ; TIB base
-                STA     LOC_TIB
+                LDA     (UP),Y
+                STA     SCRATCH0
 
-                ; Push source length
+                ; Cache source length
                 LDY     #U_SOURCELEN
-                LDA     (LOC_UP),Y      ; source length
-                STA     LOC_LEN
+                LDA     (UP),Y
+                STA     SCRATCH1
 
-                ; Push parse index (>IN)
+                ; Load >IN
                 LDY     #U_TOIN
-                LDA     (LOC_UP),Y      ; >IN
-                STA     LOC_IDX
-                TAY                     ; Use Y as the parse index during loops
+                LDA     (UP),Y
+                TAY
 
-                ; --- Skip leading delimiters ---
+                SEP     #$20
+                .a8
 @skip_loop:
-                CPY     LOC_LEN         ; If Y >= source length then input end
-                BCC     @otherwise
+                CPY     SCRATCH1        ; >IN >= source length?
+                BCS     @done           ; end of input
 
-                SEP     #$20            ; Return HERE with zero-length counted string
-                .a8
-                LDA     #0
-                LDY     #0
-                STA     (LOC_HERE),Y    ; Zero count byte at HERE
-                REP     #$20
-                .a16
-                BRA     @return         ; Tear down frame and return
+                ; Fetch char at scan pointer
+                LDA     (SCRATCH0),Y
+                CMP     0,X             ; matches delimiter?
+                BNE     @done           ; no → stop skipping
 
-@otherwise:
-                SEP     #$20
-                .a8
-                LDA     (LOC_TIB),Y     ; Fetch TIB[index]
-                REP     #$20
-                .a16
-                AND     #$00FF
-                CMP     LOC_DELIM       ; Is it the delimiter?
-                BNE     @found_start    ; No - start of word found
-                INY                     ; Increment parse index
+                INY                     ; >IN++
                 BRA     @skip_loop
+@done:
+                REP     #$20            ; Ensure 16-bit accumulator
+                .a16
 
-                ; --- Copy word characters to HERE+1 ---
-@found_start:
-                ; Set up destination: HERE+1 (past the count byte)
-                LDA     LOC_HERE
-                INC     A               ; dest = HERE+1
-                STA     LOC_DEST
-                PHX
-                LDX     #$0000          ; Borrow X for char count = 0
-@copy:
-                CPY     LOC_LEN         ; parse index >= source length?
-                BCS     @copy_done      ; End of input
+                ; Write updated >IN back to user area
+                TYA
+                LDY     #U_TOIN
+                STA     (UP),Y
+
+                INX                     ; Drop char from parameter stack
+                INX
+                PLY
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; PLACE ( c-addr u dest -- ) copy addr/len string to dest as counted string
+; with uppercase conversion.
+;------------------------------------------------------------------------------
+        HEADER  "PLACE", PLACE_ENTRY, PLACE_CFA, 0, SKIPCHAR_ENTRY
+        CODEPTR PLACE_CODE
+        PUBLIC  PLACE_CODE
+        .a16
+        .i16
+                LOC_SRC     = 1         ; source address
+                LOC_COUNT   = 3         ; character count
+                LOC_DEST    = 5         ; destination address
+
+                PHY
+
+                LDA     0,X             ; dest (TOS)
+                PHA                     ; LOC_DEST
+                LDA     2,X             ; u (NOS)
+                PHA                     ; LOC_COUNT
+                LDA     4,X             ; c-addr (3OS)
+                PHA                     ; LOC_SRC
+
+                ; drop all three params from parameter stack
+                INX
+                INX
+                INX
+                INX
+                INX
+                INX
+
+                ; Store count byte at dest
+                LDY     #0
+                LDA     LOC_COUNT,S
+                SEP     #$20
+                .a8
+                STA     (LOC_DEST,S),Y  ; count byte at dest+0
+                REP     #$20
+                .a16
+
+                ; Advance dest to dest+1 for char copy
+                LDA     LOC_DEST,S
+                INC     A
+                STA     LOC_DEST,S
 
                 SEP     #$20
                 .a8
-                LDA     (LOC_TIB),Y     ; Fetch TIB[index]
-                REP     #$20
-                .a16
-                AND     #$00FF
-                CMP     LOC_DELIM       ; Is it the delimiter?
-                BEQ     @copy_done      ; Yes - end of word
+@copy_loop:
+                TYA
+                CMP     LOC_COUNT,S
+                BCS     @done
 
-                ; ANS Forth 1994 requires case-insensitivity for standards
-                ; words, uppercasing input before dictionary lookup.
+                LDA     (LOC_SRC,S),Y   ; fetch src char
+                ; Uppercase conversion
                 CMP     #'a'
                 BCC     @not_lower
                 CMP     #'z'+1
                 BCS     @not_lower
-                AND     #$DF            ; Clear bit 5 = convert to uppercase
+                AND     #$DF
 @not_lower:
-                ; Store char at dest
-                SEP     #$20
-                .a8
-                STA     (LOC_DEST)
+                STA     (LOC_DEST,S),Y  ; store to dest+1+Y
+                INY
+                BRA     @copy_loop
+
+@done:
                 REP     #$20
                 .a16
-                INC     LOC_DEST        ; Advance dest pointer
-                INX                     ; Increment char count
-                INY                     ; Advance parse index
-                BRA     @copy
-
-@copy_done:
-                ; Skip the trailing delimiter if not at end
-                CPY     LOC_LEN
-                BCS     @store_count
-                INY                     ; Consume trailing delimiter
-
-@store_count:
-                ; Store count byte at HERE
-                STY     LOC_IDX         ; Update LOC_IDX with Y contents.
-                TXA                     ; char count
-                PLX                     ; Restore X
-                SEP     #$20
-                .a8
-                STA     (LOC_HERE)      ; Store count byte at HERE
-                REP     #$20
-                .a16
-
-                ; Update >IN in user area
-                LDY     #U_TOIN
-                LDA     LOC_IDX
-                STA     (LOC_UP),Y      ; >IN
-
-@return:
-                LDA     LOC_HERE
-                STA     a:0,X           ; Put HERE onto parameter stack TOS
-
-                ; --- Tear down stack frame and return to interpreter ---
-                TSC                     ; Drop locals
-                CLC
-                ADC    #LOC_SIZE
-                TCS
-                PLY                     ; Restore IP
-                PLD                     ; Restore DP
+                PLA                     ; drop LOC_SRC
+                PLA                     ; drop LOC_COUNT
+                PLA                     ; drop LOC_DEST
+                PLY
                 NEXT
         ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; PARSE ( char -- c-addr u )
+;------------------------------------------------------------------------------
+        HEADER  "PARSE", PARSE_ENTRY, PARSE_CFA, 0, PLACE_ENTRY
+        CODEPTR PARSE_CODE
+        PUBLIC  PARSE_CODE
+        .a16
+        .i16
+
+        LOC_CHAR    = 1         ; delimiter char
+        LOC_TIB     = 3         ; TIB base address
+        LOC_TOIN    = 5         ; >IN at entry
+        LOC_CURPTR  = 7         ; current scan pointer
+        LOC_ENDADDR = 9         ; TIB + SOURCE-LEN
+        LOC_UP      = 11        ; cached UP
+        LOC_SIZE    = LOC_UP + 1
+
+                PHD
+                PHY
+
+                TSC
+                SEC
+                SBC     #LOC_SIZE
+                TCS
+                TCD
+
+                ;--------------------------------------------------------------
+                ; Peek delimiter
+                ;--------------------------------------------------------------
+                LDA     a:0,X
+                AND     #$00FF
+                STA     LOC_CHAR
+
+                ;--------------------------------------------------------------
+                ; Cache UP, then load TIB, >IN, SOURCE-LEN
+                ;--------------------------------------------------------------
+                LDA     a:UP
+                STA     LOC_UP
+
+                LDY     #U_TIB
+                LDA     (LOC_UP),Y
+                STA     LOC_TIB
+
+                LDY     #U_TOIN
+                LDA     (LOC_UP),Y
+                STA     LOC_TOIN
+
+                ; CURPTR = TIB + >IN
+                LDA     LOC_TIB
+                CLC
+                ADC     LOC_TOIN
+                STA     LOC_CURPTR
+
+                ; ENDADDR = TIB + SOURCE-LEN
+                LDY     #U_SOURCELEN
+                LDA     (LOC_UP),Y
+                CLC
+                ADC     LOC_TIB
+                STA     LOC_ENDADDR
+
+                ;--------------------------------------------------------------
+                ; Scan loop
+                ;--------------------------------------------------------------
+@scan_loop:
+                LDA     LOC_CURPTR
+                CMP     LOC_ENDADDR
+                BCS     @end_of_input
+
+                ; Fetch char at CURPTR
+                SEP     #$20
+                .a8
+                LDA     (LOC_CURPTR)    ; fetch byte
+                REP     #$20
+                .a16
+                AND     #$00FF
+
+                CMP     LOC_CHAR
+                BEQ     @found
+
+                INC     LOC_CURPTR
+                BRA     @scan_loop
+
+@found:
+                INC     LOC_CURPTR      ; advance past delimiter
+                ; u = CURPTR - 1 - (TIB + TOIN)
+                LDA     LOC_CURPTR
+                DEC     A               ; ptr before delimiter
+                SEC
+                SBC     LOC_TIB
+                SEC
+                SBC     LOC_TOIN     ; u = offset from TIB+TOIN
+                BRA     @update_in
+
+@end_of_input:
+                ; u = SOURCE-LEN - TOIN = ENDADDR - TIB - STARTIN
+                LDA     LOC_ENDADDR
+                SEC
+                SBC     LOC_TIB
+                SEC
+                SBC     LOC_TOIN
+
+@update_in:
+                PHA                     ; save u
+
+                ; Write CURPTR back as >IN offset: >IN = CURPTR - TIB
+                LDA     LOC_CURPTR
+                SEC
+                SBC     LOC_TIB
+                LDY     #U_TOIN
+                STA     (LOC_UP),Y
+
+                ; c-addr = TIB + STARTIN
+                LDA     LOC_TIB
+                CLC
+                ADC     LOC_TOIN
+
+                STA     a:0,X           ; overwrite TOS with c-addr
+
+                PLA                     ; restore u
+                DEX
+                DEX
+                STA     a:0,X           ; push u (TOS)
+
+                TSC
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY
+                PLD
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; PARSE-NAME ( "<spaces>name<space>" -- c-addr u )
+; https://forth-standard.org/standard/core/PARSE-NAME
+;------------------------------------------------------------------------------
+        HEADER  "PARSE-NAME", PARSENAME_ENTRY, PARSENAME_CFA, 0, PARSE_ENTRY
+        CODEPTR DOCOL
+        .word   BL_CFA
+        .word   SKIPCHAR_CFA            ; skip leading spaces
+        .word   BL_CFA
+        .word   PARSE_CFA               ; parse space-delimited token
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; WORD ( char -- addr ) parse word delimited by char from input
+; Returns counted string at HERE
+;------------------------------------------------------------------------------
+	HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, PARSENAME_ENTRY
+        CODEPTR DOCOL
+        .word   DUP_CFA                 ; ( char char )
+        .word   SKIPCHAR_CFA            ; skip leading delimiters
+        .word   PARSE_CFA               ; ( char -- c-addr u )
+        .word   HERE_CFA                ; ( c-addr u here )
+        .word   PLACE_CFA               ; ( ) copy to HERE as counted string
+        .word   HERE_CFA                ; ( here )
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DECIMAL ( -- ) set numeric base to 10

@@ -137,6 +137,7 @@ F_LENMASK       = $1F
         .global PAD_CFA
         .global COUNT_CFA
         .global PARSE_CFA
+        .global PARSENAME_CFA
         .global DOTQUOTE_CFA
         .global DOSQUOTE_CFA
         .global SQUOTE_CFA

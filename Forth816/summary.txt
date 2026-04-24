@@ -200,10 +200,8 @@ list by name" section. Subtracts 2 from addresses to compensate for NEXT
 pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 
 TODO items carried forward:
-* FIND CFA offset calculation may need verification for words with padding.
 * Double number support (>NUMBER upgrade)
 * Conditional statements CASE, OF, ENDOF, and ENDCASE.
-* Refactoring WORD to use PARSE.
 * Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
     - Replace INX/INX and DEX/DEX pairs with DROP and ADVANCE to hide cell size
     - ADC #2 / SBC #2 used for cell arithmetic
