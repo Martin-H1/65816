@@ -2091,6 +2091,7 @@ calc_depth:     TXA
                 DEX
                 DEX
                 STA     0,X
+                PLY
                 NEXT
         ENDPUBLIC
 
@@ -2813,9 +2814,31 @@ HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; \ ( -- ) consumes all input to the end of line.
+;------------------------------------------------------------------------------
+        HEADER  "\", BACKSLASH_ENTRY, BACKSLASH_CFA, F_IMMEDIATE, WORD_ENTRY
+        CODEPTR DOCOL
+        .word   SOURCE_CFA              ; ( c-addr u )
+        .word   NIP_CFA                 ; ( u )
+        .word   TOIN_CFA                ; ( u &>IN )
+        .word   STORE_CFA               ; >IN = u
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; { ( -- ) consumes all input until )
+;------------------------------------------------------------------------------
+	HEADER  "(", PAREN_ENTRY, PAREN_CFA, F_IMMEDIATE, BACKSLASH_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   ')'
+        .word   PARSE_CFA               ; ( c-addr u )
+        .word   TWODROP_CFA             ; discard
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; DECIMAL ( -- ) set numeric base to 10
 ;------------------------------------------------------------------------------
-        HEADER  "DECIMAL", DECIMAL_ENTRY, DECIMAL_CFA, 0, WORD_ENTRY
+        HEADER  "DECIMAL", DECIMAL_ENTRY, DECIMAL_CFA, 0, PAREN_ENTRY
         CODEPTR DOCOL
 DECIMAL_BODY:
         .word   LIT_CFA
