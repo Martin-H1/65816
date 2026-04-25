@@ -31,18 +31,12 @@ PUBLIC MAIN
 	jsr variableTest
 	jsr tickTest
 	jsr ifTest
+	jsr caseTest
 	jsr loopTest
 	jsr plusLoopTest
 	jsr cellsTest
 	jsr blDupTest
 	jsr recurseTest
-
-	; : test-nq 32 word number? . . ;
-	; test-nq cell
-	; : test-nq 32 word number? . . ;
-	; test-nq cell
-	; : test-again  0 begin 1+ dup . dup 5 = until ;
-	; test-again              \ should print 1 2 3 4 5
 
 	TYPESTRCR "Compiler test - exit!"
 	rts
@@ -113,6 +107,33 @@ ENDPUBLIC
 	MOVE_TIB ": test4 0 if 99 else 42 then ; test4"
 	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
 	TYPESTR_DOT "': test4 0 if 99 else 42 then ; test4' (expect 42) = "
+
+	rts
+.endproc
+
+.proc caseTest
+	MOVE_TIB ": test-case ( n -- ) CASE"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	MOVE_TIB "1 OF 10 ENDOF"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	MOVE_TIB "2 OF 20 ENDOF"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	MOVE_TIB "30"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	MOVE_TIB "ENDCASE ;"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+
+	MOVE_TIB "1 test-case"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "test case 1 (expect 10) = "
+
+	MOVE_TIB "2 test-case"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "test case 2 (expect 20) = "
+
+	MOVE_TIB "3 test-case"
+	CALL_DOCOL INTERPRET_CFA	; RTS_CFA will return here.
+	TYPESTR_DOT "test case default (expect 30) = "
 
 	rts
 .endproc

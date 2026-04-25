@@ -46,7 +46,8 @@ $0000-$007F     Zero Page / Direct Page
 
 $0100-$01FF     Hardware Stack (Return Stack, grows down from $01FF)
 $0200-$03FF     Parameter Stack (grows down from $03FF)
-$0400-$04FF     User Area
+$0400-$04FF     Scratch PAD area
+$0500-$05FF     User Area
                   +$00  BASE         numeric base (default 10)
                   +$02  STATE        0=interpret, 1=compile
                   +$04  DP           dictionary pointer
@@ -55,7 +56,6 @@ $0400-$04FF     User Area
                   +$0A  >IN          parse offset
                   +$0C  SOURCE-LEN   current source length
                   +$0E  HANDLER      exception handler
-$0500-$05FF     Scratch PAD area
 $0600-$06FF     Terminal Input Buffer (TIB)
 $0700-$7EFF     RAM Dictionary (user definitions grow upward)
 $7F00-$7FFF     I/O Space (UART)
@@ -165,6 +165,12 @@ Offset  Size  Field
 ### Defining
 `: ; CONSTANT VARIABLE CREATE DOES>`
 
+### Conditional statements
+`?DUP, IF, ELSE, THEN, CASE, OF, ENDOF, and ENDCASE.
+
+### Flow control words
+`+LOOP, LEAVE, AGAIN, WHILE, REPEAT, and RECURSE.
+
 ## UART Configuration
 
 Edit `forth.s` to match your hardware:
@@ -207,19 +213,31 @@ make tests
 - Dictionary search (FIND)
 - System initialization and hardware vectors
 - 16-bit math funnctions
-- ":", ";", and basic conditional and flow control.
+- ":", ";", and conditionals and flow control.
 - Extensive unit tests for primitive verification
 
 ### What needs completion
-The following words have stubs and need full implementation:
-
-1. Refactoring WORD to use PARSE.
-
-2. Conditional statements ?DUP, CASE, OF, ENDOF, and ENDCASE.
-
-3. Flow control words like +LOOP, LEAVE, AGAIN, WHILE, REPEAT, and RECURSE.
-
-4. Double precision mathematics.
+- FORGET keyword for dictionary clean up.
+- Double number support (>NUMBER upgrade)
+- SEE keyword for word decompliation
+- hal_mench.s was reused from another project and the source isn't the same as
+  the other modules. I also plan to resuse a 65c22 VIA driver module. To make
+  the source consistant I want to create a Python pretty printer. It reads
+  source from a file, tokenizes it, and outputs it formatted the same as the
+  other modules.
+  1. Function header comments flush with left margin.
+  2. Labels flush with left margin and case preserved.
+  3. First indent eight spaces no tabs. PUBLIC, .a16, .i16, .proc, etc
+  4. Second indent for opcodes at sixteen spaces. Opcodes are upper case.
+  5. Third indent twenty four spaces for operand. Register operands upper case.
+  6. Comments at column 40 with no taps.
+- Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
+    - Replace INX/INX and DEX/DEX pairs with DROP and ADVANCE to hide cell size
+    - ADC #2 / SBC #2 used for cell arithmetic
+    - Frame layout offsets like LOC_ADDR = 1, LOC_PTR = 3 etc.
+      these could be expressed as LOC_ADDR = 1, LOC_PTR = LOC_ADDR + CELL_SIZE
+    - The CFA alignment rounding in FIND and DOCREATE
+    - >NUMBER and NUMBER? stack manipulation
 
 ### Extending for your SBC
 - Change HAL code for your UART chip

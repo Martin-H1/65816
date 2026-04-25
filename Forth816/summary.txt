@@ -145,11 +145,19 @@ CREATE — DOCOL definition. Reserves an extra placeholder cell at CFA+2 for the
 DOES> code address so that body data starts at CFA+4.
 DOES> — immediate DOCOL word that compiles (DOES>) into the current definition.
 (DOES>) — hidden assembly primitive. Patches the CFA of the most recently
-CREATEd word to DODOES and stores the current IP (DOES> code address) at CFA+2.
+CREATE word to DODOES and stores the current IP (DOES> code address) at CFA+2.
 DODOES — updated to push CFA+4 as the body address and set IP from CFA+2.
 VARIABLE — DOCOL definition using (CREATE), DOVAR, and REVEAL.
 CONSTANT — DOCOL definition using (CREATE), DOCON, and REVEAL.
 DECIMAL / HEX — DOCOL definitions that store 10 or 16 into BASE.
+NUMBER - radix prefix support
+WORD refactored to use PARSE — done via SKIP-CHAR, PLACE, PARSE-NAME
+CASE/OF/ENDOF/ENDCASE — implemented and tested
+SKIP-CHAR ( char -- ) skips leading occurrences of char updating >IN
+PLACE ( c-addr u dest -- ) copies string to dest as counted string with uppercase
+PARSE-NAME ( -- c-addr u ) skips leading spaces then parses space-delimited token
+CURDEF user area variable — holds CFA of word being compiled, set by DOCREATE
+(OF) hidden runtime primitive for CASE/OF
 
 Important bugs found and fixed:
 
@@ -165,6 +173,7 @@ CREATE must reserve a placeholder cell at CFA+2 for the DOES> code address,
 otherwise , overwrites it with body data. Body data starts at CFA+4.
 ca65 linker bug: hal_mench.o must be listed first in the linker command or
 hal_cputs resolves incorrectly. Document in Makefile.
+RECURSE/LATEST>CFA — refactored using U_CURDEF in DOCREATE
 
 Coding style rules established:
 Three classes of routines each with their own pattern:
@@ -200,8 +209,20 @@ list by name" section. Subtracts 2 from addresses to compensate for NEXT
 pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 
 TODO items carried forward:
+* FORGET keyword for dictionary clean up.
 * Double number support (>NUMBER upgrade)
-* Conditional statements CASE, OF, ENDOF, and ENDCASE.
+* SEE keyword for word decompliation
+* hal_mench.s was reused from another project and the source isn't the same as
+  the other modules. I also plan to resuse a 65c22 VIA driver module. To make
+  the source consistant I want to create a Python pretty printer. It reads
+  source from a file, tokenizes it, and outputs it formatted the same as the
+  other modules.
+  1. Function header comments flush with left margin.
+  2. Labels flush with left margin and case preserved.
+  3. First indent eight spaces no tabs. PUBLIC, .a16, .i16, .proc, etc
+  4. Second indent for opcodes at sixteen spaces. Opcodes are upper case.
+  5. Third indent twenty four spaces for operand. Register operands upper case.
+  6. Comments at column 40 with no taps.
 * Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
     - Replace INX/INX and DEX/DEX pairs with DROP and ADVANCE to hide cell size
     - ADC #2 / SBC #2 used for cell arithmetic

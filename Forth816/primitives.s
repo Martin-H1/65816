@@ -4704,6 +4704,108 @@ TICK_ERR:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; (OF) ( n val -- n | ) runtime OF comparison
+; match:    drop both, skip branch target, continue into OF body
+; no match: drop val, leave n, branch to after ENDOF
+;------------------------------------------------------------------------------
+        HEADER  "(OF)", DOOF_ENTRY, DOOF_CFA, F_HIDDEN, ELSE_ENTRY
+        CODEPTR DOOF_CODE
+        PUBLIC  DOOF_CODE
+        .a16
+        .i16
+                LDA     0,X             ; pop val (TOS)
+                INX
+                INX
+                CMP     0,X             ; peek n (NOS)
+                BNE     @nomatch
+
+                ; Match: drop n
+                INX
+                INX
+                INY                     ; skip branch target
+                INY
+                NEXT
+
+@nomatch:
+                ; No match: drop val, leave n, branch to after ENDOF
+                LDA     0,Y             ; fetch branch target
+                TAY                     ; IP = branch target
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; CASE ( -- case-addr )
+; Compiles a BRANCH that points just past itself (no-op on entry)
+;------------------------------------------------------------------------------
+        HEADER  "CASE", CASE_ENTRY, CASE_CFA, F_IMMEDIATE, DOOF_ENTRY
+        CODEPTR DOCOL
+        ; Compile first BRANCH that skips over second BRANCH
+        .word   LIT_CFA
+        .word   BRANCH_CFA
+        .word   COMMA_CFA              ; compile first BRANCH
+        .word   HERE_CFA               ; ( here ) = placeholder address
+        .word   LIT_CFA
+        .word   6
+        .word   PLUS_CFA               ; ( here here+6 )
+        .word   COMMA_CFA              ; Compile skip target
+        ; Compile second BRANCH (target for ENDOFs)
+        .word   HERE_CFA               ; BA = address of second BRANCH
+        .word   LIT_CFA
+        .word   BRANCH_CFA
+        .word   COMMA_CFA              ; compile second BRANCH
+        .word   HERE_CFA               ; CA = address of placeholder
+        .word   LIT_CFA
+        .word   0
+        .word   COMMA_CFA              ; compile unresolved placeholder
+        .word   SWAP_CFA               ; ( CA BA )
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; OF Compile time: ( CA BA -- CA BA OA )
+;------------------------------------------------------------------------------
+        HEADER  "OF", OF_ENTRY, OF_CFA, F_IMMEDIATE, CASE_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   DOOF_CFA
+        .word   COMMA_CFA              ; compile (OF)
+        .word   HERE_CFA               ; OA = address of (OF)'s placeholder
+        .word   LIT_CFA
+        .word   0
+        .word   COMMA_CFA              ; compile unresolved branch target
+        .word   EXIT_CFA               ; stack: ( CA BA OA )
+
+;------------------------------------------------------------------------------
+; ENDOF ( CA BA OA -- CA BA )
+; Compile BRANCH to BA, resolve OA to HERE
+;------------------------------------------------------------------------------
+        HEADER  "ENDOF", ENDOF_ENTRY, ENDOF_CFA, F_IMMEDIATE, OF_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   BRANCH_CFA
+        .word   COMMA_CFA              ; compile BRANCH
+        .word   OVER_CFA               ; ( CA BA OA BA )
+        .word   COMMA_CFA              ; compile BA as branch target
+        .word   HERE_CFA               ; ( CA BA OA HERE )
+        .word   SWAP_CFA               ; ( CA BA HERE OA )
+        .word   STORE_CFA              ; resolve OA to HERE
+        .word   EXIT_CFA               ; stack: ( CA BA )
+
+;------------------------------------------------------------------------------
+; ENDCASE ( CA BA -- )
+; DROP BA, compile DROP, resolve CA to HERE
+;------------------------------------------------------------------------------
+        HEADER  "ENDCASE", ENDCASE_ENTRY, ENDCASE_CFA, F_IMMEDIATE, ENDOF_ENTRY
+        CODEPTR DOCOL
+        .word   DROP_CFA               ; discard BA
+        .word   LIT_CFA
+        .word   DROP_CFA
+        .word   COMMA_CFA              ; compile DROP to discard n at runtime
+        .word   HERE_CFA               ; ( CA HERE )
+        .word   SWAP_CFA               ; ( HERE CA )
+        .word   STORE_CFA              ; resolve CA to HERE
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; BEGIN Interpretation: Undefined. Compilation: ( C: -- dest )
 ; Put the next location for a transfer of control, dest, onto the control flow
 ; stack. Append the run-time semantics given below to the current definition.
@@ -4711,7 +4813,7 @@ TICK_ERR:
 ; Continue execution.
 ; https://forth-standard.org/standard/core/BEGIN
 ;------------------------------------------------------------------------------
-        HEADER  "BEGIN", BEGIN_ENTRY, BEGIN_CFA, F_IMMEDIATE, ELSE_ENTRY
+        HEADER  "BEGIN", BEGIN_ENTRY, BEGIN_CFA, F_IMMEDIATE, ENDCASE_ENTRY
         CODEPTR DOCOL
         .word   HERE_CFA                ; push current DP as loop top
         .word   EXIT_CFA
