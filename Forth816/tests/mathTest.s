@@ -37,6 +37,7 @@
 PUBLIC MAIN
 	TYPESTRCR "math test - enter!"
 	jsr plusTest
+	jsr plusStoreTest
 	jsr minusTest
 	jsr starTest
 	jsr umStarTest
@@ -52,6 +53,7 @@ PUBLIC MAIN
 	jsr oneMinusTest
 	jsr twoStarTest
 	jsr twoSlashTest
+	jsr stodTest
 
 	TYPESTRCR "math test - exit!"
 	rts
@@ -65,6 +67,19 @@ ENDPUBLIC
 	jsr PLUS_CODE
 	TYPESTR_DOT "+ test 597 + 4133 (expect 4730) = "
 	rts
+.endproc
+
+.proc plusStoreTest
+	lda #13
+	PUSH
+	lda #@data
+	PUSH
+	jsr PLUSSTORE_CODE
+	lda #@data
+	PUSH
+	TYPESTR_DOT "+! test n=13 @a=33 (expect 46) = "
+	rts
+@data:	.word 33
 .endproc
 
 .proc minusTest
@@ -330,5 +345,20 @@ ENDPUBLIC
 	PUSH
 	jsr TWOSLASH_CODE
 	TYPESTR_DOTHEX "2/ test $0537 (expect 029B) = "
+	rts
+.endproc
+
+.proc stodTest
+	lda #$0537
+	PUSH
+	jsr STOD_CODE
+	TYPESTR_DOTHEX "S>D test $0537 HIGH (expect 0) = "
+	TYPESTR_DOTHEX "S>D test $0537 LOW (expect 0537) = "
+
+	lda #$8537
+	PUSH
+	jsr STOD_CODE
+	TYPESTR_DOTHEX "S>D test $8537 HIGH (expect FFFF) = "
+	TYPESTR_DOTHEX "S>D test $8537 LOW (expect 8537) = "
 	rts
 .endproc

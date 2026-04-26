@@ -485,9 +485,31 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; +! ( n addr -- ) adds n to the cell at addr.
+; https://forth-standard.org/standard/core/PlusStore
+;------------------------------------------------------------------------------
+        HEADER  "+!", PLUSSTORE_ENTRY, PLUSSTORE_CFA, 0, PLUS_ENTRY
+        CODEPTR PLUSSTORE_CODE
+        PUBLIC  PLUSSTORE_CODE
+        .a16
+        .i16
+                LDA     0,X             ; addr
+                STA     SCRATCH0        ; save addr
+                LDA     2,X             ; n
+                CLC
+                ADC     (SCRATCH0)      ; n + [addr]
+                STA     (SCRATCH0)      ; store back
+                INX
+                INX
+                INX
+                INX
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; - ( a b -- a-b )
 ;------------------------------------------------------------------------------
-        HEADER  "-", MINUS_ENTRY, MINUS_CFA, 0, PLUS_ENTRY
+        HEADER  "-", MINUS_ENTRY, MINUS_CFA, 0, PLUSSTORE_ENTRY
         CODEPTR MINUS_CODE
         PUBLIC  MINUS_CODE
         .a16
@@ -1031,6 +1053,28 @@ calc_depth:     TXA
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; S>D ( n -- d ) Convert the number n to the double-cell number d with the
+; same numerical value.
+; https://forth-standard.org/standard/core/StoD
+;------------------------------------------------------------------------------
+        HEADER  "S>D", STOD_ENTRY, STOD_CFA, 0, TWOSLASH_ENTRY
+        CODEPTR STOD_CODE
+        PUBLIC  STOD_CODE
+        .a16
+        .i16
+                DEX
+                DEX
+                LDA     2,X             ; n
+                BPL     @positive
+                LDA     #$FFFF          ; negative → high cell = $FFFF
+                STA     0,X
+                NEXT
+@positive:
+                STZ     0,X             ; positive → high cell = 0
+                NEXT
+        ENDPUBLIC
+
 ;==============================================================================
 ; SECTION 4: COMPARISON PRIMITIVES
 ; ANS Forth: TRUE = $FFFF, FALSE = $0000
@@ -1039,7 +1083,7 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
 ; = ( a b -- flag )
 ;------------------------------------------------------------------------------
-        HEADER  "=", EQUAL_ENTRY, EQUAL_CFA, 0, TWOSLASH_ENTRY
+        HEADER  "=", EQUAL_ENTRY, EQUAL_CFA, 0, STOD_ENTRY
         CODEPTR EQUAL_CODE
         PUBLIC  EQUAL_CODE
         .a16
@@ -1464,9 +1508,22 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; ALIGNED ( addr -- a-addr ) a-addr is the first aligned address greater than
+; or equal to addr.
+; https://forth-standard.org/standard/core/ALIGNED
+;------------------------------------------------------------------------------
+        HEADER  "ALIGNED", ALIGNED_ENTRY, ALIGNED_CFA, 0, TWOSTORE_ENTRY
+        CODEPTR DOCOL
+        .word   ONEPLUS_CFA
+        .word   LIT_CFA
+        .word   $FFFE
+        .word   AND_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; MOVE ( src dst u -- ) copy u bytes from src to dst
 ;------------------------------------------------------------------------------
-        HEADER  "MOVE", MOVE_ENTRY, MOVE_CFA, 0, TWOSTORE_ENTRY
+        HEADER  "MOVE", MOVE_ENTRY, MOVE_CFA, 0, ALIGNED_ENTRY
         CODEPTR MOVE_CODE
         PUBLIC  MOVE_CODE
         .a16
@@ -2554,13 +2611,31 @@ ABORTQUOTE_CLOOP:
 ; delimited by a space. Put the value of its first character onto the stack.
 ; https://forth-standard.org/standard/core/CHAR
 ;------------------------------------------------------------------------------
-HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
+        HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   ' '
         .word   PARSE_CFA               ; ( c-addr u ) raw, no uppercasing
         .word   DROP_CFA                ; ( c-addr ) discard length
         .word   CFETCH_CFA              ; ( char ) first character
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; CHARS ( n -- n ) NOP on byte addressed system.
+; https://forth-standard.org/standard/core/CHARS
+;------------------------------------------------------------------------------
+        HEADER  "CHARS", CHARS_ENTRY, CHARS_CFA, 0, CHAR_ENTRY
+        CODEPTR DOCOL
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; CHAR+ ( c-addr -- c-addr+1 ) add the size in address units of a character
+; to c-addr. This is a byte addressed ASCII only Forth, so that's 1.
+; https://forth-standard.org/standard/core/CHARPlus
+;------------------------------------------------------------------------------
+        HEADER  "CHAR+", CHARPLUS_ENTRY, CHARPLUS_CFA, 0, CHARS_ENTRY
+        CODEPTR DOCOL
+        .word   ONEPLUS_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -2571,7 +2646,7 @@ HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
 ; Place char, the value of the first character of name, on the stack.
 ; https://forth-standard.org/standard/core/BracketCHAR
 ;------------------------------------------------------------------------------
-        HEADER  "[CHAR]", BRACKCHAR_ENTRY, BRACKCHAR_CFA, F_IMMEDIATE, CHAR_ENTRY
+        HEADER  "[CHAR]", BRACKCHAR_ENTRY, BRACKCHAR_CFA, F_IMMEDIATE, CHARPLUS_ENTRY
         CODEPTR DOCOL
         .word   CHAR_CFA                ; ( char )
         .word   LIT_CFA
