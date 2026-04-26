@@ -1633,9 +1633,24 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; CPUTS ( addr -- ) transmits a NULL terminated stringfrom addr via HAL
+;------------------------------------------------------------------------------
+        HEADER  "CPUTS", CPUTS_ENTRY, CPUTS_CFA, 0, TYPE_ENTRY
+        CODEPTR CPUTS_CODE
+        PUBLIC  CPUTS_CODE
+        .a16
+        .i16
+                LDA     0,X
+                INX
+                INX
+                JSR     hal_cputs
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; CR ( -- ) emit carriage return + line feed via HAL
 ;------------------------------------------------------------------------------
-        HEADER  "CR", CR_ENTRY, CR_CFA, 0, TYPE_ENTRY
+        HEADER  "CR", CR_ENTRY, CR_CFA, 0, CPUTS_ENTRY
         CODEPTR CR_CODE
         PUBLIC  CR_CODE
         .a16
@@ -2256,7 +2271,8 @@ DOSQUOTE_CFA:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; S"
+; S" ( " test\"" -- c-addr u ) parses string terminated by a quote in input
+; buffer and returns a a pointer and character count.
 ;------------------------------------------------------------------------------
 SQUOTE_ENTRY:
         .word   DOSQUOTE_ENTRY          ; Link field
@@ -2361,7 +2377,7 @@ DODOTQUOTE_CFA:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; ." ( -- )
+; ." ( " test\"" -- ) parses text in the input buffer and outputs to console.
 ; https://forth-standard.org/standard/core/Dotq
 ;------------------------------------------------------------------------------
 DOTQUOTE_ENTRY:
@@ -4256,11 +4272,34 @@ print_udec:
 @crlf:          .byte C_RETURN, L_FEED, 0
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; HEADER>CFA ( entry -- addr ) extracts the CFA field from a header.
+;------------------------------------------------------------------------------
+        HEADER  "HEADER>CFA", HEADERCFA_ENTRY, HEADERCFA_CFA, 0, DOT_PROMPT_ENTRY
+        CODEPTR DOCOL
+        .word   DUP_CFA                ; ( header header )
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; ( header header+2 )
+        .word   CFETCH_CFA             ; ( header flags/len )
+        .word   LIT_CFA
+        .word   F_LENMASK
+        .word   AND_CFA                ; ( header namelen )
+        .word   SWAP_CFA               ; ( namelen header )
+        .word   LIT_CFA
+        .word   3
+        .word   PLUS_CFA               ; ( namelen header+3 )
+        .word   PLUS_CFA               ; ( header+3+namelen )
+        .word   ONEPLUS_CFA            ; ( +1 )
+        .word   LIT_CFA
+        .word   $FFFE
+        .word   AND_CFA                ; ( cfa aligned )
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; HEADER>NAME ( entry -- c-addr u ) extracts the name field from a header.
 ;------------------------------------------------------------------------------
-HEADER  "HEADER>NAME", HEADERNAME_ENTRY, HEADERNAME_CFA, 0, DOT_PROMPT_ENTRY
+        HEADER  "HEADER>NAME", HEADERNAME_ENTRY, HEADERNAME_CFA, 0, HEADERCFA_ENTRY
         CODEPTR DOCOL
         .word   DUP_CFA                 ; ( entry entry )
         .word   LIT_CFA
@@ -4278,9 +4317,52 @@ HEADER  "HEADER>NAME", HEADERNAME_ENTRY, HEADERNAME_CFA, 0, DOT_PROMPT_ENTRY
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; CFA>NAME ( cfa -- c-addr u flag ) walks the dictionary, finds a CFA, and
+; extracts the name field from a header.
+;------------------------------------------------------------------------------
+        HEADER  "CFA>NAME", CFANAME_ENTRY, CFANAME_CFA, 0, HEADERNAME_ENTRY
+        CODEPTR DOCOL
+        .word   LATEST_CFA
+        .word   FETCH_CFA              ; ( cfa entry )
+
+CFANAME_LOOP:
+        .word   DUP_CFA                ; ( cfa entry entry )
+        .word   ZBRANCH_CFA
+        .word   CFANAME_NOTFOUND
+
+        .word   TOR_CFA                ; ( cfa ) R: ( entry )
+        .word   DUP_CFA                ; ( cfa cfa ) R: ( entry )
+        .word   RFETCH_CFA             ; ( cfa cfa entry ) R: ( entry )
+        .word   HEADERCFA_CFA          ; ( cfa cfa entry-cfa ) R: ( entry )
+        .word   EQUAL_CFA              ; ( cfa flag ) R: ( entry )
+        .word   RFROM_CFA              ; ( cfa flag entry ) R: ( )
+        .word   SWAP_CFA               ; ( cfa entry flag )
+        .word   ZBRANCH_CFA
+        .word   CFANAME_NEXT
+
+        ; Match found
+        .word   NIP_CFA                ; ( entry )
+        .word   HEADERNAME_CFA         ; ( c-addr u )
+        .word   LIT_CFA
+        .word   $FFFF
+        .word   EXIT_CFA
+
+CFANAME_NEXT:
+        ; No match - follow link
+        .word   FETCH_CFA              ; ( cfa link )
+        .word   BRANCH_CFA
+        .word   CFANAME_LOOP
+
+CFANAME_NOTFOUND:
+        .word   TWODROP_CFA            ; ( )
+        .word   LIT_CFA
+        .word   $0000
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; WORDS ( -- ) list all non-hidden words in the dictionary
 ;------------------------------------------------------------------------------
-        HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, HEADERNAME_ENTRY
+        HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, CFANAME_ENTRY
         CODEPTR DOCOL
 
 WORDS_BODY:
@@ -5110,14 +5192,214 @@ FORGET_NOTFOUND:
         .word   TWODROP_CFA            ; ( )
         .word   LIT_CFA
         .word   notfound_msg
-        .word   LIT_CFA
-        .word   .strlen("Word not found") + 3
-        .word   TYPE_CFA
+        .word   CPUTS_CFA
         .word   ABORT_CFA
         .word   EXIT_CFA
 
 notfound_msg:
         .byte   "Word not found", $0D, $0A, $00
+
+;------------------------------------------------------------------------------
+; SEE ( "<spaces>name" -- ) skips leading space delimiters. Parse name
+; delimited by a space. Find name in dictionary, then print its definition
+; or "primitive" if its assembly.
+; Prints an error if the name can not be found.
+;------------------------------------------------------------------------------
+        HEADER  "SEE", SEE_ENTRY, SEE_CFA, 0, FORGET_ENTRY
+        CODEPTR DOCOL
+        ; Parse name, uppercase into HERE
+        .word   PARSENAME_CFA          ; ( c-addr u )
+        .word   TWODUP_CFA             ; ( c-addr u c-addr u )
+        .word   HERE_CFA
+        .word   PLACE_CFA              ; uppercase copy at HERE
+        .word   TWODROP_CFA            ; ( )
+        .word   HERE_CFA
+
+        ; Find the word
+        .word   FIND_CFA               ; ( xt 1|-1 | addr 0 )
+        .word   DUP_CFA                ; ( xt 1|-1 1|-1 | addr 0 0 )
+        .word   ZBRANCH_CFA
+        .word   SEE_NOTFOUND
+        .word   DROP_CFA               ; ( xt ) drop flag
+
+        ; Print ": NAME "
+        .word   LIT_CFA
+        .word   colon_msg
+        .word   CPUTS_CFA              ; print ": "
+        .word   DUP_CFA                ; ( xt xt )
+        .word   CFANAME_CFA            ; ( xt c-addr u true | xt false )
+        .word   ZBRANCH_CFA
+        .word   SEE_NONAME
+        .word   TYPE_CFA               ; ( xt )
+        .word   SPACE_CFA
+        .word   BRANCH_CFA
+        .word   SEE_CHECKTYPE
+
+SEE_NONAME:
+        .word   LIT_CFA
+        .word   unknown_msg
+        .word   CPUTS_CFA               ; ( xt )
+
+SEE_CHECKTYPE:
+        ; Check if DOCOL or primitive
+        .word   DUP_CFA                ; ( xt xt )
+        .word   FETCH_CFA              ; ( xt code-ptr )
+        .word   LIT_CFA
+        .word   DOCOL
+        .word   EQUAL_CFA              ; ( xt flag )
+        .word   ZBRANCH_CFA
+        .word   SEE_PRIMITIVE
+
+        ; DOCOL word - walk cells from xt+2
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; ( scan-ptr = xt+2 )
+
+SEE_LOOP:
+        .word   DUP_CFA                ; ( scan-ptr scan-ptr )
+        .word   FETCH_CFA              ; ( scan-ptr cell )
+
+        ; Check EXIT
+        .word   DUP_CFA                ; ( scan-ptr cell cell )
+        .word   LIT_CFA
+        .word   EXIT_CFA
+        .word   EQUAL_CFA              ; ( scan-ptr cell flag )
+        .word   ZBRANCH_CFA
+        .word   SEE_NOT_EXIT
+        .word   TWODROP_CFA            ; ( )
+        .word   LIT_CFA
+        .word   exit_msg
+        .word   CPUTS_CFA
+        .word   CR_CFA
+        .word   EXIT_CFA
+
+SEE_NOT_EXIT:
+        ; Check LIT
+        .word   DUP_CFA                ; ( scan-ptr cell cell )
+        .word   LIT_CFA
+        .word   LIT_CFA
+        .word   EQUAL_CFA              ; ( scan-ptr cell flag )
+        .word   ZBRANCH_CFA
+        .word   SEE_NOT_LIT
+        .word   DROP_CFA               ; ( scan-ptr )
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; ( scan-ptr+2 )
+        .word   DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
+        .word   FETCH_CFA              ; ( scan-ptr+2 value )
+        .word   LIT_CFA
+        .word   lit_msg
+        .word   CPUTS_CFA
+        .word   DOT_CFA                ; print value
+        .word   SPACE_CFA
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; advance past value
+        .word   BRANCH_CFA
+        .word   SEE_LOOP
+
+SEE_NOT_LIT:
+        ; Check BRANCH
+        .word   DUP_CFA                ; ( scan-ptr cell cell )
+        .word   LIT_CFA
+        .word   BRANCH_CFA
+        .word   EQUAL_CFA              ; ( scan-ptr cell flag )
+        .word   ZBRANCH_CFA
+        .word   SEE_NOT_BRANCH
+        .word   DROP_CFA               ; ( scan-ptr )
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; ( scan-ptr+2 )
+        .word   DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
+        .word   FETCH_CFA              ; ( scan-ptr+2 target )
+        .word   LIT_CFA
+        .word   branch_msg
+        .word   CPUTS_CFA
+        .word   DOTHEX_CFA
+        .word   SPACE_CFA
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; advance past target
+        .word   BRANCH_CFA
+        .word   SEE_LOOP
+
+SEE_NOT_BRANCH:
+        ; Check ZBRANCH
+        .word   DUP_CFA                ; ( scan-ptr cell cell )
+        .word   LIT_CFA
+        .word   ZBRANCH_CFA
+        .word   EQUAL_CFA              ; ( scan-ptr cell flag )
+        .word   ZBRANCH_CFA
+        .word   SEE_NOT_ZBRANCH
+        .word   DROP_CFA               ; ( scan-ptr )
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; ( scan-ptr+2 )
+        .word   DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
+        .word   FETCH_CFA              ; ( scan-ptr+2 target )
+        .word   LIT_CFA
+        .word   zbranch_msg
+        .word   CPUTS_CFA
+        .word   DOTHEX_CFA
+        .word   SPACE_CFA
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; advance past target
+        .word   BRANCH_CFA
+        .word   SEE_LOOP
+
+SEE_NOT_ZBRANCH:
+        ; General case - look up CFA name
+        .word   DROP_CFA               ; ( scan-ptr ) drop cell
+        .word   DUP_CFA                ; ( scan-ptr scan-ptr )
+        .word   FETCH_CFA              ; ( scan-ptr cell )
+        .word   CFANAME_CFA            ; ( scan-ptr c-addr u true | scan-ptr false )
+        .word   ZBRANCH_CFA
+        .word   SEE_UNKNOWN
+        .word   TYPE_CFA               ; ( scan-ptr ) print name
+        .word   SPACE_CFA
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; advance scan-ptr
+        .word   BRANCH_CFA
+        .word   SEE_LOOP
+
+SEE_UNKNOWN:
+        ; Unknown CFA - print hex value
+        .word   DUP_CFA                ; ( scan-ptr scan-ptr )
+        .word   FETCH_CFA              ; ( scan-ptr cell )
+        .word   DOTHEX_CFA             ; print hex
+        .word   SPACE_CFA
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; advance scan-ptr
+        .word   BRANCH_CFA
+        .word   SEE_LOOP
+
+SEE_PRIMITIVE:
+        .word   DROP_CFA               ; ( ) drop xt
+        .word   LIT_CFA
+        .word   primitive_msg
+        .word   CPUTS_CFA
+        .word   CR_CFA
+        .word   EXIT_CFA
+
+SEE_NOTFOUND:
+        .word   TWODROP_CFA            ; drop addr and 0
+        .word   LIT_CFA
+        .word   notfound_msg
+        .word   CPUTS_CFA
+        .word   ABORT_CFA
+        .word   EXIT_CFA
+
+colon_msg:      .byte ": ", $00
+exit_msg:       .byte "EXIT ;", $00
+lit_msg:        .byte "LIT ", $00
+branch_msg:     .byte "BRANCH ", $00
+zbranch_msg:    .byte "0BRANCH ", $00
+primitive_msg:  .byte "primitive", $00
+unknown_msg:    .byte "??? ", $00
+;notfound_msg:   .byte "Word not found", $0D, $0A, $00
 
 .ifdef DEBUG
 ;------------------------------------------------------------------------------
@@ -5139,7 +5421,7 @@ notfound_msg:
 ;------------------------------------------------------------------------------
 ; TRACEON ( -- ) enable execution tracing
 ;------------------------------------------------------------------------------
-        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, FORGET_ENTRY
+        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, SEE_ENTRY
         CODEPTR TRACEON_CODE
         PUBLIC  TRACEON_CODE
         .a16
@@ -5170,5 +5452,5 @@ notfound_msg:
 .ifdef DEBUG
 	LAST_WORD = TRACEOFF_ENTRY
 .else
-	LAST_WORD = FORGET_ENTRY
+	LAST_WORD = SEE_ENTRY
 .endif
