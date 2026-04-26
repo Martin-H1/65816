@@ -405,6 +405,64 @@ calc_depth:     TXA
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; 2>R ( x1 x2 -- ) R: ( -- x1 x2 ) Semantically equivalent to SWAP >R >R.
+;------------------------------------------------------------------------------
+        HEADER  "2>R", TWOTOR_ENTRY, TWOTOR_CFA, 0, RFETCH_ENTRY
+        CODEPTR TWOTOR_CODE
+        PUBLIC  TWOTOR_CODE
+        .a16
+        .i16
+                LDA     2,X             ; x1 (NOS)
+                PHA                     ; push x1 first
+                LDA     0,X             ; x2 (TOS)
+                PHA                     ; push x2 on top
+                INX
+                INX
+                INX
+                INX
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; 2R> ( -- x1 x2 ) R: ( x1 x2 -- ) Semantically equivalent to R> R> SWAP.
+;------------------------------------------------------------------------------
+        HEADER  "2R>", TWORFROM_ENTRY, TWORFROM_CFA, 0, TWOTOR_ENTRY
+        CODEPTR TWORFROM_CODE
+        PUBLIC  TWORFROM_CODE
+        .a16
+        .i16
+                DEX
+                DEX
+                DEX
+                DEX
+                PLA                     ; x2 (TOS of return stack)
+                STA     0,X             ; x2 (TOS)
+                PLA                     ; x1
+                STA     2,X             ; x1 (NOS)
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; 2R@ ( -- x1 x2 ) R: ( x1 x2 -- x1 x2 )
+; Semantically equivalent to R> R> 2DUP >R >R SWAP.
+;------------------------------------------------------------------------------
+        HEADER  "2R@", TWORFETCH_ENTRY, TWORFETCH_CFA, 0, TWORFROM_ENTRY
+        CODEPTR TWORFETCH_CODE
+        PUBLIC  TWORFETCH_CODE
+        .a16
+        .i16
+                DEX
+                DEX
+                DEX
+                DEX
+                LDA     1,S             ; x2 (TOS of return stack)
+                STA     0,X             ; x2 (TOS)
+                LDA     3,S             ; x1
+                STA     2,X             ; x1 (NOS)
+                NEXT
+        ENDPUBLIC
+
 ;==============================================================================
 ; SECTION 3: ARITHMETIC PRIMITIVES
 ;==============================================================================
@@ -412,7 +470,7 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
 ; + ( a b -- a+b )
 ;------------------------------------------------------------------------------
-        HEADER  "+", PLUS_ENTRY, PLUS_CFA, 0, RFETCH_ENTRY
+        HEADER  "+", PLUS_ENTRY, PLUS_CFA, 0, TWORFETCH_ENTRY
         CODEPTR PLUS_CODE
         PUBLIC  PLUS_CODE
         .a16
@@ -1999,9 +2057,26 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; DP ( -- addr ) address of DP variable in user area
+;------------------------------------------------------------------------------
+        HEADER  "DP", DP_ENTRY, DP_CFA, 0, CURDEF_ENTRY
+        CODEPTR DP_CODE
+        PUBLIC  DP_CODE
+        .a16
+        .i16
+                LDA     UP
+                CLC
+                ADC     #U_DP
+                DEX
+                DEX
+                STA     0,X
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; LATEST ( -- addr ) address of LATEST variable in user area
 ;------------------------------------------------------------------------------
-        HEADER  "LATEST", LATEST_ENTRY, LATEST_CFA, 0, CURDEF_ENTRY
+        HEADER  "LATEST", LATEST_ENTRY, LATEST_CFA, 0, DP_ENTRY
         CODEPTR LATEST_CODE
         PUBLIC  LATEST_CODE
         .a16
@@ -4181,10 +4256,31 @@ print_udec:
 @crlf:          .byte C_RETURN, L_FEED, 0
         ENDPUBLIC
 
+
+;------------------------------------------------------------------------------
+; HEADER>NAME ( entry -- c-addr u ) extracts the name field from a header.
+;------------------------------------------------------------------------------
+HEADER  "HEADER>NAME", HEADERNAME_ENTRY, HEADERNAME_CFA, 0, DOT_PROMPT_ENTRY
+        CODEPTR DOCOL
+        .word   DUP_CFA                 ; ( entry entry )
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA                ; ( entry entry+2 )
+        .word   CFETCH_CFA              ; ( entry flags+len )
+        .word   LIT_CFA
+        .word   F_LENMASK
+        .word   AND_CFA                 ; ( entry u )
+        .word   SWAP_CFA                ; ( u entry )
+        .word   LIT_CFA
+        .word   3
+        .word   PLUS_CFA                ; ( u entry+3 ) = c-addr
+        .word   SWAP_CFA                ; ( c-addr u )
+        .word   EXIT_CFA
+
 ;------------------------------------------------------------------------------
 ; WORDS ( -- ) list all non-hidden words in the dictionary
 ;------------------------------------------------------------------------------
-        HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, DOT_PROMPT_ENTRY
+        HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, HEADERNAME_ENTRY
         CODEPTR DOCOL
 
 WORDS_BODY:
@@ -4203,17 +4299,7 @@ WORDS_LOOP:
         .word   ZBRANCH_CFA
         .word   WORDS_SKIP
         .word   DUP_CFA                 ; ( entry entry )
-        .word   LIT_CFA
-        .word   3
-        .word   PLUS_CFA                ; ( entry entry+3 ) skip link+flags byte
-        .word   DUP_CFA                 ; ( entry entry+3 entry+3 )
-        .word   LIT_CFA
-        .word   1
-        .word   MINUS_CFA               ; ( entry entry+3 entry+2 )
-        .word   CFETCH_CFA              ; ( entry entry+3 flags+len )
-        .word   LIT_CFA
-        .word   F_LENMASK
-        .word   AND_CFA                 ; ( entry entry+3 len )
+        .word   HEADERNAME_CFA          ; ( entry c-addr u )
         .word   TYPE_CFA                ; ( entry )
         .word   SPACE_CFA
 WORDS_SKIP:
@@ -4961,6 +5047,78 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         .word   COMMA_CFA              ; compile into definition
         .word   EXIT_CFA
 
+;==============================================================================
+; SECTION 15: The optional Programming-Tools word set
+;==============================================================================
+
+;------------------------------------------------------------------------------
+; FORGET ( "<spaces>name" -- ) skips leading space delimiters. Parse name
+; delimited by a space. Find name, then delete name from the dictionary along
+; with all words added to the dictionary after name.
+; Prints an error if the name can not be found.
+;------------------------------------------------------------------------------
+	HEADER  "FORGET", FORGET_ENTRY, FORGET_CFA, 0, RECURSE_ENTRY
+        CODEPTR DOCOL
+        .word   PARSENAME_CFA          ; ( c-addr u )
+        .word   TWODUP_CFA             ; ( c-addr u c-addr u )
+        .word   HERE_CFA               ; ( c-addr u c-addr u here )
+        .word   PLACE_CFA              ; ( c-addr u ) uppercased copy at HERE
+        .word   TWODROP_CFA            ; ( )
+        .word   HERE_CFA               ; ( here )
+        .word   COUNT_CFA              ; ( c-addr' u ) uppercased string
+        .word   LATEST_CFA
+        .word   FETCH_CFA              ; ( c-addr' u entry )
+FORGET_LOOP:
+        ; Check for end of dictionary
+        .word   DUP_CFA                ; ( c-addr u entry entry )
+        .word   ZBRANCH_CFA            ; branch if entry = 0 (not found)
+        .word   FORGET_NOTFOUND
+
+        ; Stash entry, duplicate c-addr u, get name, compare
+        .word   TOR_CFA                ; ( c-addr u ) R: ( entry )
+        .word   TWODUP_CFA             ; ( c-addr u c-addr u ) R: ( entry )
+        .word   RFETCH_CFA             ; ( c-addr u c-addr u entry ) R: ( entry )
+        .word   HEADERNAME_CFA         ; ( c-addr u c-addr u c-addr2 u2 ) R: ( entry )
+        .word   COMPARE_CFA            ; ( c-addr u flag ) R: ( entry )
+        .word   ZEROEQ_CFA             ; ( c-addr u match ) R: ( entry )
+        .word   RFROM_CFA              ; ( c-addr u match entry ) R: ( )
+        .word   SWAP_CFA               ; ( c-addr u entry match )
+        .word   ZBRANCH_CFA
+        .word   FORGET_NEXT
+
+        ; Match found - clean up c-addr u then update LATEST and DP
+        .word   TWOSWAP_CFA            ; ( entry c-addr u )
+        .word   TWODROP_CFA            ; ( entry )
+        .word   DUP_CFA                ; ( entry entry )
+        .word   FETCH_CFA              ; ( entry link )
+        .word   LATEST_CFA
+        .word   STORE_CFA              ; LATEST = link
+        .word   DP_CFA
+        .word   STORE_CFA              ; DP = entry
+        .word   EXIT_CFA
+
+FORGET_NEXT:
+        ; No match - follow link to next entry
+        ; Stack: ( c-addr u entry )
+        .word   FETCH_CFA              ; ( c-addr u link )
+        .word   BRANCH_CFA
+        .word   FORGET_LOOP
+
+FORGET_NOTFOUND:
+        ; Stack: ( c-addr u entry ) entry=0
+        .word   DROP_CFA               ; ( c-addr u )
+        .word   TWODROP_CFA            ; ( )
+        .word   LIT_CFA
+        .word   notfound_msg
+        .word   LIT_CFA
+        .word   .strlen("Word not found") + 3
+        .word   TYPE_CFA
+        .word   ABORT_CFA
+        .word   EXIT_CFA
+
+notfound_msg:
+        .byte   "Word not found", $0D, $0A, $00
+
 .ifdef DEBUG
 ;------------------------------------------------------------------------------
 ; TRACEOUT ( -- ) Prints current IP to console in hex.
@@ -4981,7 +5139,7 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 ;------------------------------------------------------------------------------
 ; TRACEON ( -- ) enable execution tracing
 ;------------------------------------------------------------------------------
-        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, RECURSE_ENTRY
+        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, FORGET_ENTRY
         CODEPTR TRACEON_CODE
         PUBLIC  TRACEON_CODE
         .a16
@@ -5012,5 +5170,5 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 .ifdef DEBUG
 	LAST_WORD = TRACEOFF_ENTRY
 .else
-	LAST_WORD = RECURSE_ENTRY
+	LAST_WORD = FORGET_ENTRY
 .endif
