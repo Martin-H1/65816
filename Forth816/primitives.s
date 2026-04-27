@@ -1807,10 +1807,20 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; LITERAL ( n -- ) compile-time, compiles n as a literal into current definition;------------------------------------------------------------------------------
+        HEADER  "LITERAL", LITERAL_ENTRY, LITERAL_CFA, F_IMMEDIATE, LIT_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   LIT_CFA
+        .word   COMMA_CFA              ; compile LIT
+        .word   COMMA_CFA              ; compile n
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; BRANCH ( -- ) unconditional branch (compiled word)
 ; The cell following BRANCH contains the branch offset (signed)
 ;------------------------------------------------------------------------------
-        HEADER  "BRANCH", BRANCH_ENTRY, BRANCH_CFA, F_HIDDEN, LIT_ENTRY
+        HEADER  "BRANCH", BRANCH_ENTRY, BRANCH_CFA, F_HIDDEN, LITERAL_ENTRY
         CODEPTR BRANCH_CODE
         PUBLIC  BRANCH_CODE
         .a16
@@ -2649,10 +2659,7 @@ ABORTQUOTE_CLOOP:
         HEADER  "[CHAR]", BRACKCHAR_ENTRY, BRACKCHAR_CFA, F_IMMEDIATE, CHARPLUS_ENTRY
         CODEPTR DOCOL
         .word   CHAR_CFA                ; ( char )
-        .word   LIT_CFA
-        .word   LIT_CFA
-        .word   COMMA_CFA               ; compile LIT
-        .word   COMMA_CFA               ; compile char value
+        .word   LITERAL_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -4435,9 +4442,19 @@ CFANAME_NOTFOUND:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; >BODY ( xt -- a-addr ) CFA to body, skips past the code pointer cell
+;------------------------------------------------------------------------------
+        HEADER  ">BODY", TOBODY_ENTRY, TOBODY_CFA, 0, CFANAME_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; WORDS ( -- ) list all non-hidden words in the dictionary
 ;------------------------------------------------------------------------------
-        HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, CFANAME_ENTRY
+        HEADER  "WORDS", WORDS_ENTRY, WORDS_CFA, 0, TOBODY_ENTRY
         CODEPTR DOCOL
 
 WORDS_BODY:
@@ -4869,8 +4886,6 @@ TICK_ERR:
 ;------------------------------------------------------------------------------
 ; ['] Interpretation: Undefined. Compilation: ( "<spaces>name" -- )
 ; Skip leading space delimiters. Parse name delimited by a space. Find name.
-; Append the run-time semantics given below to the current definition.
-; An ambiguous condition exists if name is not found.
 ; Run-time: ( -- xt )
 ; Place name's execution token xt on the stack. The execution token returned by
 ; the compiled phrase "['] X" is the same value returned by "' X" outside of
@@ -4880,10 +4895,7 @@ TICK_ERR:
         HEADER  "[']", BRACKETTICK_ENTRY, BRACKETTICK_CFA, F_IMMEDIATE, TICK_ENTRY
         CODEPTR DOCOL
         .word   TICK_CFA                ; execute ' -> xt on stack
-        .word   LIT_CFA                 ; execute LIT -> pushes the next cell...
-        .word   LIT_CFA                 ; ...which is the value LIT_CFA itself
-        .word   COMMA_CFA               ; compile LIT_CFA into dictionary
-        .word   COMMA_CFA               ; compile xt into dictionary
+        .word   LITERAL_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
