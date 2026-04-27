@@ -20,8 +20,9 @@ bin/release/forth816.rom: obj/release/forth.o obj/release/hal_mench.o obj/releas
 tests: CA65FLAGS += -D DEBUG -I .
 tests: tests/bin/acceptTest.srec tests/bin/compilerTest.srec \
 	tests/bin/compareTest.srec tests/bin/interpretTest.srec \
-	tests/bin/ioTest.srec tests/bin/mathTest.srec \
-	tests/bin/memoryTest.srec tests/bin/stackTest.srec
+	tests/bin/ioTest.srec tests/bin/loopTest.srec \
+	tests/bin/mathTest.srec tests/bin/memoryTest.srec \
+	tests/bin/stackTest.srec
 
 tests/bin/acceptTest.bin: tests/obj/hal_test.o tests/obj/acceptTest.o obj/debug/primitives.o
 	$(LD65) -C tests/test.cfg -o tests/bin/acceptTest.bin -m tests/bin/acceptTest.map $^
@@ -37,6 +38,9 @@ tests/bin/interpretTest.bin: tests/obj/hal_test.o tests/obj/interpretTest.o obj/
 
 tests/bin/ioTest.bin: tests/obj/hal_test.o tests/obj/ioTest.o obj/debug/primitives.o
 	$(LD65) -C tests/test.cfg -o tests/bin/ioTest.bin -m tests/bin/ioTest.map $^
+
+tests/bin/loopTest.bin: tests/obj/hal_test.o tests/obj/loopTest.o obj/debug/primitives.o
+	$(LD65) -C tests/test.cfg -o tests/bin/loopTest.bin -m tests/bin/loopTest.map $^
 
 tests/bin/mathTest.bin: tests/obj/hal_test.o tests/obj/mathTest.o obj/debug/primitives.o
 	$(LD65) -C tests/test.cfg -o tests/bin/mathTest.bin -m tests/bin/mathTest.map $^
