@@ -236,3 +236,36 @@ HAL TODO items
 * It's easy to overrun the Mench monitors serial I/O routines. I'd guess that
   the monitor's routines use small buffers to fit within the on chip RAM.
 * Add a block oriented mass storage interface to the HAL.
+
+Stretch Goals
+
+CORE-EXT words
+6.2.0200 .(
+6.2.0210 .R
+6.2.0260 0<>
+6.2.0455 :NONAME
+6.2.0620 ?DO
+6.2.0698 ACTION-OF
+6.2.0825 BUFFER:
+6.2.0855 C"
+6.2.1173 DEFER
+6.2.1175 DEFER!
+6.2.1177 DEFER@
+6.2.1350 ERASE
+6.2.1485 FALSE
+6.2.1675 HOLDS
+6.2.1725 IS
+6.2.1850 MARKER
+6.2.2125 REFILL
+6.2.2148 RESTORE-INPUT
+6.2.2266 S\"
+6.2.2182 SAVE-INPUT
+6.2.2218 SOURCE-ID
+6.2.2295 TO
+6.2.2298 TRUE
+6.2.2330 U.R
+6.2.2395 UNUSED
+6.2.2405 VALUE
+6.2.2440 WITHIN
+6.2.2530 [COMPILE]
+6.2.2535 \
