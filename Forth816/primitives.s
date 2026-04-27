@@ -1075,6 +1075,66 @@ calc_depth:     TXA
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; DNEGATE ( d -- -d ) negate the double cell in ANS order on stack.
+; https://forth-standard.org/standard/double/DNEGATE
+;------------------------------------------------------------------------------
+        HEADER  "DNEGATE", DNEGATE_ENTRY, DNEGATE_CFA, 0, STOD_ENTRY
+        CODEPTR DNEGATE_CODE
+        PUBLIC  DNEGATE_CODE
+        .a16
+        .i16
+                LDA     0,X             ; high cell
+                EOR     #$FFFF          ; invert
+                STA     0,X
+                LDA     2,X             ; low cell
+                EOR     #$FFFF          ; invert
+                INC     A               ; +1
+                STA     2,X
+                BNE     @done           ; no carry
+                INC     0,X             ; propagate carry to high cell
+@done:          NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; M* ( n1 n2 -- d ) d is the signed product of n1 times n2.
+; https://forth-standard.org/standard/core/MTimes
+;------------------------------------------------------------------------------
+        HEADER  "M*", MSTAR_ENTRY, MSTAR_CFA, 0, DNEGATE_ENTRY
+        CODEPTR DOCOL
+        .word   TWODUP_CFA             ; ( n1 n2 n1 n2 )
+        .word   XOR_CFA                ; ( n1 n2 xor ) sign of result
+        .word   TOR_CFA                ; R: ( sign )
+        .word   ABS_CFA                ; ( n1 |n2| )
+        .word   SWAP_CFA               ; ( |n2| n1 )
+        .word   ABS_CFA                ; ( |n2| |n1| )
+        .word   UMSTAR_CFA             ; ( ud ) unsigned 32-bit result
+        .word   RFROM_CFA              ; ( ud sign )
+        .word   ZEROLESS_CFA           ; ( ud flag ) true if result negative
+        .word   ZBRANCH_CFA
+        .word   MSTAR_DONE
+        .word   DNEGATE_CFA            ; negate if signs differed
+MSTAR_DONE:
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; */MOD ( n1 n2 n3 -- n4 n5 ) Multiply n1 by n2 producing the intermediate
+; double-cell result d. Divide d by n3 producing the single-cell remainder n4
+; and the single-cell quotient n5. An ambiguous condition exists if n3 is zero,
+; or if the quotient n5 lies outside the range of a single-cell signed integer.
+; If d and n3 differ in sign, the implementation-defined result returned will
+; be the same as that returned by either the phrase >R M* R> FM/MOD or the
+; phrase >R M* R>
+; https://forth-standard.org/standard/core/TimesDivMOD
+;------------------------------------------------------------------------------
+        HEADER  "*/MOD", SSMOD_ENTRY, SSMOD_CFA, 0, MSTAR_ENTRY
+        CODEPTR DOCOL
+        .word   TOR_CFA                ; ( n1 n2 ) R: ( n3 )
+        .word   MSTAR_CFA              ; ( d ) 32-bit result
+        .word   RFROM_CFA              ; ( d n3 )
+;        .word   SMREM_CFA              ; ( rem quot )
+        .word   EXIT_CFA
+
 ;==============================================================================
 ; SECTION 4: COMPARISON PRIMITIVES
 ; ANS Forth: TRUE = $FFFF, FALSE = $0000
@@ -1083,7 +1143,7 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
 ; = ( a b -- flag )
 ;------------------------------------------------------------------------------
-        HEADER  "=", EQUAL_ENTRY, EQUAL_CFA, 0, STOD_ENTRY
+        HEADER  "=", EQUAL_ENTRY, EQUAL_CFA, 0, SSMOD_ENTRY
         CODEPTR EQUAL_CODE
         PUBLIC  EQUAL_CODE
         .a16
