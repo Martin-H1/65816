@@ -15,17 +15,21 @@
 .include "macrosdbg.inc"
 
 .import PLUS_CODE
+.import PLUSSTORE_CODE
 .import MINUS_CODE
 .import STAR_CODE
 .import UMSTAR_CODE
 .import UMSLASHMOD_CODE
 .import SLASHMOD_CODE
+.import SLASH_CODE
+.import MOD_CODE
 .import NEGATE_CODE
 .import ABS_CODE
 .import MAX_CODE
 .import MIN_CODE
 .import ONEPLUS_CODE
 .import ONEMINUS_CODE
+.import STOD_CODE
 .import TWOSTAR_CODE
 .import TWOSLASH_CODE
 .import MOVE_CODE
@@ -72,14 +76,14 @@ ENDPUBLIC
 .proc plusStoreTest
 	lda #13
 	PUSH
-	lda #@data
+	lda #data
 	PUSH
 	jsr PLUSSTORE_CODE
-	lda #@data
+	lda data
 	PUSH
 	TYPESTR_DOT "+! test n=13 @a=33 (expect 46) = "
 	rts
-@data:	.word 33
+data:	.word 33
 .endproc
 
 .proc minusTest
@@ -213,31 +217,31 @@ ENDPUBLIC
 	PUSH
 	lda #20
 	PUSH
-	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
+	JSR SLASH_CODE    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test 4133 / 20 (expect 206) = "
 	lda #4133
 	PUSH
 	lda #$fffd
 	PUSH
-	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
+	JSR SLASH_CODE    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test 4133 / -3 (expect -1378) = "
 	lda #$fffd
 	PUSH
 	lda #$fffd
 	PUSH
-	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
+	JSR SLASH_CODE    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test -3 / -3 (expect 1) = "
 	lda #$fffd
 	PUSH
 	lda #20
 	PUSH
-	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
+	JSR SLASH_CODE    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test -3 / 20 (expect 0) = "
 	lda #$fffd
 	PUSH
 	lda #$1
 	PUSH
-	CALL_DOCOL SLASH_CFA    ; RTS_CFA will return here.
+	JSR SLASH_CODE    ; RTS_CFA will return here.
 	TYPESTR_DOT "/ test -3 / 1 (expect -3) = "
 	rts
 .endproc
@@ -247,25 +251,25 @@ ENDPUBLIC
 	PUSH
 	lda #20
 	PUSH
-	CALL_DOCOL MOD_CFA    ; RTS_CFA will return here.
+	JSR MOD_CODE      ; RTS_CFA will return here.
 	TYPESTR_DOT "MOD test 4133 MOD 20 (expect 13) = "
 	lda #$4133
 	PUSH
 	lda #$fffd
 	PUSH
-	CALL_DOCOL MOD_CFA    ; RTS_CFA will return here.
+	JSR MOD_CODE      ; RTS_CFA will return here.
 	TYPESTR_DOT "MOD test 4133 MOD -3 (expect -1) = "
 	lda #$fffd
 	PUSH
 	lda #$fffd
 	PUSH
-	CALL_DOCOL MOD_CFA    ; RTS_CFA will return here.
+	JSR MOD_CODE      ; RTS_CFA will return here.
 	TYPESTR_DOT "MOD test -3 MOD -3 (expect 0) = "
 	lda #$fffd
 	PUSH
 	lda #20
 	PUSH
-	CALL_DOCOL MOD_CFA    ; RTS_CFA will return here.
+	JSR MOD_CODE      ; RTS_CFA will return here.
 	TYPESTR_DOT "MOD test -3 MOD 20 (expect 17) = "
 	rts
 .endproc

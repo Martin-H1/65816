@@ -23,6 +23,8 @@
 .import MOVE_CODE
 .import FILL_CODE
 
+.importzp W
+
 ; Main entry point for the test
 PUBLIC MAIN
 	TYPESTRCR "memory test - enter!"
@@ -33,6 +35,8 @@ PUBLIC MAIN
 	jsr cstoreTest
 	jsr twoFetchTest
 	jsr twoStoreTest
+	jsr alignedTest
+	jsr charplusTest
 	jsr moveTest
 	jsr fillTest
 
@@ -117,6 +121,28 @@ twofetch1:
 .endproc
 twostore1:
 	.word $0000, $0000
+
+.proc alignedTest
+	lda #$0057
+	PUSH
+	CALL_DOCOL ALIGNED_CFA
+	TYPESTR_DOTHEX "Aligned test $0057 (expect 0058) = "
+
+	lda #$0064
+	PUSH
+	CALL_DOCOL ALIGNED_CFA
+	TYPESTR_DOTHEX "Aligned test $0064 (expect 0064) = "
+	rts
+.endproc
+
+.proc charplusTest
+	lda #$0057
+	PUSH
+	CALL_DOCOL CHARPLUS_CFA
+	TYPESTR_DOTHEX "Char+ test $0057 (expect 0058) = "
+
+	rts
+.endproc
 
 .proc moveTest
 	lda #movesrc

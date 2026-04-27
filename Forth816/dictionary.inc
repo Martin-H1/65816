@@ -85,6 +85,7 @@ F_LENMASK       = $1F
         .global CSTORE_CFA
         .global TWOFETCH_CFA
         .global TWOSTORE_CFA
+        .global ALIGNED_CFA
         .global MOVE_CFA
         .global FILL_CFA
 
@@ -123,6 +124,8 @@ F_LENMASK       = $1F
         .global ABORT_CODE
         .global ABORTQ_CFA
         .global DOABORTQ_CFA
+        .global CHARS_CFA
+        .global CHARPLUS_CFA
         .global BYE_CFA
 
 ; String/parse words
