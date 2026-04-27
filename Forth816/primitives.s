@@ -886,17 +886,6 @@ calc_depth:     TXA
                 INC     A
                 STA     2,X
 @rem_positive:
-                ; Step 7: floor correction
-                LDA     SDIV_N1,S
-                EOR     SDIV_N2,S
-                BPL     @done
-                LDA     2,X             ; remainder (signed)
-                BEQ     @done
-                DEC     0,X             ; quot -= 1
-                LDA     2,X
-                CLC
-                ADC     SDIV_N2,S       ; rem += n2
-                STA     2,X
 @done:
                 ; 0,X=rem 2,X=quot
                 PLA
@@ -935,9 +924,121 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; SM/REM ( d1 n1 -- n2 n3 ) Divide d1 by n1, giving the symmetric quotient n3
+; and the remainder n2. Input and output stack arguments are signed. An
+; ambiguous condition exists if n1 is zero or if the quotient lies outside
+; the range of a single-cell signed integer.
+; https://forth-standard.org/standard/core/SMDivREM
+;------------------------------------------------------------------------------
+        HEADER  "SM/REM", SMREM_ENTRY, SMREM_CFA, 0, MOD_ENTRY
+        CODEPTR SMREM_CODE
+        PUBLIC  SMREM_CODE
+        .a16
+        .i16
+                JSR     SMREM_IMPL
+                NEXT
+        ENDPUBLIC
+
+        PUBLIC  SMREM_IMPL
+        .a16
+        .i16
+        SMREM_N     = 1                 ; saved divisor (n)
+        SMREM_DHIGH = 3                 ; saved d-high
+        SMREM_SIGN  = 5                 ; saved sign indicator (d-high XOR n)
+
+                ; Save sign indicator, d-high, and n
+                LDA     2,X             ; d-high
+                EOR     0,X             ; XOR with n for sign indicator
+                PHA                     ; SMREM_SIGN
+                LDA     2,X             ; d-high
+                PHA                     ; SMREM_DHIGH
+                LDA     0,X             ; n
+                PHA                     ; SMREM_N
+
+                ; Take absolute value of n
+                LDA     0,X
+                BPL     @n_pos
+                EOR     #$FFFF
+                INC     A
+                STA     0,X
+@n_pos:
+                ; Take absolute value of 32-bit dividend
+                LDA     2,X             ; d-high
+                BPL     @d_pos
+                LDA     4,X             ; d-low
+                EOR     #$FFFF          ; invert
+                CLC
+                ADC     #1              ; +1, carry set if result = 0
+                STA     4,X
+                LDA     2,X             ; d-high
+                EOR     #$FFFF          ; invert
+                ADC     #0              ; add carry
+                STA     2,X
+@d_pos:
+                JSR     UMSLASHMOD_IMPL ; ( rem quot )
+
+                ; Apply sign to quotient: sign(d-high XOR n)
+                LDA     SMREM_SIGN,S
+                BPL     @quot_pos
+                LDA     0,X
+                BEQ     @quot_pos
+                EOR     #$FFFF
+                INC     A
+                STA     0,X
+@quot_pos:
+                ; Apply sign to remainder: sign of original d-high
+                LDA     SMREM_DHIGH,S
+                BPL     @rem_pos
+                LDA     2,X
+                BEQ     @rem_pos
+                EOR     #$FFFF
+                INC     A
+                STA     2,X
+@rem_pos:
+                PLA                     ; drop SMREM_N
+                PLA                     ; drop SMREM_DHIGH
+                PLA                     ; drop SMREM_SIGN
+                RTS
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; FM/MOD ( d1 n1 -- n2 n3 ) Divide d1 by n1, giving the floored quotient n3 and
+; the remainder n2. Input and output stack arguments are signed. An ambiguous
+; condition exists if n1 is zero or if the quotient lies outside the range of
+; a single-cell signed integer.
+; https://forth-standard.org/standard/core/FMDivMOD
+;------------------------------------------------------------------------------
+        HEADER  "FM/MOD", FMMOD_ENTRY, FMMOD_CFA, 0, SMREM_ENTRY
+        CODEPTR FMMOD_CODE
+        PUBLIC  FMMOD_CODE
+        .a16
+        .i16
+                LDA     2,X             ; d-high
+                EOR     0,X             ; sign indicator
+                PHA                     ; save sign indicator
+                LDA     0,X             ; n
+                PHA                     ; save n
+                JSR     SMREM_IMPL      ; ( rem quot )
+                ; Floor correction
+                LDA     3,S             ; sign indicator
+                BPL     @done           ; same signs → no correction
+                LDA     2,X             ; remainder
+                BEQ     @done           ; zero → no correction
+                DEC     0,X             ; quot -= 1
+                LDA     2,X
+                CLC
+                ADC     1,S             ; rem += n
+                STA     2,X
+@done:
+                PLA                     ; drop n
+                PLA                     ; drop sign indicator
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; NEGATE ( n -- -n )
 ;------------------------------------------------------------------------------
-        HEADER  "NEGATE", NEGATE_ENTRY, NEGATE_CFA, 0, MOD_ENTRY
+        HEADER  "NEGATE", NEGATE_ENTRY, NEGATE_CFA, 0, FMMOD_ENTRY
         CODEPTR NEGATE_CODE
         PUBLIC  NEGATE_CODE
         .a16
@@ -1132,7 +1233,20 @@ MSTAR_DONE:
         .word   TOR_CFA                ; ( n1 n2 ) R: ( n3 )
         .word   MSTAR_CFA              ; ( d ) 32-bit result
         .word   RFROM_CFA              ; ( d n3 )
-;        .word   SMREM_CFA              ; ( rem quot )
+        .word   SMREM_CFA              ; ( rem quot )
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; */ ( n1 n2 n3 -- n4 ) Multiply n1 by n2 producing the intermediate
+; double-cell result d. Divide d by n3 giving the single-cell quotient n4.
+; An ambiguous condition exists if n3 is zero or if the quotient n4 lies
+; outside the range of a signed number.
+; https://forth-standard.org/standard/core/TimesDiv
+;------------------------------------------------------------------------------
+        HEADER  "*/", SSSLASH_ENTRY, SSSLASH_CFA, 0, SSMOD_ENTRY
+        CODEPTR DOCOL
+        .word   SSMOD_CFA              ; ( rem quot )
+        .word   NIP_CFA                ; ( quot )
         .word   EXIT_CFA
 
 ;==============================================================================
@@ -1143,7 +1257,7 @@ MSTAR_DONE:
 ;------------------------------------------------------------------------------
 ; = ( a b -- flag )
 ;------------------------------------------------------------------------------
-        HEADER  "=", EQUAL_ENTRY, EQUAL_CFA, 0, SSMOD_ENTRY
+        HEADER  "=", EQUAL_ENTRY, EQUAL_CFA, 0, SSSLASH_ENTRY
         CODEPTR EQUAL_CODE
         PUBLIC  EQUAL_CODE
         .a16
