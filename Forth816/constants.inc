@@ -15,6 +15,8 @@ PSP_EMPTY       = $0400         ; Parameter stack pointer underflow
 
 ; Scratch pad buffer
 PAD_BASE        = $0400         ; PAD at $0400
+PAD_SIZE        = $00FF         ; PAD area is one page.
+PAD_END         = PAD_BASE + PAD_SIZE
 
 ; User area base and offsets
 UP_BASE         = $0500

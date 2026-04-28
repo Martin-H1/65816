@@ -2444,6 +2444,23 @@ MSTAR_DONE:
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; HLD ( -- addr ) pointer within the scratch pad area.
+;------------------------------------------------------------------------------
+        HEADER  "HLD", HLD_ENTRY, HLD_CFA, 0, PAD_ENTRY
+        CODEPTR HLD_CODE
+        PUBLIC  HLD_CODE
+        .a16
+        .i16
+                LDA     UP
+                CLC
+                ADC     #U_HLD
+                DEX
+                DEX
+                STA     0,X
+                NEXT
+        ENDPUBLIC
+
 ;==============================================================================
 ; SECTION 11: STRING AND PARSE WORDS
 ;==============================================================================
@@ -2451,7 +2468,7 @@ MSTAR_DONE:
 ;------------------------------------------------------------------------------
 ; COUNT ( addr -- addr+1 len ) counted string to addr/len
 ;------------------------------------------------------------------------------
-        HEADER  "COUNT", COUNT_ENTRY, COUNT_CFA, 0, PAD_ENTRY
+        HEADER  "COUNT", COUNT_ENTRY, COUNT_CFA, 0, HLD_ENTRY
         CODEPTR COUNT_CODE
         PUBLIC  COUNT_CODE
         .a16
@@ -4394,6 +4411,8 @@ print_udec:
                 INX
                 STA     SCRATCH0
                 JSR     DOT_CODE::print_udec
+                LDA     #SPACE
+                JSR     hal_putch
                 NEXT
         ENDPUBLIC
 
@@ -5390,6 +5409,125 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         .word   COMMA_CFA              ; compile into definition
         .word   EXIT_CFA
 
+
+;==============================================================================
+; SECTION 14: Pictured numeric output conversion words.
+;==============================================================================
+
+;------------------------------------------------------------------------------
+; UD/MOD ( d-low d-high u -- rem quot-low quot-high ) non-standard helper for
+; pictured I/O. Used to divide a double by a base to get a digit to print and
+; the next quotient to divide.
+;------------------------------------------------------------------------------
+        HEADER  "UD/MOD", UDIVMOD_ENTRY, UDIVMOD_CFA, 0, RECURSE_ENTRY
+        CODEPTR DOCOL
+        .word   TOR_CFA                ; ( d-low d-high ) R: ( u )
+        .word   LIT_CFA
+        .word   0                      ; ( d-low d-high 0 )
+        .word   RFETCH_CFA             ; ( d-low d-high 0 u ) R: ( u )
+        .word   UMSLASHMOD_CFA         ; ( d-low rem quot-high ) R: ( u )
+        ; rem is remainder from high division, used as high cell for low div
+        .word   RFROM_CFA              ; ( d-low rem quot-high u )
+        .word   SWAP_CFA               ; ( d-low rem u quot-high )
+        .word   TOR_CFA                ; ( d-low rem u ) R: ( quot-high )
+        .word   UMSLASHMOD_CFA         ; ( rem quot-low ) R: ( quot-high )
+        .word   RFROM_CFA              ; ( rem quot-low quot-high )
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; <# ( -- ) Initialize the pictured numeric output conversion process.
+; https://forth-standard.org/standard/core/num-start
+;------------------------------------------------------------------------------
+        HEADER  "<#", LESSHASH_ENTRY, LESSHASH_CFA, 0, UDIVMOD_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   PAD_END                ; End of the PAD buffer
+        .word   HLD_CFA                ; ( end-addr HLD-addr )
+        .word   STORE_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; HOLD ( char -- ) insert char into pictured numeric output string
+; https://forth-standard.org/standard/core/HOLD
+;------------------------------------------------------------------------------
+        HEADER  "HOLD", HOLD_ENTRY, HOLD_CFA, 0, LESSHASH_ENTRY
+        CODEPTR DOCOL
+        .word   HLD_CFA                ; ( char hld-addr )
+        .word   FETCH_CFA              ; ( char hld )
+        .word   ONEMINUS_CFA           ; ( char hld-1 )
+        .word   DUP_CFA                ; ( char hld-1 hld-1 )
+        .word   HLD_CFA                ; ( char hld-1 hld-1 hld-addr )
+        .word   STORE_CFA              ; HLD = HLD -1
+        .word   CSTORE_CFA             ; store char at new HLD
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; # ( ud -- ud ) format one digit
+;------------------------------------------------------------------------------
+        HEADER  "#", HASH_ENTRY, HASH_CFA, 0, HOLD_ENTRY
+        CODEPTR DOCOL
+        .word   BASE_CFA
+        .word   FETCH_CFA              ; ( ud base )
+        .word   UDIVMOD_CFA            ; ( rem quot-low quot-high )
+        .word   ROT_CFA                ; ( quot-low quot-high rem )
+        .word   DUP_CFA                ; ( quot-low quot-high rem rem )
+        .word   LIT_CFA
+        .word   9
+        .word   GREATER_CFA            ; ( quot-low quot-high rem flag )
+        .word   ZBRANCH_CFA
+        .word   HASH_DIGIT
+        .word   LIT_CFA
+        .word   7
+        .word   PLUS_CFA
+HASH_DIGIT:
+        .word   LIT_CFA
+        .word   '0'
+        .word   PLUS_CFA               ; ( quot-low quot-high char )
+        .word   HOLD_CFA               ; ( quot-low quot-high )
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; #S ( ud -- 0 0 ) format all digits
+;------------------------------------------------------------------------------
+        HEADER  "#S", HASHS_ENTRY, HASHS_CFA, 0, HASH_ENTRY
+        CODEPTR DOCOL
+HASHS_LOOP:
+        .word   HASH_CFA               ; ( ud )
+        .word   TWODUP_CFA             ; ( ud ud )
+        .word   OR_CFA                 ; ( ud flag )
+        .word   ZEROEQ_CFA             ; ( ud flag ) true if both zero
+        .word   ZBRANCH_CFA            ; branch back if not done
+        .word   HASHS_LOOP
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; SIGN ( n -- ) if n negative prepend minus sign
+;------------------------------------------------------------------------------
+        HEADER  "SIGN", SIGN_ENTRY, SIGN_CFA, 0, HASHS_ENTRY
+        CODEPTR DOCOL
+        .word   ZEROLESS_CFA           ; ( flag )
+        .word   ZBRANCH_CFA
+        .word   SIGN_DONE
+        .word   LIT_CFA
+        .word   '-'
+        .word   HOLD_CFA
+SIGN_DONE:
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; #> ( ud -- c-addr u ) finalize pictured numeric output
+;------------------------------------------------------------------------------
+        HEADER  "#>", HASHGT_ENTRY, HASHGT_CFA, 0, SIGN_ENTRY
+        CODEPTR DOCOL
+        .word   TWODROP_CFA            ; ( ) discard ud
+        .word   HLD_CFA
+        .word   FETCH_CFA              ; ( c-addr )
+        .word   LIT_CFA
+        .word   PAD_END                ; ( c-addr PAD_END )
+        .word   OVER_CFA               ; ( c-addr PAD_END c-addr )
+        .word   MINUS_CFA              ; ( c-addr u )
+        .word   EXIT_CFA
+
 ;==============================================================================
 ; SECTION 15: The optional Programming-Tools word set
 ;==============================================================================
@@ -5400,7 +5538,7 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
 ; with all words added to the dictionary after name.
 ; Prints an error if the name can not be found.
 ;------------------------------------------------------------------------------
-	HEADER  "FORGET", FORGET_ENTRY, FORGET_CFA, 0, RECURSE_ENTRY
+	HEADER  "FORGET", FORGET_ENTRY, FORGET_CFA, 0, HASHGT_ENTRY
         CODEPTR DOCOL
         .word   PARSENAME_CFA          ; ( c-addr u )
         .word   TWODUP_CFA             ; ( c-addr u c-addr u )
