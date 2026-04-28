@@ -27,7 +27,8 @@ U_TOIN          = $0A           ; >IN parse offset      (cell)
 U_SOURCELEN     = $0C           ; Source string length  (cell)
 U_HANDLER       = $0E           ; Exception handler     (cell)
 U_PAD           = $10           ; PAD address in user area
-U_CURDEF        = $12           ; CFA of word being compiled
+U_HLD           = $12           ; Address within PAD for formated I/O
+U_CURDEF        = $14           ; CFA of word being compiled
 
 ; Terminal Input Buffer
 TIB_BASE        = $0600
