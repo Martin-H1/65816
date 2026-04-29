@@ -54,7 +54,7 @@
                 JMP     ABORT_CODE
 
 underflow_msg:
-                .byte   "Stack underflow", $0D, $0A, $00
+                .byte   "Stack underflow", C_RETURN, L_FEED, $00
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
@@ -1269,7 +1269,7 @@ MSTAR_DONE:
                 BEQ     @true
                 STZ     0,X
                 NEXT
-@true:          LDA     #$FFFF
+@true:          LDA     #FORTH_TRUE
                 STA     0,X
                 NEXT
         ENDPUBLIC
@@ -1289,7 +1289,7 @@ MSTAR_DONE:
                 BNE     @true
                 STZ     0,X
                 NEXT
-@true:          LDA     #$FFFF
+@true:          LDA     #FORTH_TRUE
                 STA     0,X
                 NEXT
         ENDPUBLIC
@@ -1307,13 +1307,13 @@ MSTAR_DONE:
                 SBC     0,X             ; a - b
                 BVS     @overflow       ; Overflow-aware signed compare
                 BMI     @true           ; result negative and no overflow = a<b
-                LDA     #$0000          ; Set TOS to false
+                LDA     #FORTH_FALSE    ; Set TOS to false
                 BRA     @return
 @overflow:
                 BPL     @true           ; overflow + positive result = a<b
-@false:         LDA     #$0000          ; Set TOS to false
+@false:         LDA     #FORTH_FALSE    ; Set TOS to false
                 BRA     @return
-@true:          LDA     #$FFFF          ; Set TOS to true
+@true:          LDA     #FORTH_TRUE     ; Set TOS to true
 @return:
                 INX                     ; Drop b
                 INX
@@ -1334,13 +1334,13 @@ MSTAR_DONE:
                 SBC     2,X             ; b - a (reversed for >)
                 BVS     @overflow       ; Overflow-aware signed compare
                 BMI     @true           ; like the previous function
-                LDA     #$0000          ; Set TOS to false
+                LDA     #FORTH_FALSE    ; Set TOS to false
                 BRA     @return
 @overflow:
                 BPL     @true
-@false:         LDA     #$0000          ; Set TOS to false
+@false:         LDA     #FORTH_FALSE    ; Set TOS to false
                 BRA     @return
-@true:          LDA     #$FFFF          ; Set TOS to true
+@true:          LDA     #FORTH_TRUE     ; Set TOS to true
 @return:
                 INX                     ; Drop b
                 INX
@@ -1363,7 +1363,7 @@ MSTAR_DONE:
                 BCC     @true           ; Carry clear = u1 < u2
                 STZ     0,X
                 NEXT
-@true:          LDA     #$FFFF
+@true:          LDA     #FORTH_TRUE
                 STA     0,X
                 NEXT
         ENDPUBLIC
@@ -1383,7 +1383,7 @@ MSTAR_DONE:
                 BCC     @true
                 STZ     0,X
                 NEXT
-@true:          LDA     #$FFFF
+@true:          LDA     #FORTH_TRUE
                 STA     0,X
                 NEXT
         ENDPUBLIC
@@ -1398,7 +1398,7 @@ MSTAR_DONE:
         .i16
                 LDA     0,X
                 BNE     @false
-                LDA     #$FFFF
+                LDA     #FORTH_TRUE
                 STA     0,X
                 NEXT
 @false:         STZ     0,X
@@ -1415,7 +1415,7 @@ MSTAR_DONE:
         .i16
                 LDA     0,X
                 BPL     @false
-                LDA     #$FFFF
+                LDA     #FORTH_TRUE
                 STA     0,X
                 NEXT
 @false:         STZ     0,X
@@ -1435,9 +1435,24 @@ MSTAR_DONE:
                 BPL     @true
 @false:         STZ     0,X
                 NEXT
-@true:          LDA     #$FFFF
+@true:          LDA     #FORTH_TRUE
                 STA     0,X
                 NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; 0<> ( a -- flag )
+;------------------------------------------------------------------------------
+        HEADER  "0<>", ZERONE_ENTRY, ZERONE_CFA, 0, ZEROGT_ENTRY
+        CODEPTR ZERONE_CODE
+        PUBLIC  ZERONE_CODE
+        .a16
+        .i16
+                LDA     0,X
+                BEQ     @return
+                LDA     #FORTH_TRUE
+                STA     0,X
+@return:        NEXT
         ENDPUBLIC
 
 ;==============================================================================
@@ -1445,9 +1460,39 @@ MSTAR_DONE:
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
+; TRUE ( -- TRUE )
+;------------------------------------------------------------------------------
+        HEADER  "TRUE", TRUE_ENTRY, TRUE_CFA, 0, ZERONE_ENTRY
+        CODEPTR TRUE_CODE
+        PUBLIC  TRUE_CODE
+        .a16
+        .i16
+                DEX
+                DEX
+                LDA     #FORTH_TRUE
+                STA     0,X
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; FALSE ( -- FALSE )
+;------------------------------------------------------------------------------
+        HEADER  "FALSE", FALSE_ENTRY, FALSE_CFA, 0, TRUE_ENTRY
+        CODEPTR FALSE_CODE
+        PUBLIC  FALSE_CODE
+        .a16
+        .i16
+                DEX
+                DEX
+                LDA     #FORTH_FALSE
+                STA     0,X
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; AND ( a b -- a&b )
 ;------------------------------------------------------------------------------
-        HEADER  "AND", AND_ENTRY, AND_CFA, 0, ZEROGT_ENTRY
+        HEADER  "AND", AND_ENTRY, AND_CFA, 0, FALSE_ENTRY
         CODEPTR AND_CODE
         PUBLIC  AND_CODE
         .a16
@@ -2848,8 +2893,7 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
         HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   ' '
+        .word   BL_CFA
         .word   PARSE_CFA               ; ( c-addr u ) raw, no uppercasing
         .word   DROP_CFA                ; ( c-addr ) discard length
         .word   CFETCH_CFA              ; ( char ) first character
@@ -4220,17 +4264,13 @@ QUIT_LOOP:
         HEADER  "COMPILE-ONLY-ERROR", COMPILE_ONLY_ERROR_ENTRY, COMPILE_ONLY_ERROR_CFA, F_HIDDEN, FIND_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
-        .word   COMPILE_ONLY_MSG
-        .word   LIT_CFA
-        .word   COMPILE_ONLY_MSG_LEN
-        .word   TYPE_CFA
+        .word   compile_only_msg
+        .word   CPUTS_CFA
         .word   ABORT_CFA
         .word   EXIT_CFA
 
-COMPILE_ONLY_MSG:
-        .byte   "error: compile-only word"
-COMPILE_ONLY_MSG_LEN = * - COMPILE_ONLY_MSG
-        .align  2
+compile_only_msg:
+        .byte "error: compile-only word",C_RETURN,L_FEED,0
 
 ;------------------------------------------------------------------------------
 ; UNDEFINED-WORD ( addr -- ) print error message and abort
@@ -4263,8 +4303,7 @@ COMPILE_ONLY_MSG_LEN = * - COMPILE_ONLY_MSG
 INTERPRET_BODY:
 INTERPRET_LOOP:
         ; Parse next space-delimited word from input
-        .word   LIT_CFA
-        .word   ' '                     ; space delimiter
+        .word   BL_CFA                  ; space delimiter
         .word   WORD_CFA                ; ( addr ) counted string at HERE
 
         ; Check for empty word - if length 0, input exhausted
@@ -4943,8 +4982,7 @@ WORDS_SKIP:
         HEADER  ":", COLON_ENTRY, COLON_CFA, 0, REVEAL_ENTRY
         CODEPTR DOCOL
 COLON_BODY:
-        .word   LIT_CFA
-        .word   ' '
+        .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name from input
         .word   DOCREATE_CFA            ; ( ) build header, update LATEST and DP
         .word   LIT_CFA
@@ -4975,8 +5013,7 @@ SEMICOLON_BODY:
         HEADER  "VARIABLE", VARIABLE_ENTRY, VARIABLE_CFA, 0, SEMICOLON_ENTRY
         CODEPTR DOCOL
 VARIABLE_BODY:
-        .word   LIT_CFA
-        .word   ' '
+        .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name
         .word   DOCREATE_CFA            ; ( ) build header
         .word   LIT_CFA
@@ -4995,8 +5032,7 @@ VARIABLE_BODY:
         HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, VARIABLE_ENTRY
         CODEPTR DOCOL
 CONSTANT_BODY:
-        .word   LIT_CFA
-        .word   ' '
+        .word   BL_CFA
         .word   WORD_CFA                ; ( n addr ) parse name
         .word   DOCREATE_CFA            ; ( n ) build header
         .word   LIT_CFA
@@ -5122,8 +5158,7 @@ postpone_notfound_msg:
         HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, IMMEDIATE_ENTRY
         CODEPTR DOCOL
 CREATE_BODY:
-        .word   LIT_CFA
-        .word   ' '
+        .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name
         .word   DOCREATE_CFA            ; ( ) build header
         .word   LIT_CFA
@@ -5206,8 +5241,7 @@ DOES_BODY:
 ;------------------------------------------------------------------------------
         HEADER  "'", TICK_ENTRY, TICK_CFA, 0, DOES_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; Space delimeter
-        .word   ' '
+        .word   BL_CFA                  ; Space delimeter
         .word   WORD_CFA                ; ( addr )
         .word   FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
         .word   ZBRANCH_CFA
