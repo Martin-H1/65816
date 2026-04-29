@@ -5669,8 +5669,22 @@ SIGN_DONE:
         .word   EXIT_CFA
 
 ;==============================================================================
-; SECTION 15: The optional Programming-Tools word set
+; SECTION 15: The Programming-Tools word set
 ;==============================================================================
+
+;------------------------------------------------------------------------------
+; ENVIRONMENT? ( c-addr u -- false | i * x true ) c-addr is the address of a
+; character string and u is the string's character count. This is the text
+; of an environment query which isn't generally used in embedded systems.
+; Stubbed out with FALSE for compatibility.
+; https://forth-standard.org/standard/core/ENVIRONMENTq
+;------------------------------------------------------------------------------
+        HEADER  "ENVIRONMENT?", ENVIRONMENTQ_ENTRY, ENVIRONMENTQ_CFA, 0, HASHGT_ENTRY
+        CODEPTR DOCOL
+        .word   TWODROP_CFA            ; discard c-addr u
+        .word   LIT_CFA
+        .word   0                      ; false - not supported
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; FORGET ( "<spaces>name" -- ) skips leading space delimiters. Parse name
@@ -5678,7 +5692,7 @@ SIGN_DONE:
 ; with all words added to the dictionary after name.
 ; Prints an error if the name can not be found.
 ;------------------------------------------------------------------------------
-	HEADER  "FORGET", FORGET_ENTRY, FORGET_CFA, 0, HASHGT_ENTRY
+	HEADER  "FORGET", FORGET_ENTRY, FORGET_CFA, 0, ENVIRONMENTQ_ENTRY
         CODEPTR DOCOL
         .word   PARSENAME_CFA          ; ( c-addr u )
         .word   TWODUP_CFA             ; ( c-addr u c-addr u )
