@@ -227,7 +227,7 @@ TODO items carried forward:
 * Stretch Goal. Implement the CORE-EXT words: .(, .R, :NONAME, ?DO,
   ACTION-OF, BUFFER:, C", DEFER, DEFER!, DEFER@, ERASE, HOLDS, IS,
   MARKER, REFILL, RESTORE-INPUT, S\", SAVE-INPUT, SOURCE-ID, TO, U.R,
-  UNUSED, VALUE, WITHIN, [COMPILE], \
+  UNUSED, VALUE, WITHIN, [COMPILE]
 
 HAL TODO items
 * hal_mench.s was reused from another project and the source isn't the same as
