@@ -2427,9 +2427,43 @@ MSTAR_DONE:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; #TIB ( -- addr ) address of source length variable
+;------------------------------------------------------------------------------
+        HEADER  "#TIB", HASHTIB_ENTRY, HASHTIB_CFA, 0, SOURCE_ENTRY
+        CODEPTR HASHTIB_CODE
+        PUBLIC  HASHTIB_CODE
+        .a16
+        .i16
+                LDA     UP
+                CLC
+                ADC     #U_SOURCELEN
+                DEX
+                DEX
+                STA     0,X
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; 'TIB ( -- addr ) address of TIB pointer variable
+;------------------------------------------------------------------------------
+        HEADER  "'TIB", TICKTIB_ENTRY, TICKTIB_CFA, 0, HASHTIB_ENTRY
+        CODEPTR TICKTIB_CODE
+        PUBLIC  TICKTIB_CODE
+        .a16
+        .i16
+                LDA     UP
+                CLC
+                ADC     #U_TIB
+                DEX
+                DEX
+                STA     0,X
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; PAD ( -- addr ) address of scratch pad area.
 ;------------------------------------------------------------------------------
-        HEADER  "PAD", PAD_ENTRY, PAD_CFA, 0, SOURCE_ENTRY
+        HEADER  "PAD", PAD_ENTRY, PAD_CFA, 0, TICKTIB_ENTRY
         CODEPTR PAD_CODE
         PUBLIC  PAD_CODE
         .a16
@@ -4308,9 +4342,47 @@ INTERPRET_COMPILE_NORMAL:
         .word   INTERPRET_LOOP
 
 ;------------------------------------------------------------------------------
+; EVALUATE ( ix c-addr u -- jx ) takes a string and interprets it as if it
+; had been typed at the keyboard. It temporarily replaces the input source
+; with the given string, runs the interpreter, then restores the original
+; input source.
+;------------------------------------------------------------------------------
+        HEADER  "EVALUATE", EVALUATE_ENTRY, EVALUATE_CFA, 0, INTERPRET_ENTRY
+        CODEPTR DOCOL
+        ; Save current source state onto return stack
+        .word   TOIN_CFA
+        .word   FETCH_CFA              ; ( c-addr u toin )
+        .word   SOURCE_CFA             ; ( c-addr u toin tib sourcelen )
+        .word   TOR_CFA                ; R: ( sourcelen )
+        .word   TOR_CFA                ; R: ( sourcelen tib )
+        .word   TOR_CFA                ; R: ( sourcelen tib toin )
+        ; Set up new source ( c-addr u )
+        .word   HASHTIB_CFA
+        .word   STORE_CFA              ; #TIB = u ( )
+        .word   TICKTIB_CFA
+        .word   STORE_CFA              ; 'TIB = c-addr ( c-addr u )
+        .word   LIT_CFA
+        .word   0
+        .word   TOIN_CFA
+        .word   STORE_CFA              ; >IN = 0
+        ; Interpret the string
+        .word   INTERPRET_CFA
+        ; Restore source state
+        .word   RFROM_CFA
+        .word   TOIN_CFA
+        .word   STORE_CFA              ; restore >IN
+        .word   RFROM_CFA
+        .word   TICKTIB_CFA
+        .word   STORE_CFA              ; restore 'TIB
+        .word   RFROM_CFA
+        .word   HASHTIB_CFA
+        .word   STORE_CFA              ; restore #TIB
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; . (DOT) ( n -- ) print signed number
 ;------------------------------------------------------------------------------
-        HEADER  ".", DOT_ENTRY, DOT_CFA, 0, INTERPRET_ENTRY
+        HEADER  ".", DOT_ENTRY, DOT_CFA, 0, EVALUATE_ENTRY
         CODEPTR DOT_CODE
         PUBLIC  DOT_CODE
         .a16
