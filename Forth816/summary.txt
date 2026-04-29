@@ -158,6 +158,13 @@ PLACE ( c-addr u dest -- ) copies string to dest as counted string with uppercas
 PARSE-NAME ( -- c-addr u ) skips leading spaces then parses space-delimited token
 CURDEF user area variable — holds CFA of word being compiled, set by DOCREATE
 (OF) hidden runtime primitive for CASE/OF
+Complete Forth standard core word set
+Pictured numeric output.
+EVALUATE, POSTPONE, IMMEDIATE
+SEE decompiler
+FORGET dictionary cleanup
+Stack underflow protection
+
 
 Important bugs found and fixed:
 
@@ -210,7 +217,6 @@ pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 
 TODO items carried forward:
 * Double number support (>NUMBER upgrade)
-* Pretty print and Merge pbasic.s and write Forth wrappers to its functions.
 * Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
     - Replace INX/INX and DEX/DEX pairs with DROP and ADVANCE to hide cell size
     - ADC #2 / SBC #2 used for cell arithmetic
@@ -218,10 +224,14 @@ TODO items carried forward:
       these could be expressed as LOC_ADDR = 1, LOC_PTR = LOC_ADDR + CELL_SIZE
     - The CFA alignment rounding in FIND and DOCREATE
     - >NUMBER and NUMBER? stack manipulation
+* Stretch Goal. Implement the CORE-EXT words: .(, .R, :NONAME, ?DO,
+  ACTION-OF, BUFFER:, C", DEFER, DEFER!, DEFER@, ERASE, HOLDS, IS,
+  MARKER, REFILL, RESTORE-INPUT, S\", SAVE-INPUT, SOURCE-ID, TO, U.R,
+  UNUSED, VALUE, WITHIN, [COMPILE], \
 
 HAL TODO items
 * hal_mench.s was reused from another project and the source isn't the same as
-  the other modules. I also plan to resuse a 65c22 VIA driver module. To make
+  the other modules. I also plan to resuse my robot control module. To make
   the source consistent I want to create a Python pretty printer. It reads
   source from a file, tokenizes it, and outputs it formatted the same as the
   other modules.
@@ -235,37 +245,5 @@ HAL TODO items
   and implement the HAL's interrupt hooks API.
 * It's easy to overrun the Mench monitors serial I/O routines. I'd guess that
   the monitor's routines use small buffers to fit within the on chip RAM.
+* Pretty print and write Forth wrappers for my 65816 robot control library.
 * Add a block oriented mass storage interface to the HAL.
-
-Stretch Goals
-
-CORE-EXT words
-6.2.0200 .(
-6.2.0210 .R
-6.2.0260 0<>
-6.2.0455 :NONAME
-6.2.0620 ?DO
-6.2.0698 ACTION-OF
-6.2.0825 BUFFER:
-6.2.0855 C"
-6.2.1173 DEFER
-6.2.1175 DEFER!
-6.2.1177 DEFER@
-6.2.1350 ERASE
-6.2.1485 FALSE
-6.2.1675 HOLDS
-6.2.1725 IS
-6.2.1850 MARKER
-6.2.2125 REFILL
-6.2.2148 RESTORE-INPUT
-6.2.2266 S\"
-6.2.2182 SAVE-INPUT
-6.2.2218 SOURCE-ID
-6.2.2295 TO
-6.2.2298 TRUE
-6.2.2330 U.R
-6.2.2395 UNUSED
-6.2.2405 VALUE
-6.2.2440 WITHIN
-6.2.2530 [COMPILE]
-6.2.2535 \
