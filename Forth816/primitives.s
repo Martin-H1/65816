@@ -468,9 +468,23 @@ calc_depth:     TXA
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
+; ZERO ( -- 0 ) pushes zero, shortcut to LIT 0.
+;------------------------------------------------------------------------------
+        HEADER  "ZERO", ZERO_ENTRY, ZERO_CFA, 0, TWORFETCH_ENTRY
+        CODEPTR ZERO_CODE
+        PUBLIC  ZERO_CODE
+        .a16
+        .i16
+                DEX
+                DEX
+                STZ     0,X             ; push zero
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; + ( a b -- a+b )
 ;------------------------------------------------------------------------------
-        HEADER  "+", PLUS_ENTRY, PLUS_CFA, 0, TWORFETCH_ENTRY
+        HEADER  "+", PLUS_ENTRY, PLUS_CFA, 0, ZERO_ENTRY
         CODEPTR PLUS_CODE
         PUBLIC  PLUS_CODE
         .a16
@@ -2637,8 +2651,7 @@ SQUOTE_CFA:
         .word   NIP_CFA                 ; ( c-addr u u )
         .word   COMMA_CFA               ; compile u as length cell
                                         ; ( c-addr u )
-        .word   LIT_CFA
-        .word   0
+        .word   ZERO_CFA
         .word   DODO_CFA                ; runtime DO  ( limit index -- )
         .word   0                       ; unused leave target
 SQUOTE_CLOOP:
@@ -2743,8 +2756,7 @@ DOTQUOTE_CFA:
         .word   TWODUP_CFA              ; ( c-addr u c-addr u )
         .word   NIP_CFA                 ; ( c-addr u u )
         .word   COMMA_CFA               ; compile u
-        .word   LIT_CFA
-        .word   0
+        .word   ZERO_CFA
         .word   DODO_CFA                ; loop u times
         .word   0                       ; unused leave target
 DOTQUOTE_CLOOP:
@@ -2870,8 +2882,7 @@ ABORTQUOTE_COMPILE:
         .word   TWODUP_CFA              ; ( c-addr u c-addr u )
         .word   NIP_CFA                 ; ( c-addr u u )
         .word   COMMA_CFA               ; compile u
-        .word   LIT_CFA
-        .word   0
+        .word   ZERO_CFA
         .word   DODO_CFA                ; U 0 DO
         .word   0                       ; unused leave target
 ABORTQUOTE_CLOOP:
@@ -3877,9 +3888,8 @@ QUIT_BODY:
         ; From inside Forth we compile a call to RSP-RESET primitive
         .word   RSP_RESET_CFA           ; Reset return stack
         .word   STATE_CFA               ; Push STATE addr
-        .word   LIT_CFA
-        .word   0                       ; 0 = interpret
-        .word   STORE_CFA              ; STATE = 0
+        .word   ZERO_CFA                ; 0 = interpret
+        .word   STORE_CFA               ; STATE = 0
 
         ; Main REPL loop
 QUIT_LOOP:
@@ -3887,13 +3897,10 @@ QUIT_LOOP:
         .word   LIT_CFA
         .word   TIB_SIZE                ; Max input length
         .word   ACCEPT_CFA              ; Read line → ( len )
-        .word   LIT_CFA
-        .word   UP_BASE + U_SOURCELEN
+        .word   HASHTIB_CFA
         .word   STORE_CFA               ; Store length in user area
-        .word   LIT_CFA
-        .word   0
-        .word   LIT_CFA
-        .word   UP_BASE + U_TOIN
+        .word   ZERO_CFA
+        .word   TOIN_CFA
         .word   STORE_CFA               ; >IN = 0
         .word   INTERPRET_CFA           ; Interpret the input line
         .word   STATE_CFA
@@ -4400,8 +4407,7 @@ INTERPRET_COMPILE_NORMAL:
         .word   STORE_CFA              ; #TIB = u ( )
         .word   TICKTIB_CFA
         .word   STORE_CFA              ; 'TIB = c-addr ( c-addr u )
-        .word   LIT_CFA
-        .word   0
+        .word   ZERO_CFA
         .word   TOIN_CFA
         .word   STORE_CFA              ; >IN = 0
         ; Interpret the string
@@ -5019,8 +5025,7 @@ VARIABLE_BODY:
         .word   LIT_CFA
         .word   DOVAR                   ; code pointer for variables
         .word   COMMA_CFA               ; write DOVAR at CFA
-        .word   LIT_CFA
-        .word   0
+        .word   ZERO_CFA
         .word   COMMA_CFA               ; allot and initialize one cell
         .word   REVEAL_CFA              ; clear F_HIDDEN
         .word   EXIT_CFA
@@ -5164,8 +5169,7 @@ CREATE_BODY:
         .word   LIT_CFA
         .word   DOVAR                   ; code pointer
         .word   COMMA_CFA               ; write DOVAR at CFA
-        .word   LIT_CFA
-        .word   0                       ; placeholder for DOES> code address
+        .word   ZERO_CFA                ; placeholder for DOES> code address
         .word   COMMA_CFA               ; reserve CFA+2 cell
         .word   REVEAL_CFA              ; clear F_HIDDEN
         .word   EXIT_CFA
@@ -5281,8 +5285,7 @@ TICK_ERR:
         .word   ZBRANCH_CFA
         .word   COMMA_CFA
         .word   HERE_CFA                ; push address of placeholder
-        .word   LIT_CFA                 ; compile placeholder 0
-        .word   0
+        .word   ZERO_CFA                ; compile placeholder 0
         .word   COMMA_CFA
         .word   EXIT_CFA
 
@@ -5316,8 +5319,7 @@ TICK_ERR:
         .word   BRANCH_CFA
         .word   COMMA_CFA
         .word   HERE_CFA                ; push address of new placeholder
-        .word   LIT_CFA                 ; compile placeholder 0
-        .word   0
+        .word   ZERO_CFA                ; compile placeholder 0
         .word   COMMA_CFA
         .word   SWAP_CFA                ; ( new-addr if-addr )
         .word   HERE_CFA                ; ( new-addr if-addr here )
@@ -5376,8 +5378,7 @@ TICK_ERR:
         .word   BRANCH_CFA
         .word   COMMA_CFA              ; compile second BRANCH
         .word   HERE_CFA               ; CA = address of placeholder
-        .word   LIT_CFA
-        .word   0
+        .word   ZERO_CFA
         .word   COMMA_CFA              ; compile unresolved placeholder
         .word   SWAP_CFA               ; ( CA BA )
         .word   EXIT_CFA
@@ -5391,8 +5392,7 @@ TICK_ERR:
         .word   DOOF_CFA
         .word   COMMA_CFA              ; compile (OF)
         .word   HERE_CFA               ; OA = address of (OF)'s placeholder
-        .word   LIT_CFA
-        .word   0
+        .word   ZERO_CFA
         .word   COMMA_CFA              ; compile unresolved branch target
         .word   EXIT_CFA               ; stack: ( CA BA OA )
 
@@ -5485,8 +5485,7 @@ HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, F_IMMEDIATE, AGAIN_ENTRY
         .word   ZBRANCH_CFA
         .word   COMMA_CFA
         .word   HERE_CFA                ; push placeholder address
-        .word   LIT_CFA                 ; compile placeholder 0
-        .word   0
+        .word   ZERO_CFA                ; compile placeholder 0
         .word   COMMA_CFA
         .word   EXIT_CFA                ; stack: ( begin-addr while-addr )
 
@@ -5521,8 +5520,7 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         .word   DODO_CFA
         .word   COMMA_CFA               ; compile (DO)
         .word   HERE_CFA                ; push leave target address
-        .word   LIT_CFA                 ; compile placeholder 0
-        .word   0                       ; leave target
+        .word   ZERO_CFA                ; compile placeholder leave target
         .word   COMMA_CFA
         .word   HERE_CFA                ; push loop address
         .word   EXIT_CFA
@@ -5596,8 +5594,7 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         HEADER  "UD/MOD", UDIVMOD_ENTRY, UDIVMOD_CFA, 0, RECURSE_ENTRY
         CODEPTR DOCOL
         .word   TOR_CFA                ; ( d-low d-high ) R: ( u )
-        .word   LIT_CFA
-        .word   0                      ; ( d-low d-high 0 )
+        .word   ZERO_CFA               ; ( d-low d-high 0 )
         .word   RFETCH_CFA             ; ( d-low d-high 0 u ) R: ( u )
         .word   UMSLASHMOD_CFA         ; ( d-low rem quot-high ) R: ( u )
         ; rem is remainder from high division, used as high cell for low div
@@ -5716,8 +5713,7 @@ SIGN_DONE:
         HEADER  "ENVIRONMENT?", ENVIRONMENTQ_ENTRY, ENVIRONMENTQ_CFA, 0, HASHGT_ENTRY
         CODEPTR DOCOL
         .word   TWODROP_CFA            ; discard c-addr u
-        .word   LIT_CFA
-        .word   0                      ; false - not supported
+        .word   FALSE_CFA              ; false - not supported
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
