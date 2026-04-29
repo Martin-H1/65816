@@ -4861,6 +4861,10 @@ WORDS_SKIP:
                 NEXT
         ENDPUBLIC
 
+;==============================================================================
+; SECTION 13: Compiler words to create words
+;==============================================================================
+
 ;------------------------------------------------------------------------------
 ; : ( -- ) parse name, create dictionary header, enter compile mode
 ;------------------------------------------------------------------------------
@@ -4976,10 +4980,74 @@ CONSTANT_BODY:
         CODEPTR COMMA_CODE              ; Reuse COMMA_CODE directly
 
 ;------------------------------------------------------------------------------
+; POSTPONE ( "<spaces>name" -- ) Skip leading space delimiters. Parse name
+; delimited by a space. Find name. Append the compilation semantics of name to
+; the current definition. An ambiguous condition exists if name is not found.
+; https://forth-standard.org/standard/core/POSTPONE
+;------------------------------------------------------------------------------
+        HEADER  "POSTPONE", POSTPONE_ENTRY, POSTPONE_CFA, F_IMMEDIATE, COMPILECOMMA_ENTRY
+        CODEPTR DOCOL
+        .word   PARSENAME_CFA          ; ( c-addr u )
+        .word   HERE_CFA
+        .word   PLACE_CFA              ; uppercase copy at HERE
+        .word   HERE_CFA
+        .word   FIND_CFA               ; ( xt 1|-1 | here 0 )
+        .word   DUP_CFA                ; ( xt flag flag | here 0 0 )
+        .word   ZBRANCH_CFA
+        .word   POSTPONE_NOTFOUND
+        .word   LIT_CFA
+        .word   1
+        .word   EQUAL_CFA              ; ( xt flag ) true if non-immediate
+        .word   ZBRANCH_CFA
+        .word   POSTPONE_IMMEDIATE
+        ; Non-immediate: compile LIT xt COMPILE,
+        .word   LITERAL_CFA            ; compile LIT xt
+        .word   LIT_CFA
+        .word   COMPILECOMMA_CFA
+        .word   COMMA_CFA              ; compile COMPILE,
+        .word   EXIT_CFA
+POSTPONE_IMMEDIATE:
+        ; Immediate: just compile the xt directly
+        .word   COMPILECOMMA_CFA
+        .word   EXIT_CFA
+POSTPONE_NOTFOUND:
+        .word   TWODROP_CFA
+        .word   LIT_CFA
+        .word   postpone_notfound_msg
+        .word   CPUTS_CFA
+        .word   ABORT_CFA
+        .word   EXIT_CFA
+
+postpone_notfound_msg:
+        .byte   "POSTPONE: word not found", $0D, $0A, $00
+
+;------------------------------------------------------------------------------
+; IMMEDIATE ( -- ) Make the most recent definition an immediate word. An
+; ambiguous condition exists if the most recent definition does not have a
+; name or if it was defined as a SYNONYM.
+; https://forth-standard.org/standard/core/IMMEDIATE
+;------------------------------------------------------------------------------
+        HEADER  "IMMEDIATE", IMMEDIATE_ENTRY, IMMEDIATE_CFA, 0, POSTPONE_ENTRY
+        CODEPTR DOCOL
+        .word   LATEST_CFA
+        .word   FETCH_CFA              ; ( header-addr )
+        .word   LIT_CFA
+        .word   2
+        .word   PLUS_CFA               ; ( flags-addr )
+        .word   DUP_CFA                ; ( flags-addr flags-addr )
+        .word   CFETCH_CFA             ; ( flags-addr flags )
+        .word   LIT_CFA
+        .word   F_IMMEDIATE
+        .word   OR_CFA                 ; ( flags-addr flags|F_IMMEDIATE )
+        .word   SWAP_CFA               ; ( flags|F_IMMEDIATE flags-addr )
+        .word   CSTORE_CFA             ; store updated flags
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; CREATE ( -- ) parse name, create dictionary entry with DOVAR behavior
 ; Runtime: created word pushes address of its body onto stack
 ;------------------------------------------------------------------------------
-        HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, COMPILECOMMA_ENTRY
+        HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, IMMEDIATE_ENTRY
         CODEPTR DOCOL
 CREATE_BODY:
         .word   LIT_CFA
