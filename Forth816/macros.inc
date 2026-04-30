@@ -6,6 +6,15 @@
 MACROS_INC = 1
 
 ;------------------------------------------------------------------------------
+; IFETCH - Fetch inline cell from instruction stream into A, advance IP
+;------------------------------------------------------------------------------
+.macro  IFETCH
+        LDA     0,Y             ; fetch cell at IP
+        INY                     ; IP += 1
+        INY                     ; IP += 2
+.endmacro
+
+;------------------------------------------------------------------------------
 ; NEXT - Inner interpreter dispatch
 ;
 ; Fetches the CFA at IP (Y), advances IP by 2, then jumps through
@@ -26,9 +35,7 @@ MACROS_INC = 1
         .local @underflow
         BCS     @underflow
 .endif
-        LDA     0,Y             ; A = *IP (fetch CFA of next word)
-        INY                     ; IP += 1
-        INY                     ; IP += 2  (advance past this cell)
+        IFETCH                  ; A = *IP, IP = IP + CELL_SIZE
         STA     W               ; W = CFA
         LDA     (W)             ; A = *W (fetch code pointer)
         STA     SCRATCH0

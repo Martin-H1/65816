@@ -66,9 +66,7 @@ underflow_msg:
         .a16
         .i16
                 LDA     0,X             ; Load TOS
-                DEX
-                DEX
-                STA     0,X             ; Push copy
+                PUSH                    ; Push copy
                 NEXT
         ENDPUBLIC
 
@@ -124,9 +122,7 @@ QDUP_DONE:
         .a16
         .i16
                 LDA     2,X             ; a (NOS)
-                DEX
-                DEX
-                STA     0,X             ; Push copy of a
+                PUSH                    ; Push copy of a
                 NEXT
         ENDPUBLIC
 
@@ -2030,12 +2026,8 @@ MSTAR_DONE:
         PUBLIC  LIT_CODE
         .a16
         .i16
-                LDA     0,Y             ; Fetch literal value at IP
-                INY
-                INY                     ; Advance IP past literal
-                DEX
-                DEX
-                STA     0,X             ; Push literal
+                IFETCH                  ; Fetch literal value at IP++
+                PUSH                    ; Push literal
                 NEXT
         ENDPUBLIC
 
@@ -2050,10 +2042,41 @@ MSTAR_DONE:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; 2LIT ( -- d_lo d_hi ) runtime, pushes inline 32-bit double literal
+; Fetches two consecutive cells from the instruction stream: low then high.
+;------------------------------------------------------------------------------
+        HEADER  "2LIT", TWOLIT_ENTRY, TWOLIT_CFA, F_HIDDEN, LITERAL_ENTRY
+        CODEPTR TWOLIT_CODE
+        PUBLIC  TWOLIT_CODE
+        .a16
+        .i16
+                IFETCH                  ; A = d_lo, IP advanced
+                PUSH                    ; push d_lo
+                IFETCH                  ; A = d_hi, IP advanced
+                PUSH                    ; push d_hi (TOS)
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; 2LITERAL ( d_lo d_hi -- ) compile-time immediate, compiles a double literal
+; into the current definition as 2LIT followed by two inline cells.
+; Stack on entry is ANS double convention: NOS=d_lo, TOS=d_hi.
+;------------------------------------------------------------------------------
+        HEADER  "2LITERAL", TWOLITERAL_ENTRY, TWOLITERAL_CFA, F_IMMEDIATE, TWOLIT_ENTRY
+        CODEPTR DOCOL
+        .word   SWAP_CFA               ; ( d_hi d_lo ) - store low cell first
+        .word   LIT_CFA
+        .word   TWOLIT_CFA
+        .word   COMMA_CFA              ; compile 2LIT
+        .word   COMMA_CFA              ; compile d_lo
+        .word   COMMA_CFA              ; compile d_hi
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; BRANCH ( -- ) unconditional branch (compiled word)
 ; The cell following BRANCH contains the branch offset (signed)
 ;------------------------------------------------------------------------------
-        HEADER  "BRANCH", BRANCH_ENTRY, BRANCH_CFA, F_HIDDEN, LITERAL_ENTRY
+        HEADER  "BRANCH", BRANCH_ENTRY, BRANCH_CFA, F_HIDDEN, TWOLITERAL_ENTRY
         CODEPTR BRANCH_CODE
         PUBLIC  BRANCH_CODE
         .a16
@@ -2972,7 +2995,8 @@ ABORTQUOTE_CLOOP:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; CELL+ ( n -- 2 * n )
+; CELL+ ( a-addr1 -- a-addr2 ) Add the size in address units of a cell to
+; a-addr1, giving a-addr2.
 ;------------------------------------------------------------------------------
         HEADER  "CELL+", CELLPLUS_ENTRY, CELLPLUS_CFA, 0, CELLS_ENTRY
         CODEPTR DOCOL
@@ -4670,9 +4694,7 @@ print_udec:
         HEADER  "HEADER>CFA", HEADERCFA_ENTRY, HEADERCFA_CFA, 0, DOT_PROMPT_ENTRY
         CODEPTR DOCOL
         .word   DUP_CFA                ; ( header header )
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; ( header header+2 )
+        .word   CELLPLUS_CFA           ; ( header header+2 )
         .word   CFETCH_CFA             ; ( header flags/len )
         .word   LIT_CFA
         .word   F_LENMASK
@@ -4694,9 +4716,7 @@ print_udec:
         HEADER  "HEADER>NAME", HEADERNAME_ENTRY, HEADERNAME_CFA, 0, HEADERCFA_ENTRY
         CODEPTR DOCOL
         .word   DUP_CFA                 ; ( entry entry )
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA                ; ( entry entry+2 )
+        .word   CELLPLUS_CFA            ; ( entry entry+2 )
         .word   CFETCH_CFA              ; ( entry flags+len )
         .word   LIT_CFA
         .word   F_LENMASK
@@ -4756,9 +4776,7 @@ CFANAME_NOTFOUND:
 ;------------------------------------------------------------------------------
         HEADER  ">BODY", TOBODY_ENTRY, TOBODY_CFA, 0, CFANAME_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA
+        .word   CELLPLUS_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -4772,9 +4790,7 @@ WORDS_BODY:
         .word   FETCH_CFA               ; ( entry )
 WORDS_LOOP:
         .word   DUP_CFA                 ; ( entry entry )
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA                ; ( entry entry+2 )
+        .word   CELLPLUS_CFA            ; ( entry entry+2 )
         .word   CFETCH_CFA              ; ( entry flags+len )
         .word   LIT_CFA
         .word   F_HIDDEN
@@ -5144,9 +5160,7 @@ postpone_notfound_msg:
         CODEPTR DOCOL
         .word   LATEST_CFA
         .word   FETCH_CFA              ; ( header-addr )
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; ( flags-addr )
+        .word   CELLPLUS_CFA           ; ( flags-addr )
         .word   DUP_CFA                ; ( flags-addr flags-addr )
         .word   CFETCH_CFA             ; ( flags-addr flags )
         .word   LIT_CFA
@@ -5834,9 +5848,7 @@ SEE_CHECKTYPE:
         .word   SEE_PRIMITIVE
 
         ; DOCOL word - walk cells from xt+2
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; ( scan-ptr = xt+2 )
+        .word   CELLPLUS_CFA           ; ( scan-ptr = xt+2 )
 
 SEE_LOOP:
         .word   DUP_CFA                ; ( scan-ptr scan-ptr )
@@ -5865,9 +5877,7 @@ SEE_NOT_EXIT:
         .word   ZBRANCH_CFA
         .word   SEE_NOT_LIT
         .word   DROP_CFA               ; ( scan-ptr )
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; ( scan-ptr+2 )
+        .word   CELLPLUS_CFA           ; ( scan-ptr+2 )
         .word   DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
         .word   FETCH_CFA              ; ( scan-ptr+2 value )
         .word   LIT_CFA
@@ -5875,9 +5885,7 @@ SEE_NOT_EXIT:
         .word   CPUTS_CFA
         .word   DOT_CFA                ; print value
         .word   SPACE_CFA
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; advance past value
+        .word   CELLPLUS_CFA           ; advance past value
         .word   BRANCH_CFA
         .word   SEE_LOOP
 
@@ -5890,9 +5898,7 @@ SEE_NOT_LIT:
         .word   ZBRANCH_CFA
         .word   SEE_NOT_BRANCH
         .word   DROP_CFA               ; ( scan-ptr )
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; ( scan-ptr+2 )
+        .word   CELLPLUS_CFA           ; ( scan-ptr+2 )
         .word   DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
         .word   FETCH_CFA              ; ( scan-ptr+2 target )
         .word   LIT_CFA
@@ -5900,9 +5906,7 @@ SEE_NOT_LIT:
         .word   CPUTS_CFA
         .word   DOTHEX_CFA
         .word   SPACE_CFA
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; advance past target
+        .word   CELLPLUS_CFA           ; advance past target
         .word   BRANCH_CFA
         .word   SEE_LOOP
 
@@ -5915,9 +5919,7 @@ SEE_NOT_BRANCH:
         .word   ZBRANCH_CFA
         .word   SEE_NOT_ZBRANCH
         .word   DROP_CFA               ; ( scan-ptr )
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; ( scan-ptr+2 )
+        .word   CELLPLUS_CFA           ; ( scan-ptr+2 )
         .word   DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
         .word   FETCH_CFA              ; ( scan-ptr+2 target )
         .word   LIT_CFA
@@ -5925,9 +5927,7 @@ SEE_NOT_BRANCH:
         .word   CPUTS_CFA
         .word   DOTHEX_CFA
         .word   SPACE_CFA
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; advance past target
+        .word   CELLPLUS_CFA           ; advance past target
         .word   BRANCH_CFA
         .word   SEE_LOOP
 
@@ -5941,9 +5941,7 @@ SEE_NOT_ZBRANCH:
         .word   SEE_UNKNOWN
         .word   TYPE_CFA               ; ( scan-ptr ) print name
         .word   SPACE_CFA
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; advance scan-ptr
+        .word   CELLPLUS_CFA           ; advance scan-ptr
         .word   BRANCH_CFA
         .word   SEE_LOOP
 
@@ -5953,9 +5951,7 @@ SEE_UNKNOWN:
         .word   FETCH_CFA              ; ( scan-ptr cell )
         .word   DOTHEX_CFA             ; print hex
         .word   SPACE_CFA
-        .word   LIT_CFA
-        .word   2
-        .word   PLUS_CFA               ; advance scan-ptr
+        .word   CELLPLUS_CFA           ; advance scan-ptr
         .word   BRANCH_CFA
         .word   SEE_LOOP
 
