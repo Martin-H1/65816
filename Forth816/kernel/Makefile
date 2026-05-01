@@ -1,4 +1,4 @@
-include ../common.mk
+include ../../common.mk
 
 CA65FLAGS = -D UNROLL -I include
 
