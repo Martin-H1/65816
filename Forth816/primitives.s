@@ -1131,9 +1131,22 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; DABS ( d -- ud ) double absolute value
+;------------------------------------------------------------------------------
+        HEADER  "DABS", DABS_ENTRY, DABS_CFA, 0, ABS_ENTRY
+        CODEPTR DOCOL
+        .word   DUP_CFA                 ; ( d_lo d_hi d_hi ) peek at sign
+        .word   ZEROLESS_CFA            ; ( d_lo d_hi flag )
+        .word   ZBRANCH_CFA
+        .word   DABS_DONE
+        .word   DNEGATE_CFA             ; ( ud_lo ud_hi ) negate if negative
+DABS_DONE:
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; MAX ( a b -- max )
 ;------------------------------------------------------------------------------
-        HEADER  "MAX", MAX_ENTRY, MAX_CFA, 0, ABS_ENTRY
+        HEADER  "MAX", MAX_ENTRY, MAX_CFA, 0, DABS_ENTRY
         CODEPTR MAX_CODE
         PUBLIC  MAX_CODE
         .a16
@@ -4823,9 +4836,25 @@ print_udec:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; D. ( d_lo d_hi -- ) print signed 32-bit double followed by space
+;------------------------------------------------------------------------------
+        HEADER  "D.", DDOT_ENTRY, DDOT_CFA, 0, UDOT_ENTRY
+        CODEPTR DOCOL
+        .word   TUCK_CFA                ; ( d_hi d_lo d_hi ) save sign
+        .word   DABS_CFA                ; ( d_hi ud_lo ud_hi ) absolute value
+        .word   LESSHASH_CFA            ; <# begin pictured output
+        .word   HASHS_CFA               ; #S convert all digits
+        .word   ROT_CFA                 ; ( ud_str d_hi ) bring sign to TOS
+        .word   SIGN_CFA                ; add '-' if negative
+        .word   HASHGT_CFA              ; #> ( c-addr u )
+        .word   TYPE_CFA                ; print
+        .word   SPACE_CFA               ; trailing space
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; .HEX ( n -- ) print hexadecimal number
 ;------------------------------------------------------------------------------
-        HEADER  ".HEX", DOTHEX_ENTRY, DOTHEX_CFA, 0, UDOT_ENTRY
+        HEADER  ".HEX", DOTHEX_ENTRY, DOTHEX_CFA, 0, DDOT_ENTRY
         CODEPTR DOTHEX_CODE
         PUBLIC  DOTHEX_CODE
         .a16

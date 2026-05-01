@@ -25,6 +25,7 @@
 .import TONUMBER_CODE
 .import NUMBERQ_CODE
 .import INTERPRET_CODE
+.import SPACE_CODE
 .import TRACEOFF_CODE
 .import TRACEON_CODE
 
@@ -39,6 +40,7 @@ PUBLIC MAIN
 
 	jsr tonumberTest
 	jsr numberTest
+	jsr doubleNumberTest
 
 	TYPESTRCR "number test - exit!"
 	rts
@@ -314,3 +316,132 @@ hex2:	PString "-$7FF"
 hex3:	PString "$DEAD"
 hex4:	PString "$7FFF"
 hex5:	PString "$8000"
+
+.proc doubleNumberTest
+	LPPUTS dmsg1
+	lda #dnum1
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS dmsg2
+	jsr DOTHEX_CODE
+	LPPUTS dmsg3
+	jsr DOTHEX_CODE
+	jsr SPACE_CODE
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS dmsg1
+	lda #dnum2
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS dmsg2
+	jsr DOTHEX_CODE
+	LPPUTS dmsg3
+	jsr DOTHEX_CODE
+	jsr SPACE_CODE
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS dmsg1
+	lda #dnum3
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS dmsg2
+	jsr DOTHEX_CODE
+	LPPUTS dmsg3
+	jsr DOTHEX_CODE
+	jsr SPACE_CODE
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS dmsg1
+	lda #dnum4
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS dmsg2
+	jsr DOTHEX_CODE
+	LPPUTS dmsg3
+	jsr DOTHEX_CODE
+	jsr SPACE_CODE
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS dmsg1
+	lda #dnum5
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS dmsg2
+	jsr DOTHEX_CODE
+	LPPUTS dmsg3
+	jsr DOTHEX_CODE
+	jsr SPACE_CODE
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS dmsg1
+	lda #dnum6
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS dmsg2
+	jsr DOTHEX_CODE
+	LPPUTS dmsg3
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS dmsg1
+	lda #dnum7
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS dmsg2
+	jsr DOTHEX_CODE
+	LPPUTS dmsg3
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS dmsg1
+	lda #dnum8
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS dmsg2
+	jsr DOTHEX_CODE
+	LPPUTS dmsg3
+	jsr DOTHEX_CODE
+	jsr SPACE_CODE
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	LPPUTS dmsg1
+	lda #dnum9
+	PUSH
+	jsr hal_lpputs
+	jsr NUMBERQ_CODE
+	LPPUTS dmsg2
+	jsr DOTHEX_CODE
+	LPPUTS dmsg3
+	jsr DOTHEX_CODE
+	jsr SPACE_CODE
+	jsr DOTHEX_CODE
+	jsr CR_CODE
+
+	rts
+.endproc
+dmsg1:	PString "Double number test input='"
+dmsg2:	PString "', Status="
+dmsg3:	PString ", Result="
+dnum1:	PString "1234."    ; should show 1234 0 (d_lo=1234, d_hi=0)
+dnum2:	PString "0."       ; should show 0 0
+dnum3:	PString "100000."  ; d_lo=$86A0, d_hi=$0001  (100000 = $000186A0)
+dnum4:	PString "-1."      ; d_lo=$FFFF, d_hi=$FFFF
+dnum5:	PString "-100000." ; d_lo=$7960, d_hi=$FFFE
+dnum6:	PString "65535"    ; single cell, should show $FFFF
+dnum7:	PString "65536"    ; should fail (overflow, no trailing dot)
+dnum8:	PString "65536."   ; should show 0 1 (d_lo=0, d_hi=1)
+dnum9:	PString "$10000."  ; d_lo=0, d_hi=1
