@@ -153,9 +153,7 @@ QDUP_DONE:
         PUBLIC  NIP_CODE
         .a16
         .i16
-                LDA     0,X             ; b (TOS)
-                INX
-                INX
+                POP                     ; b (TOS)
                 STA     0,X             ; Overwrite a with b
                 NEXT
         ENDPUBLIC
@@ -534,6 +532,62 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; D+ ( d1_lo d1_hi d2_lo d2_hi -- d3_lo d3_hi )
+; 32-bit addition with carry from low to high cell.
+; Stack: TOS=d2_hi, NOS=d2_lo, NOS2=d1_hi, NOS3=d1_lo
+;------------------------------------------------------------------------------
+        HEADER  "D+", DPLUS_ENTRY, DPLUS_CFA, 0, MINUS_ENTRY
+        CODEPTR DPLUS_CODE
+        PUBLIC  DPLUS_CODE
+        .a16
+        .i16
+                CLC
+                LDA     a:6,X           ; d1_lo
+                ADC     a:2,X           ; + d2_lo
+                STA     a:6,X           ; result_lo
+                LDA     a:4,X           ; d1_hi
+                ADC     a:0,X           ; + d2_hi + carry
+                STA     a:4,X           ; result_hi
+                INX
+                INX
+                INX
+                INX                     ; drop d2 cells
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; D- ( d1_lo d1_hi d2_lo d2_hi -- d3_lo d3_hi )
+; 32-bit subtraction with borrow from low to high cell.
+;------------------------------------------------------------------------------
+        HEADER  "D-", DMINUS_ENTRY, DMINUS_CFA, 0, DPLUS_ENTRY
+        CODEPTR DMINUS_CODE
+        PUBLIC  DMINUS_CODE
+        .a16
+        .i16
+                SEC
+                LDA     a:6,X           ; d1_lo
+                SBC     a:2,X           ; - d2_lo
+                STA     a:6,X           ; result_lo
+                LDA     a:4,X           ; d1_hi
+                SBC     a:0,X           ; - d2_hi - borrow
+                STA     a:4,X           ; result_hi
+                INX
+                INX
+                INX
+                INX                     ; drop d2 cells
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; M+ ( d n -- d ) add single to double, sign extending n first
+;------------------------------------------------------------------------------
+        HEADER  "M+", MPLUS_ENTRY, MPLUS_CFA, 0, DMINUS_ENTRY
+        CODEPTR DOCOL
+        .word   STOD_CFA                ; sign extend n to double
+        .word   DPLUS_CFA               ; add to d
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; * ( a b -- a*b ) 16x16 -> 16 (low word)
 ;
 ; Two's-complement word multiplication gives the same bit pattern for
@@ -544,7 +598,7 @@ calc_depth:     TXA
 ; expensive. Also use of page zero variables is waranted for efficiency.
 ; https://forth-standard.org/standard/core/Times
 ;------------------------------------------------------------------------------
-        HEADER  "*", STAR_ENTRY, STAR_CFA, 0, MINUS_ENTRY
+        HEADER  "*", STAR_ENTRY, STAR_CFA, 0, MPLUS_ENTRY
         CODEPTR STAR_CODE
         PUBLIC  STAR_CODE
         .a16
@@ -1187,10 +1241,18 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; D>S ( d -- n ) truncate double to single, discard high cell
+;------------------------------------------------------------------------------
+        HEADER  "D>S", DTOS_ENTRY, DTOS_CFA, 0, STOD_ENTRY
+        CODEPTR DOCOL
+        .word   DROP_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; DNEGATE ( d -- -d ) negate the double cell in ANS order on stack.
 ; https://forth-standard.org/standard/double/DNEGATE
 ;------------------------------------------------------------------------------
-        HEADER  "DNEGATE", DNEGATE_ENTRY, DNEGATE_CFA, 0, STOD_ENTRY
+        HEADER  "DNEGATE", DNEGATE_ENTRY, DNEGATE_CFA, 0, DTOS_ENTRY
         CODEPTR DNEGATE_CODE
         PUBLIC  DNEGATE_CODE
         .a16
@@ -1465,6 +1527,131 @@ MSTAR_DONE:
 @return:        NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; D= ( d1_lo d1_hi d2_lo d2_hi -- flag )
+; True if both cells equal.
+;------------------------------------------------------------------------------
+        HEADER  "D=", DEQ_ENTRY, DEQ_CFA, 0, ZERONE_ENTRY
+        CODEPTR DEQ_CODE
+        PUBLIC  DEQ_CODE
+        .a16
+        .i16
+                LDA     a:6,X           ; d1_lo
+                CMP     a:2,X           ; d2_lo
+                BNE     @false
+                LDA     a:4,X           ; d1_hi
+                CMP     a:0,X           ; d2_hi
+                BNE     @false
+                INX
+                INX
+                INX
+                INX
+                INX
+                INX                     ; drop 3 cells
+                LDA     #FORTH_TRUE
+                STA     a:0,X
+                NEXT
+@false:
+                INX
+                INX
+                INX
+                INX
+                INX
+                INX                     ; drop 3 cells
+                LDA     #FORTH_FALSE
+                STA     a:0,X
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; DU< ( ud1_lo ud1_hi ud2_lo ud2_hi -- flag )
+; Unsigned 32-bit less than.
+;------------------------------------------------------------------------------
+        HEADER  "DU<", DULESS_ENTRY, DULESS_CFA, 0, DEQ_ENTRY
+        CODEPTR DULESS_CODE
+        PUBLIC  DULESS_CODE
+        .a16
+        .i16
+                ; Compare high cells first
+                LDA     a:4,X           ; ud1_hi
+                CMP     a:0,X           ; ud2_hi
+                BCC     @true           ; ud1_hi < ud2_hi unsigned
+                BNE     @false          ; ud1_hi > ud2_hi
+                ; High cells equal, compare low cells
+                LDA     a:6,X           ; ud1_lo
+                CMP     a:2,X           ; ud2_lo
+                BCC     @true
+@false:
+                INX
+                INX
+                INX
+                INX
+                INX
+                INX                     ; drop 3 cells
+                LDA     #FORTH_FALSE
+                STA     a:0,X
+                NEXT
+@true:
+                INX
+                INX
+                INX
+                INX
+                INX
+                INX                     ; drop 3 cells
+                LDA     #FORTH_TRUE
+                STA     a:0,X
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; D< ( d1_lo d1_hi d2_lo d2_hi -- flag )
+; Signed 32-bit less than. Compare high cells with overflow-aware signed
+; compare; only if high cells are equal fall through to unsigned low cell
+; compare.
+;------------------------------------------------------------------------------
+        HEADER  "D<", DLESS_ENTRY, DLESS_CFA, 0, DULESS_ENTRY
+        CODEPTR DLESS_CODE
+        PUBLIC  DLESS_CODE
+        .a16
+        .i16
+                ; Compare high cells (signed)
+                LDA     a:4,X           ; d1_hi
+                SEC
+                SBC     a:0,X           ; d1_hi - d2_hi
+                BEQ     @equal_hi       ; high cells equal, check low
+                BVS     @overflow
+                BMI     @true           ; negative, no overflow -> d1 < d2
+                BRA     @false
+@overflow:
+                BPL     @true           ; overflow + positive -> d1 < d2
+                BRA     @false
+@equal_hi:
+                ; High cells equal: unsigned compare of low cells
+                LDA     a:6,X           ; d1_lo
+                CMP     a:2,X           ; d2_lo
+                BCC     @true
+@false:
+                INX
+                INX
+                INX
+                INX
+                INX
+                INX                     ; drop 3 cells
+                LDA     #FORTH_FALSE
+                STA     a:0,X
+                NEXT
+@true:
+                INX
+                INX
+                INX
+                INX
+                INX
+                INX                     ; drop 3 cells
+                LDA     #FORTH_TRUE
+                STA     a:0,X
+                NEXT
+        ENDPUBLIC
+
 ;==============================================================================
 ; SECTION 5: LOGIC PRIMITIVES
 ;==============================================================================
@@ -1472,7 +1659,7 @@ MSTAR_DONE:
 ;------------------------------------------------------------------------------
 ; TRUE ( -- TRUE )
 ;------------------------------------------------------------------------------
-        HEADER  "TRUE", TRUE_ENTRY, TRUE_CFA, 0, ZERONE_ENTRY
+        HEADER  "TRUE", TRUE_ENTRY, TRUE_CFA, 0, DLESS_ENTRY
         CODEPTR TRUE_CODE
         PUBLIC  TRUE_CODE
         .a16
@@ -3340,8 +3527,7 @@ HEX_BODY:
 ; >NUMBER ( ud c-addr u -- ud c-addr u )
 ; Converts as many characters as possible from string into ud accumulator.
 ; Stops at first unconvertible character or when u reaches zero.
-; TODO: ud is currently 16-bit single cell. Upgrade to true 32-bit double
-;       when double number support is added.
+; ud is a true 32-bit double: NOS2=ud_lo, NOS1=ud_hi (ANS convention).
 ;------------------------------------------------------------------------------
         HEADER  ">NUMBER", TONUMBER_ENTRY, TONUMBER_CFA, 0, HEX_ENTRY
         CODEPTR TONUMBER_CODE
@@ -3355,7 +3541,7 @@ HEX_BODY:
         .proc TONUMBER_IMPL
         LOC_U       = 1         ; character count
         LOC_ADDR    = 3         ; current char pointer
-        LOC_UDHI    = 5         ; high cell of ud (0 until double support)
+        LOC_UDHI    = 5         ; high cell of ud
         LOC_UDLO    = 7         ; low cell of ud
         LOC_BASE    = 9         ; cached BASE
         LOC_SIZE    = LOC_BASE + 1
@@ -3396,8 +3582,9 @@ HEX_BODY:
                 ;--------------------------------------------------------------
 @digit_loop:
                 LDA     LOC_U
-                BEQ     @done           ; u = 0, done
-
+                BNE     @skip
+                JMP     @done           ; u = 0, done
+@skip:
                 ; Fetch character
                 SEP     #$20
                 .a8
@@ -3433,43 +3620,77 @@ HEX_BODY:
                 CMP     LOC_BASE
                 BCS     @done           ; digit >= BASE -> stop
 
-                ; ud = ud * BASE + digit
-                ; First: ud_lo * BASE via UM*
+                ;--------------------------------------------------------------
+                ; ud = ud * BASE + digit  (true 32-bit)
+                ;
+                ; Step 1: ud_lo * BASE via UM* -> (prod_lo prod_hi)
+                ; Step 2: ud_hi * BASE via UM* -> low word only
+                ; Step 3: prod_hi += ud_hi * BASE low word
+                ; Step 4: prod_lo += digit, propagate carry into prod_hi
+                ;--------------------------------------------------------------
                 PHA                     ; save digit on hw stack
-
-                DEX                     ; push ud_lo
-                DEX
+                ; --- Step 1: ud_lo * BASE via UM* ---
                 LDA     LOC_UDLO
-                STA     a:0,X
-                DEX                     ; push BASE
                 DEX
+                DEX
+                STA     a:0,X           ; push ud_lo
                 LDA     LOC_BASE
-                STA     a:0,X
+                DEX
+                DEX
+                STA     a:0,X           ; push BASE
 
                 PHD
-                LDA     #$0000          ; set Direct Page to $0000
+                LDA     #$0000
                 TCD
-                LDY     #RTS_CFA_LIST   ; use trampoline to RTS
-                JSR     UMSTAR_CODE     ; ( ud_lo ud_hi )
-                PLD
+                LDY     #RTS_CFA_LIST
+                JSR     UMSTAR_CODE     ; ( prod_lo prod_hi )
+                PLD                     ; D -> frame
 
-                ; Add digit to low cell, propagate carry to high cell
+                ; --- Step 2: ud_hi * BASE via UM* ---
+                LDA     LOC_UDHI        ; D -> frame, safe to use LOC_ names
+                DEX
+                DEX
+                STA     a:0,X           ; push ud_hi
+                LDA     LOC_BASE
+                DEX
+                DEX
+                STA     a:0,X           ; push BASE
+
+                PHD
+                LDA     #$0000
+                TCD
+                LDY     #RTS_CFA_LIST
+                JSR     UMSTAR_CODE     ; ( prod_lo prod_hi ud_hi*BASE_lo ud_hi*BASE_hi )
+                PLD                     ; D -> frame
+
+                ; Discard ud_hi*BASE high word (ANS: no overflow beyond 32 bits)
+                INX
+                INX
+
+                ; --- Step 3: prod_hi += ud_hi * BASE low word ---
+                CLC
+                LDA     a:0,X           ; ud_hi*BASE_lo (TOS)
+                INX
+                INX                     ; drop it
+                ADC     a:0,X           ; prod_hi (now TOS)
+                INX
+                INX                     ; drop prod_hi
+                STA     LOC_UDHI        ; store updated ud_hi into frame
+
+                ; --- Step 4: prod_lo += digit ---
                 PLA                     ; restore digit
                 CLC
-                ADC     a:2,X           ; add to ud_lo (NOS)
-                STA     LOC_UDLO
+                ADC     a:0,X           ; prod_lo (now TOS)
+                INX
+                INX                     ; drop prod_lo
+                STA     LOC_UDLO        ; store updated ud_lo into frame
                 BCC     @no_carry
-                INC     LOC_UDHI        ; carry into ud_hi (TOS)
+                INC     LOC_UDHI        ; carry from low into high
 @no_carry:
-                INX
-                INX
-                INX
-                INX                     ; clean up UM* result from stack
-
                 ; Advance pointer, decrement count
                 INC     LOC_ADDR
                 DEC     LOC_U
-                BRA     @digit_loop
+                JMP     @digit_loop
 
                 ;--------------------------------------------------------------
                 ; Done: write results back to parameter stack
@@ -3495,8 +3716,11 @@ HEX_BODY:
         .endproc
 
 ;------------------------------------------------------------------------------
-; NUMBER? ( c-addr -- n true | c-addr false )
+; NUMBER? ( c-addr -- n true | d_lo d_hi true | c-addr false )
 ; Handles prefixes: - (negative), $ (hex), # (decimal), % (binary)
+; Trailing '.' marks a double literal: returns ( d_lo d_hi true ).
+; Single number returns ( n true ).
+; Failure returns ( c-addr false ).
 ; Restores BASE after conversion.
 ;------------------------------------------------------------------------------
         HEADER  "NUMBER?", NUMBERQ_ENTRY, NUMBERQ_CFA, 0, TONUMBER_ENTRY
@@ -3505,14 +3729,15 @@ HEX_BODY:
         .a16
         .i16
 
-        LOC_ADDR    = 1         ; original c-addr (for fail return)
-        LOC_PTR     = 3         ; current char pointer
-        LOC_COUNT   = 5         ; remaining character count
-        LOC_SIGN    = 7         ; 0=positive, $FFFF=negative
-        LOC_BASE    = 9         ; saved original BASE
-        LOC_TMPBASE = 11        ; working base for this conversion
-        LOC_UP      = 13        ; local UP to avoid refetching
-        LOC_SIZE    = LOC_UP + 1
+        LOC_ADDR     = 1        ; original c-addr (for fail return)
+        LOC_PTR      = 3        ; current char pointer
+        LOC_COUNT    = 5        ; remaining character count
+        LOC_SIGN     = 7        ; 0=positive, $FFFF=negative
+        LOC_BASE     = 9        ; saved original BASE
+        LOC_TMPBASE  = 11       ; working base for this conversion
+        LOC_UP       = 13       ; local UP to avoid refetching
+        LOC_ISDOUBLE = 15       ; $FFFF if double (trailing '.'), 0 if single
+        LOC_SIZE     = LOC_ISDOUBLE + 1
 
                 PHD
                 PHY
@@ -3528,6 +3753,8 @@ HEX_BODY:
                 ;--------------------------------------------------------------
                 LDA     a:0,X           ; c-addr
                 STA     LOC_ADDR
+                INC     A               ; Advance ptr to first char
+                STA     LOC_PTR
 
                 SEP     #$20
                 .a8
@@ -3535,51 +3762,46 @@ HEX_BODY:
                 REP     #$20
                 .a16
                 AND     #$00FF
-                BNE     @skip
+                BNE     @has_chars
                 JMP     @fail_return    ; empty string -> fail
-@skip:          STA     LOC_COUNT
-
-                ; Advance past length byte
-                LDA     LOC_ADDR
-                INC     A
-                STA     LOC_PTR
+@has_chars:
+                STA     LOC_COUNT
 
                 ;--------------------------------------------------------------
-                ; Cache BASE, init working base and sign
+                ; Cache BASE, init working base, sign, double flag
                 ;--------------------------------------------------------------
                 LDA     a:UP
                 STA     LOC_UP
                 LDY     #U_BASE
                 LDA     (LOC_UP),Y
-                STA     LOC_BASE        ; save original BASE
-                STA     LOC_TMPBASE     ; working base defaults to BASE
-                STZ     LOC_SIGN        ; assume positive
+                STA     LOC_BASE
+                STA     LOC_TMPBASE
+                STZ     LOC_SIGN
+                STZ     LOC_ISDOUBLE
 
                 ;--------------------------------------------------------------
-                ; Check for prefix characters
+                ; Check for '-' prefix
                 ;--------------------------------------------------------------
                 SEP     #$20
                 .a8
-                LDA     (LOC_PTR)       ; peek first char
+                LDA     (LOC_PTR)
                 REP     #$20
                 .a16
                 AND     #$00FF
 
                 CMP     #'-'
                 BNE     @check_dollar
-                DEC     LOC_SIGN        ; 0 -> $FFFF = negative
-
-                INC     LOC_PTR         ; Consume '-' char, advance pointer
-                DEC     LOC_COUNT       ; one fewer char to process
-                BEQ     @fail_return    ; '-' alone is not a valid number
-
-                SEP     #$20
+                DEC     LOC_SIGN        ; -1 = FORTH_TRUE to mark negative
+                INC     LOC_PTR
+                DEC     LOC_COUNT
+                BNE     @skip
+                JMP     @fail_return    ; '-' alone is not valid
+@skip:          SEP     #$20
                 .a8
-                LDA     (LOC_PTR)       ; peek next char
+                LDA     (LOC_PTR)       ; peek next char for base prefix check
                 REP     #$20
                 .a16
                 AND     #$00FF
-
 @check_dollar:
                 CMP     #'$'
                 BNE     @check_hash
@@ -3603,38 +3825,53 @@ HEX_BODY:
 @advance_prefix:
                 INC     LOC_PTR
                 DEC     LOC_COUNT
-                BEQ     @fail_return    ; prefix alone is not valid
-
-                ; Handle minus after base prefix (e.g. $-FF not supported,
-                ; but -$ is already handled above)
-
+                BNE     @no_prefix
+                JMP     @fail_return    ; prefix alone is not valid
 @no_prefix:
                 ;--------------------------------------------------------------
-                ; Temporarily write working base into BASE in user area
+                ; Check for trailing '.' (double literal marker).
+                ; If the LAST character of the remaining string is '.',
+                ; set IS_DOUBLE and reduce count by 1 to exclude it.
+                ;--------------------------------------------------------------
+                LDY     LOC_COUNT
+                DEY                     ; index of last char
+                SEP     #$20
+                .a8
+                LDA     (LOC_PTR),Y     ; fetch last char
+                REP     #$20
+                .a16
+                AND     #$00FF
+                CMP     #'.'
+                BNE     @no_dot
+                DEC     LOC_ISDOUBLE    ; -1 = FORTH_TRUE
+                DEC     LOC_COUNT       ; exclude the '.' from conversion
+                BEQ     @fail_return    ; '.' alone or prefix + '.' is invalid
+@no_dot:
+		;--------------------------------------------------------------
+                ; Write working BASE into user area for >NUMBER
                 ;--------------------------------------------------------------
                 LDY     #U_BASE
                 LDA     LOC_TMPBASE
-                STA     (LOC_UP),Y      ; BASE = working base
+                STA     (LOC_UP),Y
 
                 ;--------------------------------------------------------------
                 ; Set up stack for >NUMBER: ( 0 0 c-addr u )
-                ; We need 4 cells below current TOS.
-                ; Current TOS (0,X) = original c-addr, replace with u
-                ; then push c-addr, ud_hi, ud_lo below.
+                ; TOS=u, NOS=c-addr, NOS2=ud_hi=0, NOS3=ud_lo=0
                 ;--------------------------------------------------------------
                 LDA     #0
-                STA     a:0,X           ; ud_lo
+                STA     a:0,X           ; ud_lo (reuse existing TOS slot)
                 DEX
                 DEX
-                STA     a:0,X           ; stack: ( ud_lo ud_hi c-addr u )
+                STA     a:0,X           ; ud_hi
+                LDA     LOC_PTR         ; c-addr (first digit)
                 DEX
                 DEX
-                LDA     LOC_PTR         ; c-addr
                 STA     a:0,X
-                DEX
-                DEX
                 LDA     LOC_COUNT       ; u
+                DEX
+                DEX
                 STA     a:0,X           ; TOS = u
+
                 JSR     TONUMBER_IMPL   ; ( ud_lo ud_hi c-addr u )
 
                 ;--------------------------------------------------------------
@@ -3647,39 +3884,67 @@ HEX_BODY:
                 ;--------------------------------------------------------------
                 ; Check u = 0 (all chars consumed = success)
                 ;--------------------------------------------------------------
-                LDA     a:0,X           ; u
+                LDA     a:0,X           ; u remaining
                 TAY
                 INX                     ; drop u
                 INX
                 INX                     ; drop c-addr
-                INX
-                INX                     ; drop ud_hi (single cell for now)
-                INX
-                TYA                     ; TOS = ud_lo = result
-                BNE     @fail_return    ; unconverted chars remain -> fail
+                INX                     ; Stack now: ( ud_lo ud_hi )
+                TYA
+                BNE     @fail_cleanup   ; unconverted chars -> fail
 
-                ;--------------------------------------------------------------
-                ; Apply sign
-                ;--------------------------------------------------------------
-                LDA     LOC_SIGN
+                LDA     LOC_ISDOUBLE
+                BNE     @apply_sign
+
+                ; Single: ud_hi must be zero for a valid single-cell number.
+                ; If ud_hi != 0 the number overflowed a cell -> fail.
+                LDA     a:0,X           ; ud_hi
+                BNE     @fail_overflow
+
+@apply_sign:    LDA     LOC_SIGN        ; Apply sign to 32-bit result
                 BEQ     @positive
-                LDA     a:0,X
+
+                ; Negate 32-bit: invert both cells, add 1 to low cell
+                LDA     a:2,X           ; ud_lo
                 EOR     #$FFFF
-                INC     A
+                STA     a:2,X
+                LDA     a:0,X           ; ud_hi
+                EOR     #$FFFF
                 STA     a:0,X
+                INC     a:2,X           ; ud_lo + 1
+                BNE     @positive
+                INC     a:0,X           ; carry into ud_hi
 @positive:
+                ;--------------------------------------------------------------
+                ; Return result
+                ; Double: leave ( ud_lo ud_hi ) on stack, push TRUE
+                ; Single: drop ud_hi, leave ud_lo, push TRUE
+                ;--------------------------------------------------------------
+                LDA     LOC_ISDOUBLE
+                BNE     @return_double
+
+                ; Drop ud_hi, leave ud_lo as n
+                INX
+                INX
+                ; Fall through to load flag and return
+@return_double:
+                ; Stack: ( ud_lo ud_hi ) — leave as-is
                 LDA     #FORTH_TRUE
                 BRA     @return
 
+@fail_overflow: ; Number too large for single cell but no '.' given -> fail.
+@fail_cleanup:  ; >NUMBER left u non-zero. Drop ud_hi
+                INX                     ; Drop both ud_hi cell
+                INX
 @fail_return:
-                LDA     LOC_ADDR        ; original c-addr
-                STA     a:0,X           ; restore TOS
-                LDA     #0              ; FALSE
-
+                LDA     LOC_ADDR
+                STA     a:0,X
+                LDA     #FORTH_FALSE
 @return:
                 DEX
                 DEX
                 STA     a:0,X           ; push flag
+
                 TSC
                 CLC
                 ADC     #LOC_SIZE
