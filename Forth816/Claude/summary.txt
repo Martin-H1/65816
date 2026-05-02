@@ -34,16 +34,16 @@ allocations:
   DB = Data Bank currently zero through the interpreter.
 
 Current source files are located in GitHub and can be accessed with these URLs:
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/Makefile
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/README.md
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/constants.inc
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/dictionary.inc
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/forth.cfg
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/forth.s
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/hal.inc
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/hal_mench.s
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/macros.inc
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/primitives.s
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/Makefile
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/README.md
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/constants.inc
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/dictionary.inc
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/forth.cfg
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/forth.s
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/hal.inc
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/hal_mench.s
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/macros.inc
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/kernel/primitives.s
 
 During our previous sessions we ran into a few issues with invalid 65816
 op codes, CA65 syntax, and 65816 best programming practices. I've retained a
@@ -77,7 +77,7 @@ byte value $22.
 Word defintions end in NEXT, so a word definition can't JSR directly to another
 word definition. That's because the JSR requires and RTS return. When this is
 required, this is worked around by using the RTS_CFA_LIST trampoline.
-TONUMBER_CODE calling UMSTAR_CODE is example of this pattern.
+TONUMBER_CODE calling UMSTAR_CODE is example of this pattern. An alternate approach is to split the definition into a separate _IMPL subroutine that both definitions can JSR to. UMSLASHMOD uses this approach.
 
 The 65816 supports stack relative addressing which is used to create stack local
 variables within a procedure. This reduces the need for direct page space, and
@@ -116,6 +116,14 @@ Y is saved in the stackframe this can be omitted.
 * BEQ/BNE after INX/INX: INX/INX clobbers the zero flag, so you can't test the
 just-popped value with BEQ/BNE directly after. Save to a zero page variable,
 stack local, or use CMP #0 after the pops.
+
+Register discipline for assembly primitives:
+A — free to clobber
+X — parameter stack pointer, must be preserved (or explicitly adjusted for push/pop)
+Y — instruction pointer (IP), must be preserved with PHY/PLY if used
+S — return stack pointer, managed by hardware stack operations
+D — must be $0000 on entry and exit via NEXT
+DB — must remain zero
 
 New words implemented and tested:
 
