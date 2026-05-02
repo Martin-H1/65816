@@ -1,28 +1,52 @@
+ ok 3
 \ ttester.fs - John Hayes's test framework (no floating point)
+ ok 3
 \ Adapted for Forth816
+ ok 3
 
+ ok 3
 MARKER RESET-TEST   \ restore dictionary to this point after each test
+ ok 3
 
+ ok 3
 \ Clear the parameter stack
+ ok 3
 : CLEAR-STACK BEGIN DEPTH WHILE DROP REPEAT ;
+ ok 3
 CLEAR-STACK
+ ok 
 
+ ok 
 DECIMAL
+ ok 
 
+ ok 
 VARIABLE ACTUAL-DEPTH
+ ok 
 CREATE ACTUAL-RESULTS 32 CELLS ALLOT
+ ok 
 VARIABLE START-DEPTH
+ ok 
 VARIABLE XCURSOR
+ ok 
 VARIABLE ERROR-XT
+ ok 
 
+ ok 
 : ERROR ( c-addr u -- )
     TYPE CR ;
+ ok 
 
+ ok 
 ' ERROR ERROR-XT !  \ default error handler
+ ok 
 
+ ok 
 : T{
     DEPTH START-DEPTH ! ;
+ ok 
 
+ ok 
 : ->
     DEPTH DUP ACTUAL-DEPTH !
     START-DEPTH @ - DUP 0< IF
@@ -31,7 +55,9 @@ VARIABLE ERROR-XT
     0 ?DO
         ACTUAL-RESULTS I CELLS + !
     LOOP ;
+ ok 
 
+ ok 
 : }T
     DEPTH START-DEPTH @ - ACTUAL-DEPTH @ <> IF
         S" WRONG NUMBER OF RESULTS: " TYPE CR
@@ -42,5 +68,82 @@ VARIABLE ERROR-XT
             THEN
         LOOP
     THEN ;
+ ok 
 
+ ok 
 : DONE ." ###DONE###" CR RESET-TEST ;
+ ok 
+\ stack_test.fs - Parameter stack regression tests
+ ok 
+
+ ok 
+T{ 1 2 3 SWAP -> 1 3 2 }T
+ ok 
+T{ 1 2 3 SWAP -> 1 3 2 }T
+ ok 
+
+ ok 
+\ DUP
+ ok 
+T{ 1 DUP -> 1 1 }T
+ ok 
+T{ -1 DUP -> -1 -1 }T
+ ok 
+
+ ok 
+\ DROP
+ ok 
+T{ 1 2 DROP -> 1 }T
+ ok 
+
+ ok 
+\ OVER
+ ok 
+T{ 1 2 OVER -> 1 2 1 }T
+ ok 
+
+ ok 
+\ ROT
+ ok 
+T{ 1 2 3 ROT -> 2 3 1 }T
+ ok 
+
+ ok 
+\ NIP
+ ok 
+T{ 1 2 NIP -> 2 }T
+ ok 
+
+ ok 
+\ TUCK
+ ok 
+T{ 1 2 TUCK -> 2 1 2 }T
+ ok 
+
+ ok 
+\ 2DUP
+ ok 
+T{ 1 2 2DUP -> 1 2 1 2 }T
+ ok 
+
+ ok 
+\ 2DROP
+ ok 
+T{ 1 2 3 4 2DROP -> 1 2 }T
+ ok 
+
+ ok 
+\ 2SWAP
+ ok 
+T{ 1 2 3 4 2SWAP -> 3 4 1 2 }T
+ ok 
+
+ ok 
+\ 2OVER
+ ok 
+T{ 1 2 3 4 2OVER -> 1 2 3 4 1 2 }T
+ ok 
+
+ ok 
+DONE
+###DONE###

@@ -15,3 +15,7 @@
 
 # Debug files
 *.lst
+
+# Test runner generated files
+Forth816/tests/output/*.actual
+Forth816/tests/report.txt

@@ -76,9 +76,11 @@ def send_file(ser, path, char_delay_sec):
     with open(path, "r") as f:
         contents = f.read()
     for ch in contents:
-        ser.write(ch.encode("ascii"))
+        if ch == "\n":
+            ser.write(b"\r")
+        else:
+            ser.write(ch.encode("ascii"))
         time.sleep(char_delay_sec)
-
 
 def run_test_file(ser, preamble_path, test_path, char_delay_sec, skip_preamble):
     """Send preamble (unless skipped) then test file to serial port."""
@@ -100,7 +102,7 @@ def capture_output(ser, timeout_sec):
             if ch == "\n":
                 line = "".join(current_line).rstrip("\r")
                 captured.append(line)
-                if SENTINEL in line:
+                if line.strip() == SENTINEL:
                     return "\n".join(captured), True
                 current_line = []
             else:
@@ -117,6 +119,7 @@ def capture_output(ser, timeout_sec):
 def load_master(master_dir, test_name):
     """Load master output file. Returns string or None if not found."""
     master_path = os.path.join(master_dir, test_name + ".expected")
+
     if not os.path.exists(master_path):
         return None
     with open(master_path, "r") as f:
@@ -151,14 +154,16 @@ def check_failures(captured):
 
 def run_tests(args):
     test_dir = os.path.abspath(args.test_dir)
-    master_dir = args.master or os.path.join(test_dir, "masters")
-    output_dir = args.output or os.path.join(test_dir, "output")
-    report_path = args.report or os.path.join(test_dir, "report.txt")
+    tests_parent = os.path.dirname(test_dir)
+    master_dir = args.master or os.path.join(tests_parent, "masters")
+    output_dir = args.output or os.path.join(tests_parent, "output")
+    report_path = args.report or os.path.join(tests_parent, "report.txt")
+    preamble_path = os.path.join(tests_parent, args.preamble)
+
     char_delay_sec = args.delay / 1000.0
     skip_preamble = args.no_preamble
     gen_masters = args.generate_masters
 
-    preamble_path = os.path.join(test_dir, args.preamble)
     if not skip_preamble and not os.path.exists(preamble_path):
         print(f"Preamble file not found: {preamble_path}")
         print("Use --no-preamble to skip it.")
@@ -215,6 +220,7 @@ def run_tests(args):
             # Compare against master if one exists
             master = load_master(master_dir, test_name)
             diff_lines = []
+
             if master is not None:
                 diff = list(difflib.unified_diff(
                     master.splitlines(),
@@ -223,19 +229,25 @@ def run_tests(args):
                     tofile=test_name + ".actual",
                     lineterm=""
                 ))
-                diff_lines = diff
+                diff_lines = [l for l in diff if l.startswith('+') or l.startswith('-')]
 
-            if not failing_lines and not diff_lines:
-                print("PASS")
-                results.append((test_name, "PASS", []))
+            if master is not None:
+                # Master exists: diff is the sole arbiter
+                if not diff_lines:
+                    print("PASS")
+                    results.append((test_name, "PASS", []))
+                else:
+                    print("FAIL")
+                    results.append((test_name, "FAIL", diff_lines))
             else:
-                print("FAIL")
-                details = []
-                if failing_lines:
-                    details.extend(failing_lines)
-                if diff_lines:
-                    details.extend(diff_lines)
-                results.append((test_name, "FAIL", details))
+                # No master: scan for ttester failure markers
+                failing_lines = check_failures(captured)
+                if not failing_lines:
+                    print("PASS")
+                    results.append((test_name, "PASS", []))
+                else:
+                    print("FAIL")
+                    results.append((test_name, "FAIL", failing_lines))
 
     finally:
         ser.close()

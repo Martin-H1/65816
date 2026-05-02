@@ -1,28 +1,52 @@
+ ok 
 \ ttester.fs - John Hayes's test framework (no floating point)
+ ok 
 \ Adapted for Forth816
+ ok 
 
+ ok 
 MARKER RESET-TEST   \ restore dictionary to this point after each test
+ ok 
 
+ ok 
 \ Clear the parameter stack
+ ok 
 : CLEAR-STACK BEGIN DEPTH WHILE DROP REPEAT ;
+ ok 
 CLEAR-STACK
+ ok 
 
+ ok 
 DECIMAL
+ ok 
 
+ ok 
 VARIABLE ACTUAL-DEPTH
+ ok 
 CREATE ACTUAL-RESULTS 32 CELLS ALLOT
+ ok 
 VARIABLE START-DEPTH
+ ok 
 VARIABLE XCURSOR
+ ok 
 VARIABLE ERROR-XT
+ ok 
 
+ ok 
 : ERROR ( c-addr u -- )
     TYPE CR ;
+ ok 
 
+ ok 
 ' ERROR ERROR-XT !  \ default error handler
+ ok 
 
+ ok 
 : T{
     DEPTH START-DEPTH ! ;
+ ok 
 
+ ok 
 : ->
     DEPTH DUP ACTUAL-DEPTH !
     START-DEPTH @ - DUP 0< IF
@@ -31,7 +55,9 @@ VARIABLE ERROR-XT
     0 ?DO
         ACTUAL-RESULTS I CELLS + !
     LOOP ;
+ ok 
 
+ ok 
 : }T
     DEPTH START-DEPTH @ - ACTUAL-DEPTH @ <> IF
         S" WRONG NUMBER OF RESULTS: " TYPE CR
@@ -42,5 +68,35 @@ VARIABLE ERROR-XT
             THEN
         LOOP
     THEN ;
+ ok 
 
+ ok 
 : DONE ." ###DONE###" CR RESET-TEST ;
+ ok 
+\ harness_test.fs - validates the test harness itself
+ ok 
+
+ ok 
+\ Should pass
+ ok 
+T{ 1 2 SWAP -> 2 1 }T
+ ok 
+
+ ok 
+\ Should fail with INCORRECT RESULT
+ ok 
+T{ 1 2 SWAP -> 1 2 }T
+INCORRECT RESULT: 
+INCORRECT RESULT: 
+ ok 
+
+ ok 
+\ Should fail with WRONG NUMBER OF RESULTS
+ ok 
+T{ 1 2 SWAP -> 1 2 3 }T
+WRONG NUMBER OF RESULTS: 
+ ok 3
+
+ ok 3
+DONE
+###DONE###
