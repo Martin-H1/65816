@@ -1,18 +1,18 @@
- ok 
+ ok 3
 \ ttester.fs - John Hayes's test framework (no floating point)
- ok 
+ ok 3
 \ Adapted for Forth816
- ok 
+ ok 3
 
- ok 
+ ok 3
 MARKER RESET-TEST   \ restore dictionary to this point after each test
- ok 
+ ok 3
 
- ok 
+ ok 3
 \ Clear the parameter stack
- ok 
+ ok 3
 : CLEAR-STACK BEGIN DEPTH WHILE DROP REPEAT ;
- ok 
+ ok 3
 CLEAR-STACK
  ok 
 
@@ -73,115 +73,159 @@ VARIABLE ERROR-XT
  ok 
 : DONE ." ###DONE###" CR RESET-TEST ;
  ok 
-\ stack_test.fs - Parameter stack regression tests
+\ math_test.fs - Arithmetic regression tests
  ok 
 
  ok 
-T{ 1 2 3 SWAP -> 1 3 2 }T
+\ +
  ok 
-T{ 1 2 3 SWAP -> 1 3 2 }T
- ok 
-
- ok 
-\ DUP
- ok 
-T{ 1 DUP -> 1 1 }T
- ok 
-T{ -1 DUP -> -1 -1 }T
+T{ 597 4133 + -> 4730 }T
  ok 
 
  ok 
-\ DROP
+\ +!
  ok 
-T{ 1 2 DROP -> 1 }T
+VARIABLE DATA
  ok 
-
+33 DATA !
  ok 
-\ OVER
- ok 
-T{ 1 2 OVER -> 1 2 1 }T
+T{ 13 DATA +! DATA @ -> 46 }T
  ok 
 
  ok 
-\ ROT
+\ -
  ok 
-T{ 1 2 3 ROT -> 2 3 1 }T
- ok 
-
- ok 
-\ NIP
- ok 
-T{ 1 2 NIP -> 2 }T
+T{ 4133 597 - -> 3536 }T
  ok 
 
  ok 
-\ TUCK
+\ *
  ok 
-T{ 1 2 TUCK -> 2 1 2 }T
+T{ 4133 7 * -> 28931 }T
  ok 
-
+T{ 4133 -3 * -> -12399 }T
  ok 
-\ 2DUP
+T{ -3 -3 * -> 9 }T
  ok 
-T{ 1 2 2DUP -> 1 2 1 2 }T
- ok 
-
- ok 
-\ 2DROP
- ok 
-T{ 1 2 3 4 2DROP -> 1 2 }T
+T{ -3 20 * -> -60 }T
  ok 
 
  ok 
-\ 2SWAP
+\ UM*
  ok 
-T{ 1 2 3 4 2SWAP -> 3 4 1 2 }T
+T{ 4133 20 UM* -> 17124 1 }T
  ok 
-
+T{ 4133 65533 UM* -> 53137 4132 }T
  ok 
-\ 2OVER
+T{ 65533 65533 UM* -> 9 65530 }T
  ok 
-T{ 1 2 3 4 2OVER -> 1 2 3 4 1 2 }T
- ok 
-
- ok 
-\ PICK
- ok 
-T{ 1 2 3 4 1 2 PICK -> 1 2 3 4 1 3 }T
+T{ 65533 20 UM* -> 65476 19 }T
  ok 
 
  ok 
-\ DEPTH
+\ UM/MOD
  ok 
-T{ 1 2 3 4 1 3 PICK -> 1 2 3 4 1 2 }T
+T{ 1025 0 14 UM/MOD -> 3 73 }T
  ok 
-
- ok 
-CLEAR-STACK
+T{ 1025 0 0 UM/MOD -> 1025 -1 }T
  ok 
 
  ok 
-: TEST>R  ( n -- n ) >R R> ;
+\ /MOD
+ ok 
+T{ 4133 20 /MOD -> 13 206 }T
+ ok 
+T{ 4133 -3 /MOD -> -1 -1378 }T
+ ok 
+T{ -3 -3 /MOD -> 0 1 }T
+ ok 
+T{ -3 20 /MOD -> 17 -1 }T
  ok 
 
  ok 
-T{ 42 TEST>R -> 42 }T
+\ /
+ ok 
+T{ 4133 20 / -> 206 }T
+ ok 
+T{ 4133 -3 / -> -1378 }T
+ ok 
+T{ -3 -3 / -> 1 }T
+ ok 
+T{ -3 20 / -> -1 }T
+ ok 
+T{ -3 1 / -> -3 }T
  ok 
 
  ok 
-: TEST>R2  ( a b -- b a ) >R >R R> R> ;
+\ MOD
+ ok 
+T{ 4133 20 MOD -> 13 }T
+ ok 
+T{ 4133 -3 MOD -> -1 }T
+ ok 
+T{ -3 -3 MOD -> 0 }T
+ ok 
+T{ -3 20 MOD -> 17 }T
  ok 
 
  ok 
-T{ 1 2 TEST>R2 -> 1 2 }T
+\ NEGATE
+ ok 
+T{ -32 NEGATE -> 32 }T
+ ok 
+T{ 224 NEGATE -> -224 }T
  ok 
 
  ok 
-: TESTR@  ( n -- n n ) >R R@ R> ;
+\ ABS
+ ok 
+T{ -32 ABS -> 32 }T
+ ok 
+T{ 224 ABS -> 224 }T
  ok 
 
  ok 
-T{ 42 TESTR@ -> 42 42 }T
+\ MAX
+ ok 
+T{ 50 4146 MAX -> 4146 }T
+ ok 
+
+ ok 
+\ MIN
+ ok 
+T{ 50 4146 MIN -> 50 }T
+ ok 
+
+ ok 
+\ 1+
+ ok 
+T{ 4146 1+ -> 4147 }T
+ ok 
+
+ ok 
+\ 1-
+ ok 
+T{ 1335 1- -> 1334 }T
+ ok 
+
+ ok 
+\ 2*
+ ok 
+T{ $0537 2* -> $0A6E }T
+ ok 
+
+ ok 
+\ 2/
+ ok 
+T{ $0537 2/ -> $029B }T
+ ok 
+
+ ok 
+\ S>D
+ ok 
+T{ $0537 S>D -> $0537 0 }T
+ ok 
+T{ $8537 S>D -> $8537 -1 }T
  ok 
 
  ok 
