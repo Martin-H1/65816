@@ -86,8 +86,9 @@ def run_test_file(ser, preamble_path, test_path, char_delay_sec, skip_preamble):
     """Send preamble (unless skipped) then test file to serial port."""
     if not skip_preamble:
         send_file(ser, preamble_path, char_delay_sec)
+        time.sleep(1.0)               # wait for preamble's final ok to arrive
+        ser.reset_input_buffer()      # discard all preamble output including ok
     send_file(ser, test_path, char_delay_sec)
-
 
 def capture_output(ser, timeout_sec):
     """Read from serial port until sentinel or timeout.
