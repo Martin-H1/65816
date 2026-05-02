@@ -5834,12 +5834,64 @@ HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; (?DO) ( limit index -- ) (R: -- limit index) runtime for ?DO
+; If limit = index skip the loop entirely, otherwise identical to (DO).
+;------------------------------------------------------------------------------
+        HEADER  "(?DO)", DOQDO_ENTRY, DOQDO_CFA, F_HIDDEN, DO_ENTRY
+        CODEPTR DOQDO_CODE
+        PUBLIC  DOQDO_CODE
+        .a16
+        .i16
+                LDA     2,X             ; limit
+                CMP     0,X             ; index
+                BNE     @enter_loop     ; limit <> index so enter loop
+                ; limit = index: skip loop, jump to leave target
+                INX                     ; drop index
+                INX
+                INX                     ; drop limit
+                INX
+                LDA     0,Y             ; load leave target from inline data
+                TAY                     ; IP = leave target
+                NEXT
+@enter_loop:
+                LDA     0,Y             ; load leave target
+                PHA                     ; push leave target onto return stack
+                INY                     ; advance past leave target
+                INY
+                LDA     2,X             ; limit
+                PHA                     ; push limit onto return stack
+                LDA     0,X             ; index
+                PHA                     ; push index onto return stack
+                INX
+                INX
+                INX
+                INX
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; ?DO Interpretation: Undefined. Compilation: ( C: -- do-sys )
+; Like DO but skips the loop if limit = index at runtime.
+; https://forth-standard.org/standard/core/qDO
+;------------------------------------------------------------------------------
+        HEADER  "?DO", QDO_ENTRY, QDO_CFA, F_IMMEDIATE, DOQDO_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   DOQDO_CFA
+        .word   COMMA_CFA               ; compile (?DO)
+        .word   HERE_CFA                ; push leave target address
+        .word   ZERO_CFA                ; compile placeholder leave target
+        .word   COMMA_CFA
+        .word   HERE_CFA                ; push loop address
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; LOOP Interpretation: Undefined. Compilation: ( C: do-sys -- )
 ; Append DOLOOP to the current defintion, pop and compile back branch test
 ; and target. Patch the LEAVE target in the DO byte code section.
 ; https://forth-standard.org/standard/core/LOOP
 ;------------------------------------------------------------------------------
-        HEADER  "LOOP", LOOP_ENTRY, LOOP_CFA, F_IMMEDIATE, DO_ENTRY
+        HEADER  "LOOP", LOOP_ENTRY, LOOP_CFA, F_IMMEDIATE, QDO_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA                 ; compile (LOOP)
         .word   DOLOOP_CFA
