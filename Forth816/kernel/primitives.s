@@ -855,137 +855,30 @@ calc_depth:     TXA
 ; /MOD ( n1 n2 -- rem quot )   signed floored division
 ;------------------------------------------------------------------------------
         HEADER  "/MOD", SLASHMOD_ENTRY, SLASHMOD_CFA, 0, UMSLASHMOD_ENTRY
-        CODEPTR SLASHMOD_CODE
-        PUBLIC  SLASHMOD_CODE
-        .a16
-        .i16
-                JSR     SLASHMOD_IMPL
-                NEXT
-        ENDPUBLIC
-
-;------------------------------------------------------------------------------
-; SLASHMOD_IMPL  –  signed 16÷16 → 16r 16q   ANS Forth floored division
-; Called via JSR from /MOD and MOD.
-;
-; Entry stack:
-;   0,X = n2  (divisor,  signed 16-bit)
-;   2,X = n1  (dividend, signed 16-bit)
-;
-; Exit stack:
-;   0,X = quotient   (floored toward −∞)
-;   2,X = remainder  (sign matches divisor)
-;
-; ANS floored vs. truncated:
-;   Truncated: remainder has sign of dividend.
-;   Floored:   remainder has sign of divisor; quotient is floor(n1/n2).
-;   When signs of n1 and n2 differ AND remainder ≠ 0:
-;     floored_quot = truncated_quot - 1
-;     floored_rem  = truncated_rem  + n2
-;
-; Method:
-;   1. Save original signed n1, n2 on hardware stack.
-;   2. Take |n1|, |n2|; call UMSLASHMOD_IMPL for unsigned truncated division.
-;   3. Apply floored-division sign correction.
-;
-; Hardware stack frame after PHY + two PHA:
-;   1,S = n2  (saved divisor,  pushed last)
-;   3,S = n1  (saved dividend, pushed first)
-;   5,S = saved IP (pushed by PHY)
-;------------------------------------------------------------------------------
-        PUBLIC  SLASHMOD_IMPL
-        .a16
-        .i16
-
-        SDIV_N1 = 3                     ; offset to saved n1 in hardware stack
-        SDIV_N2 = 1                     ; offset to saved n2
-
-                ; Step 1: save originals on hardware stack
-                LDA     2,X             ; n1 (dividend)
-                PHA                     ; → 3,S
-                LDA     0,X             ; n2 (divisor)
-                PHA                     ; → 1,S
-
-                ; Step 2: replace stack values with absolute values
-                LDA     2,X             ; n1
-                BPL     @n1_pos
-                EOR     #$FFFF
-                INC     A               ; |n1|
-@n1_pos:        STA     2,X
-
-                LDA     0,X             ; n2
-                BPL     @n2_pos
-                EOR     #$FFFF
-                INC     A               ; |n2|
-@n2_pos:        STA     0,X
-
-                ; Step 3: build ( divisor ud_high ud_low ) for UMSLASHMOD_IMPL
-                DEX
-                DEX                     ; allocate one new cell
-                LDA     2,X             ; |n2| = divisor
-                STA     0,X             ; divisor at 0,X
-                STZ     2,X             ; ud_high = 0
-                ; Result: 0,X=|n2|  2,X=0  4,X=|n1|
-
-                ; Step 4: unsigned division
-                JSR     UMSLASHMOD_IMPL
-
-                ; 0,X = |quot|, 2,X = |rem| on entry to sign correction
-
-                ; Step 5: quotient sign
-                LDA     SDIV_N1,S
-                EOR     SDIV_N2,S
-                BPL     @quot_positive
-                LDA     0,X             ; quot
-                BEQ     @quot_positive
-                EOR     #$FFFF
-                INC     A
-                STA     0,X
-@quot_positive:
-                ; Step 6: remainder sign (negate if dividend negative)
-                LDA     SDIV_N1,S
-                BPL     @rem_positive
-                LDA     2,X             ; rem
-                BEQ     @rem_positive
-                EOR     #$FFFF
-                INC     A
-                STA     2,X
-@rem_positive:
-@done:
-                ; 0,X=rem 2,X=quot
-                PLA
-                PLA
-                RTS
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   SWAP_CFA                ; ( n2 n1 )
+        .word   STOD_CFA                ; ( n2 n1 n1_hi )
+        .word   ROT_CFA                 ; ( n1 n1_hi n2 )
+        .word   FMMOD_CFA               ; ( rem quot )
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; / ( n1 n2 -- quot ) signed division
 ;------------------------------------------------------------------------------
         HEADER  "/", SLASH_ENTRY, SLASH_CFA, 0, SLASHMOD_ENTRY
-        CODEPTR SLASH_CODE
-        PUBLIC  SLASH_CODE
-        .a16
-        .i16
-                JSR     SLASHMOD_IMPL
-                LDA     0,X             ; b (TOS)
-                INX
-                INX
-                STA     0,X             ; Overwrite a with b
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   SLASHMOD_CFA            ; ( rem quot )
+        .word   NIP_CFA                 ; ( quot )
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MOD ( n1 n2 -- rem )
 ;------------------------------------------------------------------------------
         HEADER  "MOD", MOD_ENTRY, MOD_CFA, 0, SLASH_ENTRY
-        CODEPTR MOD_CODE
-        PUBLIC  MOD_CODE
-        .a16
-        .i16
-                JSR     SLASHMOD_IMPL
-                INX
-                INX
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   SLASHMOD_CFA            ; ( rem quot )
+        .word   DROP_CFA                ; ( rem )
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; SM/REM ( d1 n1 -- n2 n3 ) Divide d1 by n1, giving the symmetric quotient n3
