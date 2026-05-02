@@ -6091,12 +6091,75 @@ notfound_msg:
         .byte   "Word not found", $0D, $0A, $00
 
 ;------------------------------------------------------------------------------
+; MARKER ( "<spaces>name" -- ) creates a word that when executed restores
+; the dictionary to its state at the time MARKER was called, including
+; removing the marker word itself.
+;------------------------------------------------------------------------------
+        HEADER  "MARKER", MARKER_ENTRY, MARKER_CFA, 0, FORGET_ENTRY
+        CODEPTR DOCOL
+        ; Capture dictionary state BEFORE creating the new word.
+        ; saved LATEST and DP are the restore point — marker erases itself.
+        .word   LATEST_CFA
+        .word   FETCH_CFA              ; ( latest )
+        .word   DP_CFA
+        .word   FETCH_CFA              ; ( latest dp )
+        ; Parse name and build header. WORD leaves counted string at HERE,
+        ; then DOCREATE consumes its address.
+        .word   LIT_CFA
+        .word   SPACE                  ; space delimiter
+        .word   WORD_CFA               ; ( latest dp addr )
+        .word   DOCREATE_CFA           ; ( latest dp ) header built, DP at CFA
+        ; Patch CFA of new word to DOMARKER
+        .word   DP_CFA
+        .word   FETCH_CFA              ; ( latest dp cfa )
+        .word   LIT_CFA
+        .word   DOMARKER_CODE
+        .word   SWAP_CFA
+        .word   STORE_CFA              ; CFA = DOMARKER ( latest dp )
+        ; Advance DP past CFA cell
+        .word   DP_CFA
+        .word   FETCH_CFA              ; ( latest dp dp )
+        .word   CELLPLUS_CFA           ; ( latest dp dp+2 )
+        .word   DP_CFA
+        .word   STORE_CFA              ; DP += 2 ( latest dp )
+        .word   REVEAL_CFA             ; make word visible
+        ; Compile saved state into body
+        .word   SWAP_CFA               ; ( dp latest )
+        .word   COMMA_CFA              ; body[0] = saved LATEST
+        .word   COMMA_CFA              ; body[1] = saved DP
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; DOMARKER - runtime action of a MARKER-created word.
+; Body layout at CFA+2: [ saved_LATEST | saved_DP ]
+; Restores LATEST and DP, erasing the marker and all words defined after it.
+;------------------------------------------------------------------------------
+        PUBLIC  DOMARKER_CODE
+        .a16
+        .i16
+DOMARKER_CODE:
+                PHY
+                ; Restore LATEST from body[0] (CFA + CELL_SIZE)
+                LDY     #CELL_SIZE
+                LDA     (W),Y
+                LDY     #U_LATEST
+                STA     (UP),Y
+                ; Restore DP from body[1] (CFA + CELL_SIZE*2)
+                LDY     #CELL_SIZE * 2
+                LDA     (W),Y
+                LDY     #U_DP
+                STA     (UP),Y
+                PLY
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; SEE ( "<spaces>name" -- ) skips leading space delimiters. Parse name
 ; delimited by a space. Find name in dictionary, then print its definition
 ; or "primitive" if its assembly.
 ; Prints an error if the name can not be found.
 ;------------------------------------------------------------------------------
-        HEADER  "SEE", SEE_ENTRY, SEE_CFA, 0, FORGET_ENTRY
+        HEADER  "SEE", SEE_ENTRY, SEE_CFA, 0, MARKER_ENTRY
         CODEPTR DOCOL
         ; Parse name, uppercase into HERE
         .word   PARSENAME_CFA          ; ( c-addr u )
