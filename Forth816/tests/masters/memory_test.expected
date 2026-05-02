@@ -1,0 +1,107 @@
+\ memory_test.fs - Memory access regression tests
+ ok 
+
+ ok 
+\ @
+ ok 
+VARIABLE FETCH-VAR
+ ok 
+$BEEF FETCH-VAR !
+ ok 
+T{ FETCH-VAR @ -> $BEEF }T
+ ok 
+
+ ok 
+\ !
+ ok 
+VARIABLE STORE-VAR
+ ok 
+$BEEF STORE-VAR !
+ ok 
+T{ $FEED STORE-VAR ! STORE-VAR @ -> $FEED }T
+ ok 
+
+ ok 
+\ C@
+ ok 
+CREATE CFETCH-BUF $43 C, $40 C,
+ ok 
+T{ CFETCH-BUF C@ -> $43 }T
+INCORRECT RESULT: 
+ ok 
+
+ ok 
+\ C!
+ ok 
+VARIABLE CSTORE-VAR
+ ok 
+$FFFF CSTORE-VAR !
+ ok 
+T{ $24 CSTORE-VAR C! CSTORE-VAR C@ -> $24 }T
+ ok 
+
+ ok 
+\ 2@
+ ok 
+CREATE TWOFETCH-BUF $FEED , $BEEF ,
+ ok 
+T{ TWOFETCH-BUF 2@ -> $FEED $BEEF }T
+INCORRECT RESULT: 
+INCORRECT RESULT: 
+ ok 
+
+ ok 
+\ 2!
+ ok 
+CREATE TWOSTORE-BUF 0 , 0 ,
+ ok 
+T{ $FEED $BEEF TWOSTORE-BUF 2!
+ ok 
+   TWOSTORE-BUF @
+ ok 1
+   TWOSTORE-BUF CELL+ @ -> $BEEF $FEED }T
+ ok 
+
+ ok 
+\ ALIGNED
+ ok 
+T{ $0057 ALIGNED -> $0058 }T
+ ok 
+T{ $0064 ALIGNED -> $0064 }T
+ ok 
+
+ ok 
+\ CHAR+
+ ok 
+T{ $0057 CHAR+ -> $0058 }T
+ ok 
+
+ ok 
+\ MOVE
+ ok 
+CREATE MOVE-SRC  $48 C, $65 C, $6C C, $6C C, $6F C, $21 C, $20 C, $20 C,
+ ok 
+CREATE MOVE-DST  $20 C, $20 C, $20 C, $20 C, $20 C, $20 C, $20 C, $20 C,
+ ok 
+T{ MOVE-SRC MOVE-DST 8 MOVE
+ ok 
+   MOVE-SRC 8 MOVE-DST 8 COMPARE -> 0 }T
+ ok 
+
+ ok 
+\ FILL
+ ok 
+CREATE FILL-DST  $20 C, $20 C, $20 C, $20 C, $20 C, $20 C, $20 C, $20 C,
+ ok 
+T{ FILL-DST 8 $24 FILL
+ ok 
+   FILL-DST C@ -> $24 }T
+ ok 
+T{ FILL-DST 1 CHARS + C@ -> $24 }T
+ ok 
+T{ FILL-DST 7 CHARS + C@ -> $24 }T
+ ok 
+
+ ok 
+DONE
+###DONE###

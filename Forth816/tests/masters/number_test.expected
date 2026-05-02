@@ -1,0 +1,102 @@
+\ number_test.fs - Number conversion regression tests
+ ok 
+
+ ok 
+CREATE NUMTEST-BUF 32 ALLOT
+ ok 
+: NUMTEST-STR ( c-addr u -- addr ) NUMTEST-BUF PLACE NUMTEST-BUF ;
+ ok 
+
+ ok 
+\ >NUMBER ( ud c-addr u -- ud c-addr u )
+ ok 
+\ NIP drops c-addr leaving ( ud_lo ud_hi u )
+ ok 
+T{ 0 0 S" " >NUMBER NIP -> 0 0 0 }T
+ ok 
+T{ 0 0 S" 0" >NUMBER NIP -> 0 0 0 }T
+ ok 
+T{ 0 0 S" 500" >NUMBER NIP -> 500 0 0 }T
+ ok 
+T{ 0 0 S" 12G" >NUMBER NIP -> 12 0 1 }T
+ ok 
+
+ ok 
+HEX
+ ok 
+T{ 0 0 S" 7FF" >NUMBER NIP -> 7FF 0 0 }T
+ ok 
+T{ 0 0 S" DEAD" >NUMBER NIP -> DEAD 0 0 }T
+ ok 
+DECIMAL
+ ok 
+
+ ok 
+\ NUMBER? invalid input
+ ok 
+T{ S" "    NUMTEST-STR NUMBER? NIP -> 0 }T
+ ok 
+T{ S" --"  NUMTEST-STR NUMBER? NIP -> 0 }T
+ ok 
+T{ S" fpp" NUMTEST-STR NUMBER? NIP -> 0 }T
+ ok 
+T{ S" 12G" NUMTEST-STR NUMBER? NIP -> 0 }T
+ ok 
+T{ S" CELL" NUMTEST-STR NUMBER? NIP -> 0 }T
+ ok 
+
+ ok 
+\ NUMBER? valid decimal
+ ok 
+T{ S" 0"   NUMTEST-STR NUMBER? -> 0 -1 }T
+ ok 
+T{ S" -10" NUMTEST-STR NUMBER? -> -10 -1 }T
+ ok 
+T{ S" 500" NUMTEST-STR NUMBER? -> 500 -1 }T
+ ok 
+
+ ok 
+\ NUMBER? valid hex
+ ok 
+T{ S" $7FF"  NUMTEST-STR NUMBER? -> $7FF -1 }T
+ ok 
+T{ S" -$7FF" NUMTEST-STR NUMBER? -> -$7FF -1 }T
+ ok 
+T{ S" $7FFF" NUMTEST-STR NUMBER? -> $7FFF -1 }T
+ ok 
+T{ S" $8000" NUMTEST-STR NUMBER? -> $8000 -1 }T
+ ok 
+
+ ok 
+\ NUMBER? boundary - single cell
+ ok 
+T{ S" 65535" NUMTEST-STR NUMBER? -> 65535 -1 }T
+ ok 
+
+ ok 
+\ NUMBER? overflow without dot - should fail
+ ok 
+T{ S" 65536" NUMTEST-STR NUMBER? NIP -> 0 }T
+ ok 
+
+ ok 
+\ NUMBER? double literals
+ ok 
+T{ S" 1234."    NUMTEST-STR NUMBER? -> 1234 0 -1 }T
+ ok 
+T{ S" 0."       NUMTEST-STR NUMBER? -> 0 0 -1 }T
+ ok 
+T{ S" 100000."  NUMTEST-STR NUMBER? -> $86A0 1 -1 }T
+ ok 
+T{ S" -1."      NUMTEST-STR NUMBER? -> -1 -1 -1 }T
+ ok 
+T{ S" -100000." NUMTEST-STR NUMBER? -> $7960 -2 -1 }T
+ ok 
+T{ S" 65536."   NUMTEST-STR NUMBER? -> 0 1 -1 }T
+ ok 
+T{ S" $10000."  NUMTEST-STR NUMBER? -> 0 1 -1 }T
+ ok 
+
+ ok 
+DONE
+###DONE###

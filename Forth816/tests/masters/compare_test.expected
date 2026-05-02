@@ -1,0 +1,136 @@
+\ compare_test.fs - Comparison and bitwise operator regression tests
+ ok 
+
+ ok 
+\ =
+ ok 
+T{ 32 32 = -> -1 }T
+ ok 
+T{ 42 32 = -> 0 }T
+ ok 
+
+ ok 
+\ <>
+ ok 
+T{ 32 32 <> -> 0 }T
+ ok 
+T{ 42 32 <> -> -1 }T
+ ok 
+
+ ok 
+\ <
+ ok 
+T{ 32 32 < -> 0 }T
+ ok 
+T{ 42 32 < -> 0 }T
+ ok 
+T{ 32 42 < -> -1 }T
+ ok 
+T{ 32 -42 < -> 0 }T
+ ok 
+
+ ok 
+\ >
+ ok 
+T{ 32 32 > -> 0 }T
+ ok 
+T{ 42 32 > -> -1 }T
+ ok 
+T{ 32 42 > -> 0 }T
+ ok 
+T{ 32 -42 > -> -1 }T
+ ok 
+
+ ok 
+\ U<
+ ok 
+T{ 32 32 U< -> 0 }T
+ ok 
+T{ 42 32 U< -> 0 }T
+ ok 
+T{ 32 42 U< -> -1 }T
+ ok 
+T{ 32 65534 U< -> -1 }T
+ ok 
+
+ ok 
+\ U>
+ ok 
+T{ 32 32 U> -> 0 }T
+ ok 
+T{ 42 32 U> -> -1 }T
+ ok 
+T{ 32 42 U> -> 0 }T
+ ok 
+T{ 32 65534 U> -> 0 }T
+ ok 
+
+ ok 
+\ 0=
+ ok 
+T{ 32 0= -> 0 }T
+ ok 
+T{ 0 0= -> -1 }T
+ ok 
+
+ ok 
+\ 0<
+ ok 
+T{ 32 0< -> 0 }T
+ ok 
+T{ -42 0< -> -1 }T
+ ok 
+
+ ok 
+\ 0>
+ ok 
+T{ 32 0> -> -1 }T
+ ok 
+T{ -42 0> -> 0 }T
+ ok 
+T{ 0 0> -> 0 }T
+ ok 
+
+ ok 
+\ AND
+ ok 
+T{ $FF00 $0FF0 AND -> $0F00 }T
+ ok 
+
+ ok 
+\ OR
+ ok 
+T{ $FF00 $0FF0 OR -> $FFF0 }T
+ ok 
+
+ ok 
+\ XOR
+ ok 
+T{ $FF00 $0FF0 XOR -> $F0F0 }T
+ ok 
+
+ ok 
+\ INVERT
+ ok 
+T{ $F0F0 INVERT -> $0F0F }T
+ ok 
+
+ ok 
+\ LSHIFT
+ ok 
+T{ 32 0 LSHIFT -> 32 }T
+ ok 
+T{ 32 3 LSHIFT -> 256 }T
+ ok 
+
+ ok 
+\ RSHIFT
+ ok 
+T{ 32 0 RSHIFT -> 32 }T
+ ok 
+T{ 32 3 RSHIFT -> 4 }T
+ ok 
+
+ ok 
+DONE
+###DONE###

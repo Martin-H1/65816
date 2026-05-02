@@ -1,0 +1,93 @@
+\ io_test.fs - I/O regression tests
+ ok 
+
+ ok 
+\ EMIT - no stack result, just verify stack is clean
+ ok 
+T{ 69 EMIT -> }T    \ emits 'E'
+E ok 
+
+ ok 
+\ KEY - untestable via T{/}T, requires interactive input
+ ok 
+\ skipped
+ ok 
+
+ ok 
+\ KEY? - may return 0 if no key pending, just verify stack effect
+ ok 
+T{ KEY? DROP -> }T
+ ok 
+
+ ok 
+\ TYPE - no stack result
+ ok 
+T{ S" hello" TYPE -> }T
+hello ok 
+
+ ok 
+\ CR - no stack result
+ ok 
+T{ CR -> }T
+
+ ok 
+
+ ok 
+\ SPACE - no stack result
+ ok 
+T{ SPACE -> }T
+  ok 
+
+ ok 
+\ SPACES
+ ok 
+T{ 10 SPACES -> }T
+           ok 
+
+ ok 
+\ . (DOT)
+ ok 
+T{ 0 . -> }T
+0  ok 
+T{ 10 . -> }T
+10  ok 
+T{ -3 . -> }T
+-3  ok 
+T{ 15936 . -> }T
+15936  ok 
+
+ ok 
+\ U.
+ ok 
+T{ 0 U. -> }T
+0  ok 
+T{ 65535 U. -> }T
+65535  ok 
+T{ 32768 U. -> }T
+32768  ok 
+
+ ok 
+\ .HEX
+ ok 
+T{ 0 .HEX -> }T
+0000  ok 
+T{ $DEAD .HEX -> }T
+DEAD  ok 
+T{ $FFFF .HEX -> }T
+FFFF  ok 
+
+ ok 
+\ D.
+ ok 
+T{ 0. D. -> }T
+0  ok 
+T{ 1234. D. -> }T
+1234  ok 
+T{ -1. D. -> }T
+-1  ok 
+T{ 100000. D. -> }T
+100000  ok 
+
+ ok 
+DONE
+###DONE###

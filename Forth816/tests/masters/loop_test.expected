@@ -1,0 +1,152 @@
+\ loop_test.fs - Loop and recursion regression tests
+ ok 
+
+ ok 
+\ BEGIN/UNTIL
+ ok 
+: TST5 0 BEGIN 1+ DUP 5 = UNTIL ;
+ ok 
+T{ TST5 -> 5 }T
+ ok 
+
+ ok 
+\ BEGIN/AGAIN with DO/LOOP, UNLOOP and EXIT
+ ok 
+: TEST-BEGIN-AGAIN
+    0 BEGIN
+        1+
+        5 0 DO
+            I .
+            DUP 3 = IF UNLOOP EXIT THEN
+        LOOP
+    AGAIN ;
+ ok 
+\ This word prints output and exits when index reaches 3
+ ok 
+\ Expected output: 0 1 2 3 4 0 1 2 3 4 0
+ ok 
+\ We test the return value only
+ ok 
+T{ TEST-BEGIN-AGAIN -> 3 }T
+0 1 2 3 4 0 1 2 3 4 0  ok 
+
+ ok 
+\ DO/LOOP with I
+ ok 
+: TEST7 0 5 0 DO I + LOOP ;
+ ok 
+T{ TEST7 -> 10 }T
+ ok 
+
+ ok 
+\ Nested DO/LOOP with I and J
+ ok 
+: NESTED-OUT ( -- )
+    3 0 DO
+        3 0 DO
+            I J + .
+        LOOP
+    LOOP ;
+ ok 
+\ Expected printed output: 0 1 2 1 2 3 2 3 4
+ ok 
+\ No stack result to test, so test via output word
+ ok 
+T{ NESTED-OUT -> }T
+0 1 2 1 2 3 2 3 4  ok 
+
+ ok 
+\ LEAVE
+ ok 
+: TSTLEAVE ( -- )
+    10 0 DO
+        I .
+        I 5 = IF LEAVE THEN
+    LOOP ;
+ ok 
+\ Expected printed output: 0 1 2 3 4 5
+ ok 
+T{ TSTLEAVE -> }T
+0 1 2 3 4 5  ok 
+
+ ok 
+\ Nested LEAVE
+ ok 
+: TEST-LEAVE3 ( -- )
+    3 0 DO
+        3 0 DO
+            I 1 = IF LEAVE THEN
+            I J + .
+        LOOP
+    LOOP ;
+ ok 
+\ Expected printed output: 0 1 2
+ ok 
+T{ TEST-LEAVE3 -> }T
+0 1 2  ok 
+
+ ok 
+\ +LOOP stepping by 2
+ ok 
+: TEST-PLUS1 6 0 DO I . 2 +LOOP ;
+ ok 
+T{ TEST-PLUS1 -> }T  \ prints: 0 2 4
+0 2 4  ok 
+
+ ok 
+: TEST-PLUS2 7 0 DO I . 2 +LOOP ;
+ ok 
+T{ TEST-PLUS2 -> }T  \ prints: 0 2 4 6
+0 2 4 6  ok 
+
+ ok 
+: TEST-PLUS3 3 0 DO I . 1 +LOOP ;
+ ok 
+T{ TEST-PLUS3 -> }T  \ prints: 0 1 2
+0 1 2  ok 
+
+ ok 
+\ +LOOP negative step
+ ok 
+: TEST-PLUS4 0 3 DO I . -1 +LOOP ;
+ ok 
+T{ TEST-PLUS4 -> }T  \ prints: 3 2 1 0
+3 2 1 0  ok 
+
+ ok 
+: TEST-PLUS5 0 5 DO I . -2 +LOOP ;
+ ok 
+T{ TEST-PLUS5 -> }T  \ prints: 5 3 1
+5 3 1  ok 
+
+ ok 
+\ +LOOP with LEAVE
+ ok 
+: TEST-PLUS6 10 0 DO I . I 4 = IF LEAVE THEN 2 +LOOP ;
+ ok 
+T{ TEST-PLUS6 -> }T  \ prints: 0 2 4
+0 2 4  ok 
+
+ ok 
+\ Nested +LOOP
+ ok 
+: TEST-PLUS7 4 0 DO 4 0 DO I . J . 2 +LOOP 2 +LOOP ;
+ ok 
+T{ TEST-PLUS7 -> }T  \ prints: 0 0 2 0 0 2 2 2
+0 0 2 0 0 2 2 2  ok 
+
+ ok 
+\ RECURSE - factorial
+ ok 
+: FACTORIAL DUP 1 > IF DUP 1- RECURSE * THEN ;
+ ok 
+T{ 5 FACTORIAL -> 120 }T
+ ok 
+T{ 0 FACTORIAL -> 0 }T
+ ok 
+T{ 1 FACTORIAL -> 1 }T
+ ok 
+
+ ok 
+DONE
+###DONE###
