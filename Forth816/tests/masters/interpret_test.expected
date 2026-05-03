@@ -1,25 +1,50 @@
 \ interpret_test.fs - Interpreter regression tests
+ ok 
 
+ ok 
 \ COMPARE
+ ok 
 CREATE ABC  3 C, $61 C, $62 C, $63 C,
+ ok 
 CREATE BCD  3 C, $62 C, $63 C, $64 C,
+ ok 
 CREATE ABCD 4 C, $61 C, $62 C, $63 C, $64 C,
+ ok 
 
+ ok 
 T{ ABC  CELL+ COUNT BCD  CELL+ COUNT COMPARE -> -1 }T
+ ok 
 T{ BCD  CELL+ COUNT ABC  CELL+ COUNT COMPARE ->  1 }T
+ ok 
 T{ ABC  CELL+ COUNT ABC  CELL+ COUNT COMPARE ->  0 }T
+ ok 
 T{ ABC  CELL+ COUNT ABCD CELL+ COUNT COMPARE -> -1 }T
+ ok 
 T{ ABCD CELL+ COUNT ABC  CELL+ COUNT COMPARE ->  1 }T
+ ok 
 
+ ok 
 \ FIND - word not found
+ ok 
 : FINDWORD ( "name" -- flag ) BL WORD FIND NIP ;
+ ok 
 T{ FINDWORD NOTAWORD -> 0 }T
+ ok 
 T{ FINDWORD NUMBER -> 1 }T
+ ok 
 T{ FINDWORD IF -> -1 }T
+ ok 
 
+ ok 
 \ Basic interpretation
+ ok 
 T{ 1 -> 1 }T
+ ok 
 T{ 2 3 + -> 5 }T
+ ok 
 T{ -1 ABS -> 1 }T
+ ok 
 
+ ok 
 DONE
+###DONE###
