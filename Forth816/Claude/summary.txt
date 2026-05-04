@@ -226,6 +226,15 @@ pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 TODO items carried forward:
 * Add ?PAIRS to support compiler security.
 * Rework CASE to fix bug, include compiler security, and be more efficient.
+* Investigate using compiler security in other control structures e.g
+  BEGIN...UNTIL / AGAIN using security number 1
+  IF...(ELSE)...THEN using security number 2
+  DO...LOOP / +LOOP using security number 3
+    I and J don't need it because they're not involved in branching.
+    LEAVE shouldn't use it because it can be embedded within an IF e.g.
+      DO...<do-stuff>...IF LEAVE THEN, so it's unclear which it should check.
+  WHILE...REPEAT using security number 4
+  Note: These magic numbers should be defined as symbols.
 * Stretch Goal 1 Implement the CORE-EXT words: .(, .R, :NONAME, ACTION-OF,
   BUFFER:, C", DEFER, DEFER!, DEFER@, ERASE, HOLDS, IS, REFILL, RESTORE-INPUT,
   S\", SAVE-INPUT, SOURCE-ID, TO, U.R, UNUSED, VALUE, WITHIN, [COMPILE]
