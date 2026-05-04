@@ -65,7 +65,7 @@ underflow_msg:
         PUBLIC  DUP_CODE
         .a16
         .i16
-                LDA     0,X             ; Load TOS
+                PEEK                    ; Load TOS
                 PUSH                    ; Push copy
                 NEXT
         ENDPUBLIC
@@ -91,8 +91,7 @@ QDUP_DONE:
         PUBLIC  DROP_CODE
         .a16
         .i16
-                INX
-                INX
+                DROP
                 NEXT
         ENDPUBLIC
 
@@ -104,10 +103,10 @@ QDUP_DONE:
         PUBLIC  SWAP_CODE
         .a16
         .i16
-                LDA     0,X             ; b (TOS)
+                PEEK                    ; b (TOS)
                 STA     SCRATCH0
                 LDA     2,X             ; a (NOS)
-                STA     0,X             ; TOS = a
+                PUT                     ; TOS = a
                 LDA     SCRATCH0        ; b
                 STA     2,X             ; NOS = b
                 NEXT
@@ -154,7 +153,7 @@ QDUP_DONE:
         .a16
         .i16
                 POP                     ; b (TOS)
-                STA     0,X             ; Overwrite a with b
+                PUT                     ; Overwrite a with b
                 NEXT
         ENDPUBLIC
 
@@ -185,10 +184,8 @@ QDUP_DONE:
         PUBLIC  TWODROP_CODE
         .a16
         .i16
-                INX
-                INX
-                INX
-                INX
+                DROP
+                DROP
                 NEXT
         ENDPUBLIC
 
@@ -262,9 +259,7 @@ QDUP_DONE:
         .a16
         .i16
                 JSR     calc_depth
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
 
 calc_depth:     TXA
@@ -330,11 +325,11 @@ calc_depth:     TXA
 @shift_loop:
                 LDA     SCRATCH1
                 SEC
-                SBC     #2
+                SBC     #CELL_SIZE
                 STA     SCRATCH1        ; point to next lower item
                 LDA     (SCRATCH1)      ; fetch it
-                LDY     #2
-                STA     (SCRATCH1),Y    ; store 2 bytes higher
+                LDY     #CELL_SIZE
+                STA     (SCRATCH1),Y    ; store one cell higher
                 TXA
                 CMP     SCRATCH1        ; reached PSP (x_0 position)?
                 BNE     @shift_loop
@@ -358,10 +353,8 @@ calc_depth:     TXA
         PUBLIC  TOR_CODE
         .a16
         .i16
-                LDA     0,X             ; Pop from parameter stack
-                INX
-                INX
-                PHA                     ; Push onto return stack
+                POP                     ; Pop from parameter stack
+                RPUSH                   ; Push onto return stack
                 NEXT
         ENDPUBLIC
 
@@ -373,10 +366,8 @@ calc_depth:     TXA
         PUBLIC  RFROM_CODE
         .a16
         .i16
-                PLA                     ; Pop from return stack
-                DEX
-                DEX
-                STA     0,X             ; Push onto parameter stack
+                RPOP                    ; Pop from return stack
+                PUSH                    ; Push onto parameter stack
                 NEXT
         ENDPUBLIC
 
@@ -389,13 +380,8 @@ calc_depth:     TXA
         .a16
         .i16
                 ; Peek at return stack top without permanently popping.
-                ; Pop to read the value, immediately push back,
-                ; then A still holds the value for the parameter stack.
-                PLA                     ; Pop R@ value (A = value)
-                PHA                     ; Push it back (return stack unchanged)
-                DEX
-                DEX
-                STA     0,X             ; Push copy onto parameter stack
+                RPEEK                   ; Peek R@ value (A = value)
+                PUSH                    ; Push copy onto parameter stack
                 NEXT
         ENDPUBLIC
 
@@ -408,13 +394,10 @@ calc_depth:     TXA
         .a16
         .i16
                 LDA     2,X             ; x1 (NOS)
-                PHA                     ; push x1 first
-                LDA     0,X             ; x2 (TOS)
-                PHA                     ; push x2 on top
-                INX
-                INX
-                INX
-                INX
+                RPUSH                   ; push x1 first
+                POP                     ; x2 (TOS)
+                RPUSH                   ; push x2 on top
+                DROP
                 NEXT
         ENDPUBLIC
 
@@ -428,11 +411,9 @@ calc_depth:     TXA
         .i16
                 DEX
                 DEX
-                DEX
-                DEX
-                PLA                     ; x2 (TOS of return stack)
-                STA     0,X             ; x2 (TOS)
-                PLA                     ; x1
+                RPOP                    ; x2 (TOS of return stack)
+                PUSH                    ; x2 (TOS)
+                RPOP                    ; x1
                 STA     2,X             ; x1 (NOS)
                 NEXT
         ENDPUBLIC
@@ -446,14 +427,10 @@ calc_depth:     TXA
         PUBLIC  TWORFETCH_CODE
         .a16
         .i16
-                DEX
-                DEX
-                DEX
-                DEX
-                LDA     1,S             ; x2 (TOS of return stack)
-                STA     0,X             ; x2 (TOS)
                 LDA     3,S             ; x1
-                STA     2,X             ; x1 (NOS)
+                PUSH                    ; x1 (future NOS)
+                LDA     1,S             ; x2 (TOS of return stack)
+                PUSH                    ; x2 (TOS)
                 NEXT
         ENDPUBLIC
 
@@ -483,12 +460,10 @@ calc_depth:     TXA
         PUBLIC  PLUS_CODE
         .a16
         .i16
-                LDA     0,X             ; b
+                POP                     ; b
                 CLC
-                ADC     2,X             ; a + b
-                INX
-                INX
-                STA     0,X             ; Replace with result
+                ADC     0,X             ; a + b
+                PUT                     ; Replace with result
                 NEXT
         ENDPUBLIC
 
@@ -525,9 +500,8 @@ calc_depth:     TXA
                 LDA     2,X             ; a
                 SEC
                 SBC     0,X             ; a - b
-                INX
-                INX
-                STA     0,X
+                DROP
+                PUT
                 NEXT
         ENDPUBLIC
 
@@ -1789,20 +1763,16 @@ MSTAR_DONE:
         PUBLIC  TWOFETCH_CODE
         .a16
         .i16
-                LDA     0,X             ; addr
+                PEEK                    ; addr
                 STA     SCRATCH0
                 LDA     (SCRATCH0)      ; low cell
-                STA     SCRATCH1
+                PUT                     ; future NOS = low
                 LDA     SCRATCH0
                 CLC
-                ADC     #2
+                ADC     #CELL_SIZE
                 STA     SCRATCH0
                 LDA     (SCRATCH0)      ; high cell
-                DEX
-                DEX
-                STA     0,X             ; TOS = high
-                LDA     SCRATCH1
-                STA     2,X             ; NOS = low
+                PUSH                    ; TOS = high
                 NEXT
         ENDPUBLIC
 
@@ -1817,14 +1787,14 @@ MSTAR_DONE:
                 LDA     0,X             ; peek addr → SCRATCH0
                 STA     SCRATCH0
                 CLC
-                ADC     #2              ; addr+2 → SCRATCH1 (carry now clear)
+                ADC     #CELL_SIZE      ; addr+2 → SCRATCH1 (carry now clear)
                 STA     SCRATCH1
                 LDA     2,X             ; low cell of d
                 STA     (SCRATCH0)      ; store at addr
                 LDA     4,X             ; high cell of d
                 STA     (SCRATCH1)      ; store at addr+2
                 TXA
-                ADC     #6              ; drop 3 cells (carry still clear from above)
+                ADC     #3*CELL_SIZE    ; drop 3 cells (carry still clear from above)
                 TAX
                 NEXT
         ENDPUBLIC
@@ -2433,8 +2403,8 @@ MSTAR_DONE:
                 LDY     #U_DP
                 LDA     (UP),Y          ; DP → SCRATCH0
                 STA     SCRATCH0
-                CLC                     ; DP += 2
-                ADC     #2
+                CLC                     ; DP += CELL_SIZE
+                ADC     #CELL_SIZE
                 STA     (UP),Y          ; Write updated DP back
                 LDA     0,X             ; Pop val off parameter stack
                 INX
@@ -2947,6 +2917,12 @@ DOABORTQUOTE_CFA:
                 LDY     #RTS_CFA_LIST
                 JSR     TYPE_CODE
                 PLY                     ; restore IP (not strictly needed)
+
+                ; Print newline
+                LDA     #C_RETURN
+                JSR     hal_putch
+                LDA     #L_FEED
+                JSR     hal_putch
 
                 ; ABORT never returns
                 JMP     ABORT_CODE
@@ -4351,7 +4327,7 @@ QUIT_LOOP:
                 ;--------------------------------------------------------------
                 LDA     LOC_ENTRY
                 CLC
-                ADC     #2              ; Point to flags|len byte
+                ADC     #CELL_SIZE      ; Point to flags|len byte
                 STA     LOC_NAMEPTR     ; Temporarily use LOC_NAMEPTR as ptr
 
                 SEP     #$20
@@ -5078,7 +5054,7 @@ WORDS_SKIP:
                 INC     A
                 STA     LOC_SRC         ; LOC_SRC = addr+1 (first name char)
                 CLC
-                ADC     #2
+                ADC     #CELL_SIZE
                 STA     LOC_DST         ; LOC_DST = addr+3 (dest in header)
 
                 ; --- Shift name chars from addr+1 to addr+3 ---
@@ -5098,7 +5074,7 @@ WORDS_SKIP:
 @name_shifted:
 
                 ; --- Write FLAGS|LEN at addr+2 ---
-                LDY     #2
+                LDY     #CELL_SIZE
                 LDA     LOC_NAMELEN
                 ORA     #F_HIDDEN
                 SEP     #$20
@@ -5168,7 +5144,7 @@ WORDS_SKIP:
                 LDA     (UP),Y          ; LATEST
                 ; flags byte is at LATEST+2
                 CLC
-                ADC     #2
+                ADC     #CELL_SIZE
                 STA     SCRATCH0        ; point to flags byte
                 SEP     #$20
                 .a8
@@ -5395,7 +5371,7 @@ CREATE_BODY:
                 ; Easier: walk forward from LATEST+2 (flags byte)
                 ; to find the CFA using the name length
                 CLC
-                ADC     #2              ; point to flags byte
+                ADC     #CELL_SIZE      ; point to flags byte
                 STA     SCRATCH0
                 SEP     #$20
                 .a8
@@ -5419,7 +5395,7 @@ CREATE_BODY:
 
                 ; Store DOES> code address (current IP) at CFA+2
                 PLA                     ; restore IP = DOES> code address
-                LDY     #2
+                LDY     #CELL_SIZE
                 STA     (SCRATCH0),Y    ; store DOES> code address
 
                 ; EXIT the defining word - return to caller
@@ -5471,6 +5447,19 @@ TICK_ERR:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; ?PAIRS ( n1 n2 -- )
+; Abort if n1 <> n2 (compile-time structure checking)
+;------------------------------------------------------------------------------
+        HEADER  "?PAIRS", QPAIRS_ENTRY, QPAIRS_CFA, 0, BRACKETTICK_ENTRY
+        CODEPTR DOCOL
+        .word   NOTEQUAL_CFA
+        .word   DOABORTQUOTE_CFA
+        .word   28                      ; length as 16-bit cell
+        .byte   "mismatched control structure"
+        .align  2
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; IF Interpretation: Undefined. Compilation: ( C: -- orig )
 ; Put the location of a new unresolved forward reference orig onto the control
 ; flow stack. Append the run-time semantics below to the current definition.
@@ -5480,7 +5469,7 @@ TICK_ERR:
 ; the resolution of orig.
 ; https://forth-standard.org/standard/core/IF
 ;------------------------------------------------------------------------------
-        HEADER  "IF", IF_ENTRY, IF_CFA, F_IMMEDIATE, BRACKETTICK_ENTRY
+        HEADER  "IF", IF_ENTRY, IF_CFA, F_IMMEDIATE, QPAIRS_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA                 ; compile ZBRANCH into definition
         .word   ZBRANCH_CFA
