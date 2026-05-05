@@ -45,6 +45,14 @@ DICT_BASE       = $0700         ; RAM dictionary
 FORTH_TRUE      = $FFFF
 FORTH_FALSE     = $0000
 
+; Compiler Security Numbers
+CS_BEGIN_AGAIN  = 1
+CS_IF_ELSE_THEN = 2
+CS_DO_LOOP      = 3
+CS_WHILE_REPEAT = 4
+CS_CASE_ENDCASE = 5
+CS_OF_ENDOF     = 6
+
 ; Ascii / UTF-8 codes for commonly used unprintable control characters.
 NULL            = $00           ; null termination character
 SOH             = $01           ; start of header
