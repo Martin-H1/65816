@@ -40,7 +40,7 @@ T{ TEST-IF4 -> 42 }T
     CASE
         1 OF 10 ENDOF
         2 OF 20 ENDOF
-        30
+        30 SWAP
     ENDCASE ;
 T{ 1 TEST-CASE -> 10 }T
 T{ 2 TEST-CASE -> 20 }T
