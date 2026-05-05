@@ -2640,6 +2640,85 @@ MSTAR_DONE:
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; CHECKPOINT ( -- ) save DP and LATEST for definition rollback
+;------------------------------------------------------------------------------
+        HEADER  "CHECKPOINT", CHECKPOINT_ENTRY, CHECKPOINT_CFA, 0, HLD_ENTRY
+        CODEPTR CHECKPOINT_CODE
+        PUBLIC  CHECKPOINT_CODE
+        .a16
+        .i16
+                PHY                     ; save IP
+                LDY     #U_DP
+                LDA     (UP),Y
+                LDY     #U_SAVEDP
+                STA     (UP),Y          ; SAVE-DP = DP
+
+                LDY     #U_LATEST
+                LDA     (UP),Y
+                LDY     #U_SAVELATEST
+                STA     (UP),Y          ; SAVE-LATEST = LATEST
+                PLY                     ; restore IP
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; ROLLBACK ( -- ) restore DP and LATEST from checkpoint, clear checkpoint
+; No-op if no checkpoint is active (SAVE-DP = 0)
+;------------------------------------------------------------------------------
+        HEADER  "ROLLBACK", ROLLBACK_ENTRY, ROLLBACK_CFA, 0, CHECKPOINT_ENTRY
+        CODEPTR ROLLBACK_CODE
+        PUBLIC  ROLLBACK_CODE
+        .a16
+        .i16
+                JSR     ROLLBACK_IMPL
+                NEXT
+        ENDPUBLIC
+
+        .proc ROLLBACK_IMPL
+        .a16
+        .i16
+                PHY                     ; save IP
+                LDY     #U_SAVEDP
+                LDA     (UP),Y
+                BEQ     @done           ; no checkpoint active
+
+                LDY     #U_DP
+                STA     (UP),Y          ; DP = SAVE-DP
+
+                LDY     #U_SAVELATEST
+                LDA     (UP),Y
+                LDY     #U_LATEST
+                STA     (UP),Y          ; LATEST = SAVE-LATEST
+
+                LDA     #0
+                LDY     #U_SAVEDP
+                STA     (UP),Y
+                LDY     #U_SAVELATEST
+                STA     (UP),Y
+@done:
+                PLY                     ; restore IP
+                RTS
+        .endproc
+
+;------------------------------------------------------------------------------
+; COMMIT ( -- ) clear checkpoint after successful definition
+;------------------------------------------------------------------------------
+        HEADER  "COMMIT", COMMIT_ENTRY, COMMIT_CFA, 0, ROLLBACK_ENTRY
+        CODEPTR COMMIT_CODE
+        PUBLIC  COMMIT_CODE
+        .a16
+        .i16
+                PHY
+                LDA     #0
+                LDY     #U_SAVEDP
+                STA     (UP),Y
+                LDY     #U_SAVELATEST
+                STA     (UP),Y
+                PLY
+                NEXT
+        ENDPUBLIC
+
 ;==============================================================================
 ; SECTION 11: STRING AND PARSE WORDS
 ;==============================================================================
@@ -4037,6 +4116,8 @@ NUMBER_ERR:
                 LDY     #U_TOIN
                 STA     (UP),Y          ; >IN = 0
 
+                ; --- Rollback any partial definition ---
+                JSR     ROLLBACK_IMPL   ; restore DP and LATEST if checkpoint active
                 ; --- Jump into QUIT's body directly via NEXT ---
                 ; Cannot JSR/RTS because the return stack was just wiped.
                 ; Loading QUIT_BODY into IP (Y) and calling NEXT causes
@@ -5167,6 +5248,7 @@ WORDS_SKIP:
         HEADER  ":", COLON_ENTRY, COLON_CFA, 0, REVEAL_ENTRY
         CODEPTR DOCOL
 COLON_BODY:
+        .word   CHECKPOINT_CFA
         .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name from input
         .word   DOCREATE_CFA            ; ( ) build header, update LATEST and DP
@@ -5188,6 +5270,7 @@ SEMICOLON_BODY:
         .word   EXIT_CFA                ; compile EXIT into definition
         .word   COMMA_CFA
         .word   REVEAL_CFA              ; clear F_HIDDEN
+        .word   COMMIT_CFA
         .word   LBRACKET_CFA            ; STATE = 0 (interpret mode)
         .word   EXIT_CFA
 
@@ -5198,6 +5281,7 @@ SEMICOLON_BODY:
         HEADER  "VARIABLE", VARIABLE_ENTRY, VARIABLE_CFA, 0, SEMICOLON_ENTRY
         CODEPTR DOCOL
 VARIABLE_BODY:
+        .word   CHECKPOINT_CFA
         .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name
         .word   DOCREATE_CFA            ; ( ) build header
@@ -5207,6 +5291,7 @@ VARIABLE_BODY:
         .word   ZERO_CFA
         .word   COMMA_CFA               ; allot and initialize one cell
         .word   REVEAL_CFA              ; clear F_HIDDEN
+        .word   COMMIT_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5216,6 +5301,7 @@ VARIABLE_BODY:
         HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, VARIABLE_ENTRY
         CODEPTR DOCOL
 CONSTANT_BODY:
+        .word   CHECKPOINT_CFA
         .word   BL_CFA
         .word   WORD_CFA                ; ( n addr ) parse name
         .word   DOCREATE_CFA            ; ( n ) build header
@@ -5224,6 +5310,7 @@ CONSTANT_BODY:
         .word   COMMA_CFA               ; write DOCON at CFA
         .word   COMMA_CFA               ; store constant value in body
         .word   REVEAL_CFA              ; clear F_HIDDEN
+        .word   COMMIT_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5340,6 +5427,7 @@ postpone_notfound_msg:
         HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, IMMEDIATE_ENTRY
         CODEPTR DOCOL
 CREATE_BODY:
+        .word   CHECKPOINT_CFA
         .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name
         .word   DOCREATE_CFA            ; ( ) build header
@@ -5349,6 +5437,7 @@ CREATE_BODY:
         .word   ZERO_CFA                ; placeholder for DOES> code address
         .word   COMMA_CFA               ; reserve CFA+2 cell
         .word   REVEAL_CFA              ; clear F_HIDDEN
+        .word   COMMIT_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5450,7 +5539,7 @@ TICK_ERR:
 ; ?PAIRS ( n1 n2 -- )
 ; Abort if n1 <> n2 (compile-time structure checking)
 ;------------------------------------------------------------------------------
-        HEADER  "?PAIRS", QPAIRS_ENTRY, QPAIRS_CFA, 0, BRACKETTICK_ENTRY
+        HEADER  "?PAIRS", QPAIRS_ENTRY, QPAIRS_CFA, F_IMMEDIATE, BRACKETTICK_ENTRY
         CODEPTR DOCOL
         .word   NOTEQUAL_CFA
         .word   DOABORTQUOTE_CFA
@@ -5548,73 +5637,82 @@ TICK_ERR:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; CASE ( -- case-addr )
+; CASE ( -- 0 CS_NUM )
 ; Compiles a BRANCH that points just past itself (no-op on entry)
 ;------------------------------------------------------------------------------
         HEADER  "CASE", CASE_ENTRY, CASE_CFA, F_IMMEDIATE, DOOF_ENTRY
         CODEPTR DOCOL
-        ; Compile first BRANCH that skips over second BRANCH
-        .word   LIT_CFA
-        .word   BRANCH_CFA
-        .word   COMMA_CFA              ; compile first BRANCH
-        .word   HERE_CFA               ; ( here ) = placeholder address
-        .word   LIT_CFA
-        .word   6
-        .word   PLUS_CFA               ; ( here here+6 )
-        .word   COMMA_CFA              ; Compile skip target
-        ; Compile second BRANCH (target for ENDOFs)
-        .word   HERE_CFA               ; BA = address of second BRANCH
-        .word   LIT_CFA
-        .word   BRANCH_CFA
-        .word   COMMA_CFA              ; compile second BRANCH
-        .word   HERE_CFA               ; CA = address of placeholder
-        .word   ZERO_CFA
-        .word   COMMA_CFA              ; compile unresolved placeholder
-        .word   SWAP_CFA               ; ( CA BA )
+        .word   ZERO_CFA               ; Initialize the OF ENDOF count
+        .word   LIT_CFA                ; Push the compiler security number
+        .word   CS_CASE_ENDCASE
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; OF Compile time: ( CA BA -- CA BA OA )
+; OF Compile time: ( N CS_CASE_ENDCASE -- N+1 CS_OF_ENDOF OA )
 ;------------------------------------------------------------------------------
         HEADER  "OF", OF_ENTRY, OF_CFA, F_IMMEDIATE, CASE_ENTRY
         CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   CS_CASE_ENDCASE
+        .word   QPAIRS_CFA             ; Test compiler security number
+        .word   ONEPLUS_CFA            ; Increment branch resolution count
+        .word   LIT_CFA
+        .word   CS_OF_ENDOF            ; Push new compiler security number
         .word   LIT_CFA
         .word   DOOF_CFA
         .word   COMMA_CFA              ; compile (OF)
         .word   HERE_CFA               ; OA = address of (OF)'s placeholder
         .word   ZERO_CFA
         .word   COMMA_CFA              ; compile unresolved branch target
-        .word   EXIT_CFA               ; stack: ( CA BA OA )
+        .word   EXIT_CFA               ; stack: ( CS+1 N+1 OA )
 
 ;------------------------------------------------------------------------------
-; ENDOF ( CA BA OA -- CA BA )
-; Compile BRANCH to BA, resolve OA to HERE
+; ENDOF ( N+1 CS_OF_ENDOF OA -- BA N+1 CS_CASE_ENDCASE )
+; Compile Check CS NUM, BRANCH to ENDCASE, resolve OA to HERE
 ;------------------------------------------------------------------------------
         HEADER  "ENDOF", ENDOF_ENTRY, ENDOF_CFA, F_IMMEDIATE, OF_ENTRY
         CODEPTR DOCOL
+        .word   TOR_CFA                ; ( N+1 CS_OF_ENDOF ) RS: ( OA )
+        .word   LIT_CFA
+        .word   CS_OF_ENDOF
+        .word   QPAIRS_CFA             ; CS number sanity check
+        .word   TOR_CFA                ; ( ) RS: ( OA N+1 )
         .word   LIT_CFA
         .word   BRANCH_CFA
         .word   COMMA_CFA              ; compile BRANCH
-        .word   OVER_CFA               ; ( CA BA OA BA )
+        .word   HERE_CFA               ; ( BA ) RS: ( OA N+1 )
+        .word   ZERO_CFA               ; Branch placeholder
         .word   COMMA_CFA              ; compile BA as branch target
-        .word   HERE_CFA               ; ( CA BA OA HERE )
-        .word   SWAP_CFA               ; ( CA BA HERE OA )
-        .word   STORE_CFA              ; resolve OA to HERE
-        .word   EXIT_CFA               ; stack: ( CA BA )
+        .word   RFROM_CFA              ; ( BA N+1 ) RS: ( OA N+1 )
+        .word   HERE_CFA               ; ( BA N+1 HERE ) RS: ( OA )
+        .word   RFROM_CFA              ; ( BA N+1 HERE OA )
+        .word   STORE_CFA              ; resolve OA to HERE ( BA N+1 )
+        .word   LIT_CFA
+        .word   CS_CASE_ENDCASE        ; ( BA N+1 CS_CASE_END_CASE )
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; ENDCASE ( CA BA -- )
+; ENDCASE ( BAn ... BA N CS_NUM -- )
 ; DROP BA, compile DROP, resolve CA to HERE
 ;------------------------------------------------------------------------------
         HEADER  "ENDCASE", ENDCASE_ENTRY, ENDCASE_CFA, F_IMMEDIATE, ENDOF_ENTRY
         CODEPTR DOCOL
-        .word   DROP_CFA               ; discard BA
         .word   LIT_CFA
         .word   DROP_CFA
         .word   COMMA_CFA              ; compile DROP to discard n at runtime
-        .word   HERE_CFA               ; ( CA HERE )
-        .word   SWAP_CFA               ; ( HERE CA )
-        .word   STORE_CFA              ; resolve CA to HERE
+        .word   LIT_CFA
+        .word   CS_CASE_ENDCASE
+        .word   QPAIRS_CFA             ; Test compiler security number.
+        .word   ZERO_CFA               ; ( BAn ... BA N 0 )
+        .word   DODO_CFA
+        .word   ENDCASE_LEAVE
+ENDCASE_CLOOP:
+        .word   HERE_CFA               ; ( BAn HERE )
+        .word   SWAP_CFA               ; ( HERE BAn )
+        .word   STORE_CFA              ; resolve BAn) to HERE
+        .word   DOLOOP_CFA
+        .word   ENDCASE_CLOOP
+ENDCASE_LEAVE:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -6033,6 +6131,7 @@ notfound_msg:
         CODEPTR DOCOL
         ; Capture dictionary state BEFORE creating the new word.
         ; saved LATEST and DP are the restore point — marker erases itself.
+        .word   CHECKPOINT_CFA
         .word   LATEST_CFA
         .word   FETCH_CFA              ; ( latest )
         .word   DP_CFA
@@ -6057,6 +6156,7 @@ notfound_msg:
         .word   DP_CFA
         .word   STORE_CFA              ; DP += 2 ( latest dp )
         .word   REVEAL_CFA             ; make word visible
+        .word   COMMIT_CFA
         ; Compile saved state into body
         .word   SWAP_CFA               ; ( dp latest )
         .word   COMMA_CFA              ; body[0] = saved LATEST

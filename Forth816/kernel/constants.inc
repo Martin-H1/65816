@@ -33,6 +33,8 @@ U_HANDLER       = $0E           ; Exception handler     (cell)
 U_PAD           = $10           ; PAD address in user area
 U_HLD           = $12           ; Address within PAD for formated I/O
 U_CURDEF        = $14           ; CFA of word being compiled
+U_SAVEDP        = $16           ; Saved value to prevent memory leak
+U_SAVELATEST    = $18           ; if there's an exception during compile
 
 ; Terminal Input Buffer
 TIB_BASE        = $0600
