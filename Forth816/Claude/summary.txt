@@ -224,10 +224,8 @@ list by name" section. Subtracts 2 from addresses to compensate for NEXT
 pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 
 TODO items carried forward:
-* Rework CASE to fix bug, include compiler security, and be more efficient.
 * Investigate using compiler security in other control structures e.g
   BEGIN...UNTIL / AGAIN using security number 1
-  IF...(ELSE)...THEN using security number 2
   DO...LOOP / +LOOP using security number 3
     I and J don't need it because they're not involved in branching.
     LEAVE shouldn't use it because it can be embedded within an IF e.g.

@@ -5512,75 +5512,81 @@ TICK_ERR:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; ?PAIRS ( n1 n2 -- )
-; Abort if n1 <> n2 (compile-time structure checking)
+; ?PAIRS ( n1 n2 -- ) abort if n1 <> n2 or stack underflow
 ;------------------------------------------------------------------------------
         HEADER  "?PAIRS", QPAIRS_ENTRY, QPAIRS_CFA, F_IMMEDIATE, BRACKETTICK_ENTRY
         CODEPTR DOCOL
-        .word   NOTEQUAL_CFA
+        .word   DEPTH_CFA
+        .word   LIT_CFA
+        .word   2
+        .word   LESS_CFA               ; DEPTH < 2 ?
         .word   DOABORTQUOTE_CFA
-        .word   28                      ; length as 16-bit cell
-        .byte   "mismatched control structure"
+        .word   30
+        .byte   "mismatched control structure", C_RETURN, L_FEED
+        .align  2
+        .word   NOTEQUAL_CFA           ; n1 <> n2 ?
+        .word   DOABORTQUOTE_CFA
+        .word   30
+        .byte   "mismatched control structure", C_RETURN, L_FEED
         .align  2
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; IF Interpretation: Undefined. Compilation: ( C: -- orig )
-; Put the location of a new unresolved forward reference orig onto the control
-; flow stack. Append the run-time semantics below to the current definition.
-; The semantics are incomplete until orig is resolved by THEN or ELSE.
-; Run-time: ( x -- )
-; If all bits of x are zero, continue execution at the location specified by
-; the resolution of orig.
+; IF Interpretation: Undefined. Compilation: ( C: -- orig CS_IF_ELSE_THEN )
+; Compile ZBRANCH with forward reference placeholder.
 ; https://forth-standard.org/standard/core/IF
 ;------------------------------------------------------------------------------
         HEADER  "IF", IF_ENTRY, IF_CFA, F_IMMEDIATE, QPAIRS_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; compile ZBRANCH into definition
+        .word   LIT_CFA
         .word   ZBRANCH_CFA
-        .word   COMMA_CFA
-        .word   HERE_CFA                ; push address of placeholder
-        .word   ZERO_CFA                ; compile placeholder 0
-        .word   COMMA_CFA
-        .word   EXIT_CFA
+        .word   COMMA_CFA              ; compile ZBRANCH
+        .word   HERE_CFA               ; ( orig ) placeholder address
+        .word   ZERO_CFA
+        .word   COMMA_CFA              ; compile placeholder
+        .word   LIT_CFA
+        .word   CS_IF_ELSE_THEN        ; push security number
+        .word   EXIT_CFA               ; stack: ( orig CS_IF_ELSE_THEN )
 
 ;------------------------------------------------------------------------------
-; THEN Interpretation: Undefined. Compilation: ( C: orig --  )
-; Resolve the IF forward reference orig using the HERE location.
-; Run-time: ( -- ) Continue execution.
+; THEN Interpretation: Undefined. Compilation: ( C: orig CS_IF_ELSE_THEN -- )
+; Resolve the IF or ELSE forward reference.
 ; https://forth-standard.org/standard/core/THEN
 ;------------------------------------------------------------------------------
         HEADER  "THEN", THEN_ENTRY, THEN_CFA, F_IMMEDIATE, IF_ENTRY
         CODEPTR DOCOL
-        .word   HERE_CFA                ; ( addr here )
-        .word   SWAP_CFA                ; ( here addr )
-        .word   STORE_CFA               ; backpatch placeholder
+        .word   LIT_CFA
+        .word   CS_IF_ELSE_THEN
+        .word   QPAIRS_CFA             ; verify security number
+        .word   HERE_CFA               ; ( orig here )
+        .word   SWAP_CFA               ; ( here orig )
+        .word   STORE_CFA              ; backpatch placeholder
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; ELSE Interpretation: Undefined. Compilation: ( C: orig1 -- orig2 )
-; Put the location of a new unresolved forward reference orig2 onto the control
-; flow stack. Append the run-time semantics given below to the current
-; definition. The semantics will be incomplete until orig2 is resolved by THEN.
-; Resolve the forward reference orig1 using the location following the
-; appended run-time semantics.
-; Run-time: ( -- )
-; Continue execution at the location given by the resolution of orig2.
+; ELSE Interpretation: Undefined. Compilation: ( C: orig1 CS_IF_ELSE_THEN
+;                                                  -- orig2 CS_IF_ELSE_THEN )
+; Resolve IF's placeholder, compile BRANCH with new placeholder.
 ; https://forth-standard.org/standard/core/ELSE
 ;------------------------------------------------------------------------------
         HEADER  "ELSE", ELSE_ENTRY, ELSE_CFA, F_IMMEDIATE, THEN_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; compile BRANCH into definition
+        .word   LIT_CFA
+        .word   CS_IF_ELSE_THEN
+        .word   QPAIRS_CFA             ; verify security number
+        .word   LIT_CFA
         .word   BRANCH_CFA
-        .word   COMMA_CFA
-        .word   HERE_CFA                ; push address of new placeholder
-        .word   ZERO_CFA                ; compile placeholder 0
-        .word   COMMA_CFA
-        .word   SWAP_CFA                ; ( new-addr if-addr )
-        .word   HERE_CFA                ; ( new-addr if-addr here )
-        .word   SWAP_CFA                ; ( new-addr here if-addr )
+        .word   COMMA_CFA              ; compile BRANCH
+        .word   HERE_CFA               ; ( orig2 ) new placeholder address
+        .word   ZERO_CFA
+        .word   COMMA_CFA              ; compile placeholder
+        .word   SWAP_CFA               ; ( orig2 orig1 )
+        .word   HERE_CFA               ; ( orig2 orig1 here )
+        .word   SWAP_CFA               ; ( orig2 here orig1 )
         .word   STORE_CFA              ; backpatch IF's placeholder
-        .word   EXIT_CFA
+        .word   LIT_CFA
+        .word   CS_IF_ELSE_THEN        ; push security number for THEN
+        .word   EXIT_CFA               ; stack: ( orig2 CS_IF_ELSE_THEN )
 
 ;------------------------------------------------------------------------------
 ; (OF) ( n val -- n | ) runtime OF comparison
