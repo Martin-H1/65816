@@ -5698,40 +5698,39 @@ ENDCASE_LEAVE:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; BEGIN Interpretation: Undefined. Compilation: ( C: -- dest )
-; Put the next location for a transfer of control, dest, onto the control flow
-; stack. Append the run-time semantics given below to the current definition.
-; Run-time:( -- )
-; Continue execution.
+; BEGIN Interpretation: Undefined. Compilation: ( C: -- dest CS_BEGIN_AGAIN )
 ; https://forth-standard.org/standard/core/BEGIN
 ;------------------------------------------------------------------------------
         HEADER  "BEGIN", BEGIN_ENTRY, BEGIN_CFA, F_IMMEDIATE, ENDCASE_ENTRY
         CODEPTR DOCOL
-        .word   HERE_CFA                ; push current DP as loop top
-        .word   EXIT_CFA
+        .word   HERE_CFA               ; push current DP as loop top
+        .word   LIT_CFA
+        .word   CS_BEGIN_AGAIN         ; push security number
+        .word   EXIT_CFA               ; stack: ( dest CS_BEGIN_AGAIN )
 
 ;------------------------------------------------------------------------------
-; UNTIL Interpretation: Undefined. Compilation: ( C: dest -- )
-; Append the run-time semantics given below to the current definition, resolving
-; the backward reference dest.
-; Run-time: ( x -- )
-; If all bits of x are 0, continue execution at the location specified by dest.
+; UNTIL Interpretation: Undefined. Compilation: ( C: dest CS_BEGIN_AGAIN -- )
 ; https://forth-standard.org/standard/core/UNTIL
 ;------------------------------------------------------------------------------
         HEADER  "UNTIL", UNTIL_ENTRY, UNTIL_CFA, F_IMMEDIATE, BEGIN_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; compile ZBRANCH
+        .word   LIT_CFA
+        .word   CS_BEGIN_AGAIN
+        .word   QPAIRS_CFA             ; verify security number
+        .word   LIT_CFA
         .word   ZBRANCH_CFA
-        .word   COMMA_CFA
-        .word   COMMA_CFA               ; compile loop top address
+        .word   COMMA_CFA              ; compile ZBRANCH
+        .word   COMMA_CFA              ; compile loop top address
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; AGAIN Interpretation: Undefined. Compilation: ( C: dest -- )
-; Resolve the unconditional baackward branch using dest.
+; AGAIN Interpretation: Undefined. Compilation: ( C: dest CS_BEGIN_AGAIN -- )
 ;------------------------------------------------------------------------------
         HEADER  "AGAIN", AGAIN_ENTRY, AGAIN_CFA, F_IMMEDIATE, UNTIL_ENTRY
         CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   CS_BEGIN_AGAIN
+        .word   QPAIRS_CFA             ; verify security number
         .word   LIT_CFA
         .word   BRANCH_CFA
         .word   COMMA_CFA              ; compile BRANCH
@@ -5739,42 +5738,48 @@ ENDCASE_LEAVE:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; WHILE Interpretation: Undefined. Compilation: ( C: dest -- orig dest )
-; Put the location of a new unresolved forward reference orig onto the control
-; flow stack, under the existing dest. Append the run-time semantics given
-; below to the current definition. The semantics are incomplete until orig and
-; dest are resolved (e.g., by REPEAT).
-; Run-time: ( x -- )
-; If all bits of x are zero, continue execution at the location specified by
-; the resolution of orig.
+; WHILE ( C: dest CS_BEGIN_AGAIN -- orig CS_WHILE_REPEAT dest CS_BEGIN_AGAIN )
 ; https://forth-standard.org/standard/core/WHILE
 ;------------------------------------------------------------------------------
-HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, F_IMMEDIATE, AGAIN_ENTRY
+        HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, F_IMMEDIATE, AGAIN_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; compile ZBRANCH
+        ; Stack: ( dest CS_BEGIN_AGAIN )
+        .word   LIT_CFA
+        .word   CS_BEGIN_AGAIN
+        .word   QPAIRS_CFA             ; verify CS_BEGIN_AGAIN, stack: ( dest )
+        .word   LIT_CFA
         .word   ZBRANCH_CFA
-        .word   COMMA_CFA
-        .word   HERE_CFA                ; push placeholder address
-        .word   ZERO_CFA                ; compile placeholder 0
-        .word   COMMA_CFA
-        .word   EXIT_CFA                ; stack: ( begin-addr while-addr )
+        .word   COMMA_CFA              ; compile ZBRANCH
+        .word   HERE_CFA               ; ( dest orig )
+        .word   ZERO_CFA
+        .word   COMMA_CFA              ; ( dest orig ) placeholder compiled
+        .word   LIT_CFA
+        .word   CS_WHILE_REPEAT        ; ( dest orig CS_WHILE_REPEAT )
+        .word   ROT_CFA                ; ( orig CS_WHILE_REPEAT dest )
+        .word   LIT_CFA
+        .word   CS_BEGIN_AGAIN         ; ( orig CS_WHILE_REPEAT dest CS_BEGIN_AGAIN )
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; REPEAT Interpretation: Undefined. Compilation: ( C: orig dest -- )
-; Resolving the backward reference dest. Resolve the forward reference orig
-; as well.
+; REPEAT ( C: orig CS_WHILE_REPEAT dest CS_BEGIN_AGAIN -- )
 ; https://forth-standard.org/standard/core/REPEAT
 ;------------------------------------------------------------------------------
-HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
+        HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; compile BRANCH
+        ; Stack: ( orig CS_WHILE_REPEAT dest CS_BEGIN_AGAIN )
+        .word   LIT_CFA
+        .word   CS_BEGIN_AGAIN
+        .word   QPAIRS_CFA             ; verify CS_BEGIN_AGAIN, stack: ( orig CS_WHILE_REPEAT dest )
+        .word   LIT_CFA
         .word   BRANCH_CFA
-        .word   COMMA_CFA
-        .word   SWAP_CFA                ; ( while-addr begin-addr )
-        .word   COMMA_CFA               ; compile begin-addr as branch target
-        .word   HERE_CFA                ; ( while-addr here )
-        .word   SWAP_CFA                ; ( here while-addr )
-        .word   STORE_CFA               ; backpatch WHILE placeholder
+        .word   COMMA_CFA              ; compile BRANCH
+        .word   COMMA_CFA              ; compile dest as branch target, stack: ( orig CS_WHILE_REPEAT )
+        .word   LIT_CFA
+        .word   CS_WHILE_REPEAT
+        .word   QPAIRS_CFA             ; verify CS_WHILE_REPEAT, stack: ( orig )
+        .word   HERE_CFA               ; ( orig here )
+        .word   SWAP_CFA               ; ( here orig )
+        .word   STORE_CFA              ; backpatch WHILE placeholder
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
