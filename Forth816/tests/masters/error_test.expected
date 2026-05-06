@@ -1,0 +1,188 @@
+\ error_test.fs - Error handling and recovery regression tests
+ ok 
+
+ ok 
+\ Helper to verify interpreter recovered after an error
+ ok 
+: RECOVERED? 1 1 + 2 = ;
+ ok 
+
+ ok 
+\ Verify failed definition does not consume dictionary space
+ ok 
+VARIABLE HERE-BEFORE
+ ok 
+HERE HERE-BEFORE !
+ ok 
+
+ ok 
+\ ============================================================
+ ok 
+\ CASE structure errors
+ ok 
+\ ============================================================
+ ok 
+
+ ok 
+\ ENDOF without matching OF
+ ok 
+: BAD-ENDOF CASE 1 ENDOF ENDCASE ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ ENDCASE without matching CASE
+ ok 
+: BAD-ENDCASE 1 ENDCASE ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ OF without matching CASE
+ ok 
+: BAD-OF 1 OF 1 ENDOF ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ Now verify that memory wasn't leaked.
+ ok 
+T{ HERE HERE-BEFORE @ = -> -1 }T
+ ok 
+
+ ok 
+\ ============================================================
+ ok 
+\ IF structure errors
+ ok 
+\ ============================================================
+ ok 
+
+ ok 
+\ THEN without IF
+ ok 
+: BAD-THEN 1 THEN ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ ELSE without IF
+ ok 
+: BAD-ELSE 1 ELSE 2 THEN ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ ============================================================
+ ok 
+\ LOOP structure errors
+ ok 
+\ ============================================================
+ ok 
+
+ ok 
+\ LOOP without DO
+ ok 
+: BAD-LOOP 1 LOOP ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ +LOOP without DO
+ ok 
+: BAD-PLUSLOOP 1 +LOOP ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ ============================================================
+ ok 
+\ BEGIN structure errors
+ ok 
+\ ============================================================
+ ok 
+
+ ok 
+\ AGAIN without BEGIN
+ ok 
+: BAD-AGAIN 1 AGAIN ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ UNTIL without BEGIN
+ ok 
+: BAD-UNTIL 1 UNTIL ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ REPEAT without BEGIN/WHILE
+ ok 
+: BAD-REPEAT 1 REPEAT ;
+mismatched control structure
+
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ ============================================================
+ ok 
+\ Dictionary rollback verification
+ ok 
+\ ============================================================
+ ok 
+
+ ok 
+\ Verify failed definition does not consume dictionary space
+ ok 
+
+ ok 
+HERE HERE-BEFORE !
+ ok 
+
+ ok 
+: BAD-WORD UNDEFINED-WORD-XYZ ;
+error: Undefined word UNDEFINED-WORD-XYZ
+
+ ok 
+\ Now verify that memory wasn't leaked.
+ ok 
+T{ HERE HERE-BEFORE @ = -> -1 }T
+ ok 
+
+ ok 
+\ Verify successful definition after failed one works
+ ok 
+: GOOD-WORD 42 ;
+ ok 
+T{ GOOD-WORD -> 42 }T
+ ok 
+
+ ok 
+\ Verify LATEST points to GOOD-WORD (9 character name)
+ ok 
+T{ LATEST @ HEADER>NAME NIP -> 9 }T
+ ok 
+
+ ok 
+DONE
+###DONE###

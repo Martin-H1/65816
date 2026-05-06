@@ -974,10 +974,10 @@ calc_depth:     TXA
         PUBLIC  NEGATE_CODE
         .a16
         .i16
-                LDA     0,X
+                PEEK
                 EOR     #$FFFF
                 INC     A
-                STA     0,X
+                PUT
                 NEXT
         ENDPUBLIC
 
@@ -989,11 +989,11 @@ calc_depth:     TXA
         PUBLIC  ABS_CODE
         .a16
         .i16
-                LDA     0,X
+                PEEK
                 BPL     @done
                 EOR     #$FFFF
                 INC     A
-                STA     0,X
+                PUT
 @done:          NEXT
         ENDPUBLIC
 
@@ -1023,8 +1023,7 @@ DABS_DONE:
                 BPL     @endif          ; a >= b, a is max
                 LDA     0,X             ; a < b, overwrite a with b
                 STA     2,X
-@endif:         INX                     ; Drop TOS as NOS is max
-                INX
+@endif:         DROP                    ; Drop TOS as NOS is max
                 NEXT
         ENDPUBLIC
 
@@ -1041,8 +1040,7 @@ DABS_DONE:
                 BMI     @endif          ; a < b, a is min
                 LDA     0,X             ; a >= b, overwrite a with b
                 STA     2,X
-@endif:         INX                     ; Drop TOS as NOS is min
-                INX
+@endif:         DROP                    ; Drop TOS as NOS is min
                 NEXT
         ENDPUBLIC
 
@@ -1090,11 +1088,11 @@ DABS_DONE:
         PUBLIC  TWOSLASH_CODE
         .a16
         .i16
-                LDA     0,X
+                PEEK
                 ; Arithmetic shift right: preserve sign bit
                 CMP     #$8000          ; Set carry if negative
                 ROR     A               ; Shift right, sign bit from carry
-                STA     0,X
+                PUT
                 NEXT
         ENDPUBLIC
 
@@ -1214,9 +1212,7 @@ MSTAR_DONE:
         PUBLIC  EQUAL_CODE
         .a16
         .i16
-                LDA     0,X
-                INX
-                INX
+                POP
                 CMP     0,X
                 BEQ     @true
                 STZ     0,X
@@ -1234,9 +1230,7 @@ MSTAR_DONE:
         PUBLIC  NOTEQUAL_CODE
         .a16
         .i16
-                LDA     0,X
-                INX
-                INX
+                POP
                 CMP     0,X
                 BNE     @true
                 STZ     0,X
@@ -1267,9 +1261,8 @@ MSTAR_DONE:
                 BRA     @return
 @true:          LDA     #FORTH_TRUE     ; Set TOS to true
 @return:
-                INX                     ; Drop b
-                INX
-                STA     0,X             ; Set TOS to result
+                DROP                    ; Drop b
+                PUT                     ; Set TOS to result
                 NEXT
         ENDPUBLIC
 
@@ -1422,24 +1415,14 @@ MSTAR_DONE:
                 LDA     a:4,X           ; d1_hi
                 CMP     a:0,X           ; d2_hi
                 BNE     @false
-                INX
-                INX
-                INX
-                INX
-                INX
-                INX                     ; drop 3 cells
                 LDA     #FORTH_TRUE
-                STA     a:0,X
-                NEXT
+                BRA     @return
 @false:
-                INX
-                INX
-                INX
-                INX
-                INX
-                INX                     ; drop 3 cells
                 LDA     #FORTH_FALSE
-                STA     a:0,X
+@return:        DROP                    ; drop 3 cells
+                DROP
+                DROP
+                PUT                     ; Put flag in 4th cell
                 NEXT
         ENDPUBLIC
 
@@ -1462,24 +1445,15 @@ MSTAR_DONE:
                 CMP     a:2,X           ; ud2_lo
                 BCC     @true
 @false:
-                INX
-                INX
-                INX
-                INX
-                INX
-                INX                     ; drop 3 cells
                 LDA     #FORTH_FALSE
-                STA     a:0,X
+                BRA     @return
                 NEXT
 @true:
-                INX
-                INX
-                INX
-                INX
-                INX
-                INX                     ; drop 3 cells
                 LDA     #FORTH_TRUE
-                STA     a:0,X
+@return:        DROP                    ; drop 3 cells
+                DROP
+                DROP
+                PUT                     ; Put flag in 4th cell
                 NEXT
         ENDPUBLIC
 
@@ -1511,24 +1485,14 @@ MSTAR_DONE:
                 CMP     a:2,X           ; d2_lo
                 BCC     @true
 @false:
-                INX
-                INX
-                INX
-                INX
-                INX
-                INX                     ; drop 3 cells
                 LDA     #FORTH_FALSE
-                STA     a:0,X
-                NEXT
+                BRA     @return
 @true:
-                INX
-                INX
-                INX
-                INX
-                INX
-                INX                     ; drop 3 cells
                 LDA     #FORTH_TRUE
-                STA     a:0,X
+@return:        DROP                    ; drop 3 cells
+                DROP
+                DROP
+                PUT                     ; Put flag in 4th cell
                 NEXT
         ENDPUBLIC
 
@@ -1544,10 +1508,8 @@ MSTAR_DONE:
         PUBLIC  TRUE_CODE
         .a16
         .i16
-                DEX
-                DEX
                 LDA     #FORTH_TRUE
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -1559,10 +1521,8 @@ MSTAR_DONE:
         PUBLIC  FALSE_CODE
         .a16
         .i16
-                DEX
-                DEX
                 LDA     #FORTH_FALSE
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -1574,11 +1534,9 @@ MSTAR_DONE:
         PUBLIC  AND_CODE
         .a16
         .i16
-                LDA     0,X
-                INX
-                INX
+                POP
                 AND     0,X
-                STA     0,X
+                PUT
                 NEXT
         ENDPUBLIC
 
@@ -1590,11 +1548,9 @@ MSTAR_DONE:
         PUBLIC  OR_CODE
         .a16
         .i16
-                LDA     0,X
-                INX
-                INX
+                POP
                 ORA     0,X
-                STA     0,X
+                PUT
                 NEXT
         ENDPUBLIC
 
@@ -1606,11 +1562,9 @@ MSTAR_DONE:
         PUBLIC  XOR_CODE
         .a16
         .i16
-                LDA     0,X
-                INX
-                INX
+                POP
                 EOR     0,X
-                STA     0,X
+                PUT
                 NEXT
         ENDPUBLIC
 
@@ -1622,9 +1576,9 @@ MSTAR_DONE:
         PUBLIC  INVERT_CODE
         .a16
         .i16
-                LDA     0,X
+                PEEK
                 EOR     #$FFFF
-                STA     0,X
+                PUT
                 NEXT
         ENDPUBLIC
 
@@ -5783,22 +5737,24 @@ ENDCASE_LEAVE:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; DO Interpretation: Undefined. Compilation: ( C: -- do-sys )
-; Place do-sys onto the control-flow stack. Append DODO to the current
-; definition. The semantics are incomplete until resolved by a consumer of
-; do-sys such as LOOP.
+; DO Compilation: ( C: -- leave-addr loop-addr CS_DO_LOOP )
+; Place leaver-addr and loop-addr onto the control-flow stack. Append DODO to
+; the current definition. The semantics are incomplete until resolved by a
+; consumer of placeholders such as LOOP.
 ; https://forth-standard.org/standard/core/DO
 ;------------------------------------------------------------------------------
         HEADER  "DO", DO_ENTRY, DO_CFA, F_IMMEDIATE, REPEAT_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   DODO_CFA
-        .word   COMMA_CFA               ; compile (DO)
-        .word   HERE_CFA                ; push leave target address
-        .word   ZERO_CFA                ; compile placeholder leave target
-        .word   COMMA_CFA
-        .word   HERE_CFA                ; push loop address
-        .word   EXIT_CFA
+        .word   COMMA_CFA              ; compile (DO)
+        .word   HERE_CFA               ; push leave-addr placeholder address
+        .word   ZERO_CFA
+        .word   COMMA_CFA              ; compile placeholder leave target
+        .word   HERE_CFA               ; push loop-addr
+        .word   LIT_CFA
+        .word   CS_DO_LOOP             ; push security number
+        .word   EXIT_CFA               ; stack: ( leave-addr loop-addr CS_DO_LOOP )
 
 ;------------------------------------------------------------------------------
 ; (?DO) ( limit index -- ) (R: -- limit index) runtime for ?DO
@@ -5813,31 +5769,25 @@ ENDCASE_LEAVE:
                 CMP     0,X             ; index
                 BNE     @enter_loop     ; limit <> index so enter loop
                 ; limit = index: skip loop, jump to leave target
-                INX                     ; drop index
-                INX
-                INX                     ; drop limit
-                INX
+                DROP                    ; drop index
+                DROP                    ; drop limit
                 LDA     0,Y             ; load leave target from inline data
                 TAY                     ; IP = leave target
                 NEXT
 @enter_loop:
-                LDA     0,Y             ; load leave target
+                IFETCH                  ; load leave target and advance IP
                 PHA                     ; push leave target onto return stack
-                INY                     ; advance past leave target
-                INY
                 LDA     2,X             ; limit
                 PHA                     ; push limit onto return stack
-                LDA     0,X             ; index
+                POP                     ; index
                 PHA                     ; push index onto return stack
-                INX
-                INX
-                INX
-                INX
+                DROP
                 NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; ?DO Interpretation: Undefined. Compilation: ( C: -- do-sys )
+; ?DO Compilation: ( C: -- leave-addr loop-addr CS_DO_LOOP )
+; Interpretation: Undefined.
 ; Like DO but skips the loop if limit = index at runtime.
 ; https://forth-standard.org/standard/core/qDO
 ;------------------------------------------------------------------------------
@@ -5845,42 +5795,51 @@ ENDCASE_LEAVE:
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   DOQDO_CFA
-        .word   COMMA_CFA               ; compile (?DO)
-        .word   HERE_CFA                ; push leave target address
-        .word   ZERO_CFA                ; compile placeholder leave target
-        .word   COMMA_CFA
-        .word   HERE_CFA                ; push loop address
-        .word   EXIT_CFA
+        .word   COMMA_CFA              ; compile (?DO)
+        .word   HERE_CFA               ; push leave-addr placeholder address
+        .word   ZERO_CFA
+        .word   COMMA_CFA              ; compile placeholder leave target
+        .word   HERE_CFA               ; push loop-addr
+        .word   LIT_CFA
+        .word   CS_DO_LOOP             ; push security number
+        .word   EXIT_CFA               ; stack: ( leave-addr loop-addr CS_DO_LOOP )
 
 ;------------------------------------------------------------------------------
-; LOOP Interpretation: Undefined. Compilation: ( C: do-sys -- )
+; LOOP Compilation: ( C: leave-addr loop-addr CS_DO_LOOP -- )
 ; Append DOLOOP to the current defintion, pop and compile back branch test
 ; and target. Patch the LEAVE target in the DO byte code section.
 ; https://forth-standard.org/standard/core/LOOP
 ;------------------------------------------------------------------------------
         HEADER  "LOOP", LOOP_ENTRY, LOOP_CFA, F_IMMEDIATE, QDO_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; compile (LOOP)
+        .word   LIT_CFA
+        .word   CS_DO_LOOP
+        .word   QPAIRS_CFA             ; verify security number
+        .word   LIT_CFA
         .word   DOLOOP_CFA
-        .word   COMMA_CFA
-        .word   COMMA_CFA               ; compile loop top address
-        .word   HERE_CFA                ; ( while-addr here )
-        .word   SWAP_CFA                ; ( here while-addr )
-        .word   STORE_CFA               ; backpatch LEAVE placeholder
+        .word   COMMA_CFA              ; compile (LOOP)
+        .word   COMMA_CFA              ; compile loop-addr as branch target
+        .word   HERE_CFA               ; ( leave-addr here )
+        .word   SWAP_CFA               ; ( here leave-addr )
+        .word   STORE_CFA              ; backpatch LEAVE placeholder
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; +LOOP Compilation: ( C: leave-addr loop-addr CS_DO_LOOP -- )
 ; https://forth-standard.org/standard/core/PlusLOOP
 ;------------------------------------------------------------------------------
         HEADER  "+LOOP", PLUSLOOP_ENTRY, PLUSLOOP_CFA, F_IMMEDIATE, LOOP_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA                 ; compile (+LOOP)
+        .word   LIT_CFA
+        .word   CS_DO_LOOP
+        .word   QPAIRS_CFA             ; verify security number
+        .word   LIT_CFA
         .word   DOPLUSLOOP_CFA
-        .word   COMMA_CFA
-        .word   COMMA_CFA               ; compile loop top address
-        .word   HERE_CFA                ; ( leave-addr here )
-        .word   SWAP_CFA                ; ( here leave-addr )
-        .word   STORE_CFA               ; backpatch LEAVE placeholder
+        .word   COMMA_CFA              ; compile (+LOOP)
+        .word   COMMA_CFA              ; compile loop-addr as branch target
+        .word   HERE_CFA               ; ( leave-addr here )
+        .word   SWAP_CFA               ; ( here leave-addr )
+        .word   STORE_CFA              ; backpatch LEAVE placeholder
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5907,7 +5866,6 @@ ENDCASE_LEAVE:
         .word   FETCH_CFA              ; ( cfa )
         .word   COMMA_CFA              ; compile into definition
         .word   EXIT_CFA
-
 
 ;==============================================================================
 ; SECTION 14: Pictured numeric output conversion words.
