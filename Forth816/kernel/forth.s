@@ -261,11 +261,12 @@ RTS_CFA_LIST:
                 STA     (UP),Y
 
                 ; --- User area: SAVEDP and SAVELATEST = 0
+                LDA     #0
                 LDY     #U_SAVEDP
-                STZ     (UP),Y
+                STA     (UP),Y
 
                 LDY     #U_SAVELATEST
-                STZ     (UP),Y
+                STA     (UP),Y
 
 		; --- Jump to ABORT to reset stacks and start interpreter ---
                 ; ABORT_CODE is a machine code primitive that resets both
