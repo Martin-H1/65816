@@ -10,7 +10,8 @@ The memory map of the system is:
 $0000 - $00FF   Direct Page (Forth VM registers, scratch)
 $0100 - $01FF   Hardware stack (Return Stack)
 $0200 - $03FF   Parameter Stack (grows downward)
-$0400 - $04FF   User Area
+$0400 - $04FF   Scratch PAD area
+$0500 - $05FF   User Area
                 +$00  BASE         numeric base (default 10)
                 +$02  STATE        0=interpret, 1=compile
                 +$04  DP           dictionary pointer
@@ -19,7 +20,6 @@ $0400 - $04FF   User Area
                 +$0A  >IN          parse offset
                 +$0C  SOURCE-LEN   current source length
                 +$0E  HANDLER      exception handler
-$0500 - $05FF   Scratch PAD area
 $0600 - $06FF   Terminal Input Buffer (TIB)
 $0700 - $7EFF   RAM Dictionary (user definitions grow upward) 
 $8000 - $FFFF   ROM (kernel primitives, core word set)
@@ -125,57 +125,20 @@ S — return stack pointer, managed by hardware stack operations
 D — must be $0000 on entry and exit via NEXT
 DB — must remain zero
 
-New words implemented and tested:
-
-[ and ] — switch between interpret and compile mode. Both require PHY/PLY
-around LDY since Y holds the IP at all times.
-COMPILE, — compiles an xt into the current definition. In ITC Forth identical
-to ,.
-WORDS — rewritten as a DOCOL definition to test the inner interpreter. Uses
-dictionary traversal with FETCH, CFETCH, TYPE, and ZBRANCH.
-INTERPRET — rewritten as a DOCOL definition. Handles word lookup via FIND,
-number conversion via NUMBER, and compiling via COMPILE, and LIT.
-QUIT — implemented as a DOCOL definition. The double return stack reset
-(once in ABORT, once in QUIT) is intentional and harmless.
-UNDEFINED-WORD — prints "error: Undefined word" and calls ABORT.
-TRACEON / TRACEOFF — debug words that set a zero page variable TRACE_EN to
-enable/disable execution tracing via a modified NEXT macro.
-TRACEOUT — prints current IP in hex using DOTHEX_CODE::print_chex. Reuses
-existing hex output code.
-(CREATE) — hidden primitive that builds a dictionary header from a counted
-string at the address on the stack ( addr -- ). Used by :, CREATE, VARIABLE,
-and CONSTANT.
-: — rewritten as a DOCOL definition using (CREATE).
-; — rewritten as a DOCOL definition using REVEAL and [.
-REVEAL — assembly primitive that clears F_HIDDEN on the most recent dictionary
-entry. Replaces inline flag manipulation in ;, VARIABLE, and CONSTANT.
-CREATE — DOCOL definition. Reserves an extra placeholder cell at CFA+2 for the
-DOES> code address so that body data starts at CFA+4.
-DOES> — immediate DOCOL word that compiles (DOES>) into the current definition.
-(DOES>) — hidden assembly primitive. Patches the CFA of the most recently
-CREATE word to DODOES and stores the current IP (DOES> code address) at CFA+2.
-DODOES — updated to push CFA+4 as the body address and set IP from CFA+2.
-VARIABLE — DOCOL definition using (CREATE), DOVAR, and REVEAL.
-CONSTANT — DOCOL definition using (CREATE), DOCON, and REVEAL.
-DECIMAL / HEX — DOCOL definitions that store 10 or 16 into BASE.
-NUMBER - radix prefix support
-WORD refactored to use PARSE — done via SKIP-CHAR, PLACE, PARSE-NAME
-CASE/OF/ENDOF/ENDCASE — implemented and tested
-SKIP-CHAR ( char -- ) skips leading occurrences of char updating >IN
-PLACE ( c-addr u dest -- ) copies string to dest as counted string with uppercase
-PARSE-NAME ( -- c-addr u ) skips leading spaces then parses space-delimited token
-CURDEF user area variable — holds CFA of word being compiled, set by DOCREATE
-(OF) hidden runtime primitive for CASE/OF
-Complete Forth standard core word set
-Pictured numeric output.
-EVALUATE, POSTPONE, IMMEDIATE
-SEE decompiler
-FORGET dictionary cleanup
-Stack underflow protection
-
+Current interpreter status
+* All Forth standard section 6.1 core words implemented.
+  See: https://forth-standard.org/standard/words
+* Forth standard section 6.2 core extension words in progress.
+* Stack underflow protection
+* MARKER and FORGET for dictionary cleanup
+* SEE decompiler
+* Forth based regression tests
+* Dictionary checkpoint, rollback, and commit to avoid memory leaks.
+* Release and Debug builds. Release executes in ROM with an origin of $8000,
+  Debug executes in high RAM with at $4000, and includes a TRACE facility and
+  more aggressive stack underflow checking.
 
 Important bugs found and fixed:
-
 WORD was not updating >IN correctly after TCD relocated the direct page.
 Fix: use (LOC_UP),Y with Y=#U_TOIN instead of STA (U_TOIN).
 #<QUIT_BODY in ABORT_CODE loaded only the low byte of the address.
@@ -225,13 +188,10 @@ pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 
 TODO items carried forward:
 * Investigate using compiler security in other control structures e.g
-  BEGIN...UNTIL / AGAIN using security number 1
   DO...LOOP / +LOOP using security number 3
     I and J don't need it because they're not involved in branching.
     LEAVE shouldn't use it because it can be embedded within an IF e.g.
       DO...<do-stuff>...IF LEAVE THEN, so it's unclear which it should check.
-  WHILE...REPEAT using security number 4
-  Note: These magic numbers should be defined as symbols.
 * Stretch Goal 1 Implement the CORE-EXT words: .(, .R, :NONAME, ACTION-OF,
   BUFFER:, C", DEFER, DEFER!, DEFER@, ERASE, HOLDS, IS, REFILL, RESTORE-INPUT,
   S\", SAVE-INPUT, SOURCE-ID, TO, U.R, UNUSED, VALUE, WITHIN, [COMPILE]

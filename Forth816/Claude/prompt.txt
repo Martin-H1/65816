@@ -72,4 +72,4 @@ TAY / BEQ rather than a separate load to test a value that is already available
 or can be transferred cheaply."
 
 An example of these techniques is in the sample coding style module:
-https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/sample_coding_style.s
+https://raw.githubusercontent.com/Martin-H1/65816/refs/heads/main/Forth816/Claude/sample_coding_style.s
