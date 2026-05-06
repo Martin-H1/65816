@@ -2648,6 +2648,13 @@ MSTAR_DONE:
         PUBLIC  CHECKPOINT_CODE
         .a16
         .i16
+                JSR     CHECKPOINT_IMPL
+                NEXT
+        ENDPUBLIC
+
+        .proc CHECKPOINT_IMPL
+        .a16
+        .i16
                 PHY                     ; save IP
                 LDY     #U_DP
                 LDA     (UP),Y
@@ -2659,8 +2666,8 @@ MSTAR_DONE:
                 LDY     #U_SAVELATEST
                 STA     (UP),Y          ; SAVE-LATEST = LATEST
                 PLY                     ; restore IP
-                NEXT
-        ENDPUBLIC
+                RTS
+        .endproc
 
 ;------------------------------------------------------------------------------
 ; ROLLBACK ( -- ) restore DP and LATEST from checkpoint, clear checkpoint
@@ -3129,7 +3136,7 @@ ABORTQUOTE_CLOOP:
         HEADER  "CELL", CELL_ENTRY, CELL_CFA, 0, BL_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
-        .word   2
+        .word   CELL_SIZE
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -3138,7 +3145,7 @@ ABORTQUOTE_CLOOP:
         HEADER  "CELLS", CELLS_ENTRY, CELLS_CFA, 0, CELL_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
-        .word   2
+        .word   CELL_SIZE
         .word   STAR_CFA
         .word   EXIT_CFA
 
@@ -3149,7 +3156,7 @@ ABORTQUOTE_CLOOP:
         HEADER  "CELL+", CELLPLUS_ENTRY, CELLPLUS_CFA, 0, CELLS_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
-        .word   2
+        .word   CELL_SIZE
         .word   PLUS_CFA
         .word   EXIT_CFA
 
@@ -4145,7 +4152,8 @@ QUIT_BODY:
 
         ; Main REPL loop
 QUIT_LOOP:
-        .word   TIB_CFA                 ; Push TIB address
+        .word   SOURCE_CFA              ; Get TIB address and length
+        .word   DROP_CFA                ; Only the address iss required.
         .word   LIT_CFA
         .word   TIB_SIZE                ; Max input length
         .word   ACCEPT_CFA              ; Read line → ( len )
@@ -4179,23 +4187,6 @@ QUIT_LOOP:
                 NEXT
         ENDPUBLIC
 
-; TIB - push TIB base address
-        HEADER  "TIB", TIB_ENTRY, TIB_CFA, 0, RSP_RESET_ENTRY
-        CODEPTR TIB_PRIM_CODE
-        PUBLIC  TIB_PRIM_CODE
-        .a16
-        .i16
-                LDA     UP
-                CLC
-                ADC     #U_TIB
-                STA     SCRATCH0
-                LDA     (SCRATCH0)
-                DEX
-                DEX
-                STA     0,X
-                NEXT
-        ENDPUBLIC
-
 ;------------------------------------------------------------------------------
 ; ACCEPT ( addr maxlen -- actual )
 ;
@@ -4215,7 +4206,7 @@ QUIT_LOOP:
 ; Stack on exit:
 ;   0,X = actual (character count)
 ;------------------------------------------------------------------------------
-        HEADER  "ACCEPT", ACCEPT_ENTRY, ACCEPT_CFA, 0, TIB_ENTRY
+        HEADER  "ACCEPT", ACCEPT_ENTRY, ACCEPT_CFA, 0, RSP_RESET_ENTRY
         CODEPTR ACCEPT_CODE
         PUBLIC  ACCEPT_CODE
         .a16
@@ -5095,6 +5086,8 @@ WORDS_SKIP:
                 PHD                     ; Save DP
                 PHY                     ; Save IP
 
+                JSR     CHECKPOINT_IMPL ; Exception handling checkpoint
+
                 TSC                     ; Reserve stack frame
                 SEC
                 SBC     #LOC_SIZE
@@ -5212,31 +5205,22 @@ WORDS_SKIP:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; REVEAL ( -- ) clear F_HIDDEN on the most recent dictionary entry
+; REVEAL ( -- ) clear F_HIDDEN on the most recent dictionary entry and commit
 ;------------------------------------------------------------------------------
         HEADER  "REVEAL", REVEAL_ENTRY, REVEAL_CFA, 0, DOCREATE_ENTRY
-        CODEPTR REVEAL_CODE
-        PUBLIC  REVEAL_CODE
-        .a16
-        .i16
-                PHY                     ; Save IP
-                ; Fetch LATEST
-                LDY     #U_LATEST
-                LDA     (UP),Y          ; LATEST
-                ; flags byte is at LATEST+2
-                CLC
-                ADC     #CELL_SIZE
-                STA     SCRATCH0        ; point to flags byte
-                SEP     #$20
-                .a8
-                LDA     (SCRATCH0)      ; read flags byte
-                AND     #$FF ^ F_HIDDEN ; clear hidden bit
-                STA     (SCRATCH0)      ; write back
-                REP     #$20
-                .a16
-                PLY                     ; Restore IP
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   LATEST_CFA
+        .word   FETCH_CFA              ; ( entry )
+        .word   CELLPLUS_CFA           ; ( entry+2 ) skip link field
+        .word   DUP_CFA                ; ( entry+2 entry+2 )
+        .word   CFETCH_CFA             ; ( entry+2 flags )
+        .word   LIT_CFA
+        .word   $00BF                  ; $FF ^ F_HIDDEN = $BF
+        .word   AND_CFA                ; ( entry+2 flags&~F_HIDDEN )
+        .word   SWAP_CFA               ; ( flags entry+2 )
+        .word   CSTORE_CFA             ; store cleared flags back
+        .word   COMMIT_CFA             ; clear checkpoint
+        .word   EXIT_CFA
 
 ;==============================================================================
 ; SECTION 13: Compiler words to create words
@@ -5248,7 +5232,6 @@ WORDS_SKIP:
         HEADER  ":", COLON_ENTRY, COLON_CFA, 0, REVEAL_ENTRY
         CODEPTR DOCOL
 COLON_BODY:
-        .word   CHECKPOINT_CFA
         .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name from input
         .word   DOCREATE_CFA            ; ( ) build header, update LATEST and DP
@@ -5270,7 +5253,6 @@ SEMICOLON_BODY:
         .word   EXIT_CFA                ; compile EXIT into definition
         .word   COMMA_CFA
         .word   REVEAL_CFA              ; clear F_HIDDEN
-        .word   COMMIT_CFA
         .word   LBRACKET_CFA            ; STATE = 0 (interpret mode)
         .word   EXIT_CFA
 
@@ -5281,7 +5263,6 @@ SEMICOLON_BODY:
         HEADER  "VARIABLE", VARIABLE_ENTRY, VARIABLE_CFA, 0, SEMICOLON_ENTRY
         CODEPTR DOCOL
 VARIABLE_BODY:
-        .word   CHECKPOINT_CFA
         .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name
         .word   DOCREATE_CFA            ; ( ) build header
@@ -5291,7 +5272,6 @@ VARIABLE_BODY:
         .word   ZERO_CFA
         .word   COMMA_CFA               ; allot and initialize one cell
         .word   REVEAL_CFA              ; clear F_HIDDEN
-        .word   COMMIT_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5301,7 +5281,6 @@ VARIABLE_BODY:
         HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, VARIABLE_ENTRY
         CODEPTR DOCOL
 CONSTANT_BODY:
-        .word   CHECKPOINT_CFA
         .word   BL_CFA
         .word   WORD_CFA                ; ( n addr ) parse name
         .word   DOCREATE_CFA            ; ( n ) build header
@@ -5310,7 +5289,6 @@ CONSTANT_BODY:
         .word   COMMA_CFA               ; write DOCON at CFA
         .word   COMMA_CFA               ; store constant value in body
         .word   REVEAL_CFA              ; clear F_HIDDEN
-        .word   COMMIT_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5427,7 +5405,6 @@ postpone_notfound_msg:
         HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, IMMEDIATE_ENTRY
         CODEPTR DOCOL
 CREATE_BODY:
-        .word   CHECKPOINT_CFA
         .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name
         .word   DOCREATE_CFA            ; ( ) build header
@@ -5437,7 +5414,6 @@ CREATE_BODY:
         .word   ZERO_CFA                ; placeholder for DOES> code address
         .word   COMMA_CFA               ; reserve CFA+2 cell
         .word   REVEAL_CFA              ; clear F_HIDDEN
-        .word   COMMIT_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -6131,7 +6107,6 @@ notfound_msg:
         CODEPTR DOCOL
         ; Capture dictionary state BEFORE creating the new word.
         ; saved LATEST and DP are the restore point — marker erases itself.
-        .word   CHECKPOINT_CFA
         .word   LATEST_CFA
         .word   FETCH_CFA              ; ( latest )
         .word   DP_CFA
@@ -6156,7 +6131,6 @@ notfound_msg:
         .word   DP_CFA
         .word   STORE_CFA              ; DP += 2 ( latest dp )
         .word   REVEAL_CFA             ; make word visible
-        .word   COMMIT_CFA
         ; Compile saved state into body
         .word   SWAP_CFA               ; ( dp latest )
         .word   COMMA_CFA              ; body[0] = saved LATEST
