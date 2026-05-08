@@ -2,12 +2,6 @@
  ok 
 
  ok 
-\ Helper to verify interpreter recovered after an error
- ok 
-: RECOVERED? 1 1 + 2 = ;
- ok 
-
- ok 
 \ Verify failed definition does not consume dictionary space
  ok 
 VARIABLE HERE-BEFORE

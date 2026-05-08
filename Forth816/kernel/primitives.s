@@ -5527,11 +5527,12 @@ TO_INTERPRET_DOUBLE:
         .word   TWOSTORE_CFA            ; store d at body
         .word   EXIT_CFA
 TO_ERROR:
-        .word   TWODROP_CFA             ; drop codeptr and xt
+        .word   LIT_CFA
+        .word   FORTH_TRUE
         .word   DOABORTQUOTE_CFA
         .word   11
         .byte   "not a VALUE"
-        .align  CELL_SIZE
+        .align  2
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5831,7 +5832,7 @@ TICK_ERR:
         .word   DOABORTQUOTE_CFA
         .word   30
         .byte   "mismatched control structure", C_RETURN, L_FEED
-        .align  2
+        .align  CELL_SIZE
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------

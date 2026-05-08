@@ -1,0 +1,84 @@
+\ value_test.fs - VALUE, 2VALUE, TO, 2CONSTANT, 2ROT tests
+ ok 
+
+ ok 
+\ VALUE
+ ok 
+42 VALUE ANSWER
+ ok 
+T{ ANSWER -> 42 }T
+ ok 
+
+ ok 
+\ TO with VALUE
+ ok 
+T{ 99 TO ANSWER ANSWER -> 99 }T
+ ok 
+T{ -1 TO ANSWER ANSWER -> -1 }T
+ ok 
+
+ ok 
+\ TO on CONSTANT should error and recover
+ ok 
+55 CONSTANT KLIMIT
+ ok 
+TO KLIMIT
+not a VALUE
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ 2CONSTANT
+ ok 
+1234. 2CONSTANT DCONST
+ ok 
+T{ DCONST -> 1234 0 }T
+ ok 
+100000. 2CONSTANT DCONST2
+ ok 
+T{ DCONST2 -> 34464 1 }T
+ ok 
+
+ ok 
+\ TO on 2CONSTANT should error and recover
+ ok 
+1234. TO DCONST
+not a VALUE
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ 2VALUE
+ ok 
+1234. 2VALUE DVAL
+ ok 
+T{ DVAL -> 1234 0 }T
+ ok 
+
+ ok 
+\ TO with 2VALUE
+ ok 
+T{ 100000. TO DVAL DVAL -> 34464 1 }T
+ ok 
+T{ -1. TO DVAL DVAL -> -1 -1 }T
+ ok 
+
+ ok 
+\ TO on 2CONSTANT should error and recover
+ ok 
+1234. TO DCONST
+not a VALUE
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ 2ROT
+ ok 
+T{ 1 0 2 0 3 0 2ROT -> 2 0 3 0 1 0 }T
+ ok 
+T{ -1 -1 2 0 3 0 2ROT -> 2 0 3 0 -1 -1 }T
+ ok 
+
+ ok 
+DONE
+###DONE###

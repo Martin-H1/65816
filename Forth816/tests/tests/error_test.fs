@@ -1,8 +1,5 @@
 \ error_test.fs - Error handling and recovery regression tests
 
-\ Helper to verify interpreter recovered after an error
-: RECOVERED? 1 1 + 2 = ;
-
 \ Verify failed definition does not consume dictionary space
 VARIABLE HERE-BEFORE
 HERE HERE-BEFORE !

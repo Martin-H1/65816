@@ -43,4 +43,7 @@ VARIABLE ERROR-XT
         LOOP
     THEN ;
 
+\ Helper to verify interpreter recovered after an error
+: RECOVERED? 1 1 + 2 = ;
+
 : DONE ." ###DONE###" CR RESET-TEST ;
