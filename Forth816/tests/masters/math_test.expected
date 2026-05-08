@@ -154,5 +154,15 @@ T{ $8537 S>D -> $8537 -1 }T
  ok 
 
  ok 
+\ WITHIN
+ ok 
+T{  1 -5  5 WITHIN -> TRUE }T
+ ok 
+T{ -5  1  5 WITHIN -> FALSE }T
+ ok 
+T{  1  5 -5 WITHIN -> FALSE }T
+ ok 
+
+ ok 
 DONE
 ###DONE###

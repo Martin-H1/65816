@@ -187,11 +187,7 @@ list by name" section. Subtracts 2 from addresses to compensate for NEXT
 pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 
 TODO items carried forward:
-* Investigate using compiler security in other control structures e.g
-  DO...LOOP / +LOOP using security number 3
-    I and J don't need it because they're not involved in branching.
-    LEAVE shouldn't use it because it can be embedded within an IF e.g.
-      DO...<do-stuff>...IF LEAVE THEN, so it's unclear which it should check.
+* Sort out the extra cell in CREATE using DOVAR.
 * Stretch Goal 1 Implement the CORE-EXT words: .(, .R, :NONAME, ACTION-OF,
   BUFFER:, C", DEFER, DEFER!, DEFER@, ERASE, HOLDS, IS, REFILL, RESTORE-INPUT,
   S\", SAVE-INPUT, SOURCE-ID, TO, U.R, UNUSED, VALUE, WITHIN, [COMPILE]

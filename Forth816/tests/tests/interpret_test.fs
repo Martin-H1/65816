@@ -22,4 +22,14 @@ T{ 1 -> 1 }T
 T{ 2 3 + -> 5 }T
 T{ -1 ABS -> 1 }T
 
+\ CHAR [CHAR]
+
+T{ CHAR X     -> $58 }T
+T{ CHAR HELLO -> $48 }T
+
+T{ : GC1 [CHAR] X     ; -> }T
+T{ : GC2 [CHAR] HELLO ; -> }T
+T{ GC1 -> $58 }T
+T{ GC2 -> $48 }T
+
 DONE

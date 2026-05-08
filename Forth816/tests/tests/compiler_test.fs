@@ -58,4 +58,16 @@ T{ BL -> 32 }T
 T{ 0 ?DUP -> 0 }T
 T{ 5 ?DUP -> 5 5 }T
 
+\ COMPILE
+T{ : [c1] [COMPILE] DUP ; IMMEDIATE -> }T
+T{ 123 [c1] -> 123 123 }T
+
+\ POSTPONE
+T{ : GT4 POSTPONE GT1 ; IMMEDIATE -> }T
+T{ : GT5 GT4 ; -> }T
+T{ GT5 -> 123 }T
+T{ : GT6 345 ; IMMEDIATE -> }T
+T{ : GT7 POSTPONE GT6 ; -> }T
+T{ GT7 -> 345 }T
+
 DONE

@@ -24,10 +24,11 @@ T{ $FEED STORE-VAR ! STORE-VAR @ -> $FEED }T
  ok 
 \ C@
  ok 
-CREATE CFETCH-BUF $43 C, $40 C,
+VARIABLE CFETCH-BUF
+ ok 
+$0043 CFETCH-BUF !
  ok 
 T{ CFETCH-BUF C@ -> $43 }T
-INCORRECT RESULT: 
  ok 
 
  ok 
@@ -43,17 +44,17 @@ T{ $24 CSTORE-VAR C! CSTORE-VAR C@ -> $24 }T
  ok 
 \ 2@
  ok 
-CREATE TWOFETCH-BUF $FEED , $BEEF ,
+2VARIABLE TWOFETCH-BUF
+ ok 
+$FEED $BEEF TWOFETCH-BUF 2!
  ok 
 T{ TWOFETCH-BUF 2@ -> $FEED $BEEF }T
-INCORRECT RESULT: 
-INCORRECT RESULT: 
  ok 
 
  ok 
 \ 2!
  ok 
-CREATE TWOSTORE-BUF 0 , 0 ,
+2VARIABLE TWOSTORE-BUF
  ok 
 T{ $FEED $BEEF TWOSTORE-BUF 2!
  ok 
@@ -77,11 +78,31 @@ T{ $0057 CHAR+ -> $0058 }T
  ok 
 
  ok 
-\ MOVE
+VARIABLE MOVE-SRC 6 ALLOT
  ok 
-CREATE MOVE-SRC  $48 C, $65 C, $6C C, $6C C, $6F C, $21 C, $20 C, $20 C,
+MOVE-SRC $48 C!
  ok 
-CREATE MOVE-DST  $20 C, $20 C, $20 C, $20 C, $20 C, $20 C, $20 C, $20 C,
+MOVE-SRC 1 CHARS + $65 C!
+ ok 
+MOVE-SRC 2 CHARS + $6C C!
+ ok 
+MOVE-SRC 3 CHARS + $6C C!
+ ok 
+MOVE-SRC 4 CHARS + $6F C!
+ ok 
+MOVE-SRC 5 CHARS + $21 C!
+ ok 
+MOVE-SRC 6 CHARS + $20 C!
+ ok 
+MOVE-SRC 7 CHARS + $20 C!
+ ok 
+
+ ok 
+VARIABLE MOVE-DST 6 ALLOT
+ ok 
+MOVE-DST 8 $20 FILL
+ ok 
+
  ok 
 T{ MOVE-SRC MOVE-DST 8 MOVE
  ok 
@@ -91,7 +112,7 @@ T{ MOVE-SRC MOVE-DST 8 MOVE
  ok 
 \ FILL
  ok 
-CREATE FILL-DST  $20 C, $20 C, $20 C, $20 C, $20 C, $20 C, $20 C, $20 C,
+VARIABLE FILL-DST 6 ALLOT
  ok 
 T{ FILL-DST 8 $24 FILL
  ok 
@@ -100,6 +121,22 @@ T{ FILL-DST 8 $24 FILL
 T{ FILL-DST 1 CHARS + C@ -> $24 }T
  ok 
 T{ FILL-DST 7 CHARS + C@ -> $24 }T
+ ok 
+
+ ok 
+\ ERASE
+ ok 
+VARIABLE ERASE-BUF 6 ALLOT
+ ok 
+ERASE-BUF 8 $FF FILL       \ initialize to $FF
+ ok 
+T{ ERASE-BUF 8 ERASE
+ ok 
+   ERASE-BUF C@ -> 0 }T
+ ok 
+T{ ERASE-BUF 3 CHARS + C@ -> 0 }T
+ ok 
+T{ ERASE-BUF 7 CHARS + C@ -> 0 }T
  ok 
 
  ok 

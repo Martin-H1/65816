@@ -435,7 +435,7 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;==============================================================================
-; SECTION 3: ARITHMETIC PRIMITIVES
+; SECTION 3: ARITHMETIC CONSTANTS AND PRIMITIVES
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
@@ -453,9 +453,65 @@ calc_depth:     TXA
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; MIN-INT ( -- n ) pushes lowest single precision integer
+;------------------------------------------------------------------------------
+        HEADER  "MIN-INT", MININT_ENTRY, MININT_CFA, 0, ZERO_ENTRY
+        CODEPTR MININT_CODE
+        PUBLIC  MININT_CODE
+        .a16
+        .i16
+                LDA     #$8000
+                PUSH
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; MAX-INT ( -- n ) pushes highest single precision integer
+;------------------------------------------------------------------------------
+        HEADER  "MAX-INT", MAXINT_ENTRY, MAXINT_CFA, 0, MININT_ENTRY
+        CODEPTR MAXINT_CODE
+        PUBLIC  MAXINT_CODE
+        .a16
+        .i16
+                LDA     #$7FFF
+                PUSH
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; MIN-2INT ( -- d ) pushes lowest single precision integer
+;------------------------------------------------------------------------------
+        HEADER  "MIN-2INT", MINTWOINT_ENTRY, MINTWOINT_CFA, 0, MAXINT_ENTRY
+        CODEPTR MINTWOINT_CODE
+        PUBLIC  MINTWOINT_CODE
+        .a16
+        .i16
+                LDA     #$0000
+                PUSH
+                LDA     #$8000
+                PUSH
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; MAX-2INT ( -- d ) pushes highest single precision integer
+;------------------------------------------------------------------------------
+        HEADER  "MAX-2INT", MAXTWOINT_ENTRY, MAXTWOINT_CFA, 0, MINTWOINT_ENTRY
+        CODEPTR MAXTWOINT_CODE
+        PUBLIC  MAXTWOINT_CODE
+        .a16
+        .i16
+                LDA     #$FFFF
+                PUSH
+                LDA     #$7FFF
+                PUSH
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; + ( a b -- a+b )
 ;------------------------------------------------------------------------------
-        HEADER  "+", PLUS_ENTRY, PLUS_CFA, 0, ZERO_ENTRY
+        HEADER  "+", PLUS_ENTRY, PLUS_CFA, 0, MAXTWOINT_ENTRY
         CODEPTR PLUS_CODE
         PUBLIC  PLUS_CODE
         .a16
@@ -1097,11 +1153,43 @@ DABS_DONE:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; D2* ( d -- d*2 ) double shift left.
+; https://forth-standard.org/standard/double/DTwoTimes
+;------------------------------------------------------------------------------
+        HEADER  "D2*", DTWOSTAR_ENTRY, DTWOSTAR_CFA, 0, TWOSLASH_ENTRY
+        CODEPTR DOCOL
+        .word   TWODUP_CFA
+        .word   DPLUS_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; D2/ ( d -- d/2 ) double arithmetic right shift.
+; https://forth-standard.org/standard/double/DTwoDiv
+;------------------------------------------------------------------------------
+        HEADER  "D2/", DTWOSLASH_ENTRY, DTWOSLASH_CFA, 0, DTWOSTAR_ENTRY
+        CODEPTR DOCOL
+        .word   DUP_CFA
+        .word   LIT_CFA
+        .word   1
+        .word   AND_CFA
+        .word   LIT_CFA
+        .word   15
+        .word   LSHIFT_CFA
+        .word   TOR_CFA
+        .word   TWOSLASH_CFA
+        .word   SWAP_CFA
+        .word   TWOSLASH_CFA
+        .word   RFROM_CFA
+        .word   OR_CFA
+        .word   SWAP_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; S>D ( n -- d ) Convert the number n to the double-cell number d with the
 ; same numerical value.
 ; https://forth-standard.org/standard/core/StoD
 ;------------------------------------------------------------------------------
-        HEADER  "S>D", STOD_ENTRY, STOD_CFA, 0, TWOSLASH_ENTRY
+        HEADER  "S>D", STOD_ENTRY, STOD_CFA, 0, DTWOSLASH_ENTRY
         CODEPTR STOD_CODE
         PUBLIC  STOD_CODE
         .a16
@@ -1427,10 +1515,30 @@ MSTAR_DONE:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; D0= ( ud_lo ud_hi -- flag ) true if double is zero
+; https://forth-standard.org/standard/double/DZeroEqual
+;------------------------------------------------------------------------------
+        HEADER  "D0=", DZEROEQ_ENTRY, DZEROEQ_CFA, 0, DEQ_ENTRY
+        CODEPTR DOCOL
+        .word   OR_CFA
+        .word   ZEROEQ_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; D0< ( ud_lo ud_hi -- flag ) true if double is negative
+; https://forth-standard.org/standard/double/DZeroless
+;------------------------------------------------------------------------------
+        HEADER  "D0<", DZEROLESS_ENTRY, DZEROLESS_CFA, 0, DZEROEQ_ENTRY
+        CODEPTR DOCOL
+        .word   NIP_CFA
+        .word   ZEROLESS_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; DU< ( ud1_lo ud1_hi ud2_lo ud2_hi -- flag )
 ; Unsigned 32-bit less than.
 ;------------------------------------------------------------------------------
-        HEADER  "DU<", DULESS_ENTRY, DULESS_CFA, 0, DEQ_ENTRY
+        HEADER  "DU<", DULESS_ENTRY, DULESS_CFA, 0, DZEROLESS_ENTRY
         CODEPTR DULESS_CODE
         PUBLIC  DULESS_CODE
         .a16
@@ -1496,6 +1604,55 @@ MSTAR_DONE:
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; DMAX ( d1 d2 -- d ) larger of two doubles
+; https://forth-standard.org/standard/double/DMAX
+;------------------------------------------------------------------------------
+        HEADER  "DMAX", DMAX_ENTRY, DMAX_CFA, 0, DLESS_ENTRY
+        CODEPTR DOCOL
+        .word   TWOOVER_CFA
+        .word   TWOOVER_CFA
+        .word   DLESS_CFA
+        .word   ZBRANCH_CFA
+        .word   DMAX_SKIP
+        .word   TWOSWAP_CFA
+DMAX_SKIP:
+        .word   TWODROP_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; DMIN ( d1 d2 -- d ) smaller of two doubles
+; https://forth-standard.org/standard/double/DMIN
+;------------------------------------------------------------------------------
+        HEADER  "DMIN", DMIN_ENTRY, DMIN_CFA, 0, DMAX_ENTRY
+        CODEPTR DOCOL
+        .word   TWOOVER_CFA
+        .word   TWOOVER_CFA
+        .word   DLESS_CFA
+        .word   ZBRANCH_CFA
+        .word   DMIN_ELSE
+        .word   TWODROP_CFA
+        .word   BRANCH_CFA
+        .word   DMIN_THEN
+DMIN_ELSE:
+        .word   TWOSWAP_CFA
+        .word   TWODROP_CFA
+DMIN_THEN:
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; WITHIN ( n lo hi -- flag ) true if lo <= n < hi
+;------------------------------------------------------------------------------
+        HEADER  "WITHIN", WITHIN_ENTRY, WITHIN_CFA, 0, DMIN_ENTRY
+        CODEPTR DOCOL
+        .word   OVER_CFA
+        .word   MINUS_CFA
+        .word   TOR_CFA
+        .word   MINUS_CFA
+        .word   RFROM_CFA
+        .word   ULESS_CFA
+        .word   EXIT_CFA
+
 ;==============================================================================
 ; SECTION 5: LOGIC PRIMITIVES
 ;==============================================================================
@@ -1503,7 +1660,7 @@ MSTAR_DONE:
 ;------------------------------------------------------------------------------
 ; TRUE ( -- TRUE )
 ;------------------------------------------------------------------------------
-        HEADER  "TRUE", TRUE_ENTRY, TRUE_CFA, 0, DLESS_ENTRY
+        HEADER  "TRUE", TRUE_ENTRY, TRUE_CFA, 0, WITHIN_ENTRY
         CODEPTR TRUE_CODE
         PUBLIC  TRUE_CODE
         .a16
@@ -1710,28 +1867,33 @@ MSTAR_DONE:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; 2@ ( addr -- d ) fetch double cell (low at addr, high at addr+2)
+; 2@ ( a-addr -- x1 x2 ) Fetch the cell pair x1 x2 stored at a-addr. x2 is
+; stored at a-addr and x1 at the next consecutive cell. It is equivalent to
+; the sequence DUP CELL+ @ SWAP @.
+; https://forth-standard.org/standard/core/TwoFetch
 ;------------------------------------------------------------------------------
         HEADER  "2@", TWOFETCH_ENTRY, TWOFETCH_CFA, 0, CSTORE_ENTRY
         CODEPTR TWOFETCH_CODE
         PUBLIC  TWOFETCH_CODE
         .a16
         .i16
-                PEEK                    ; addr
+                PEEK                    ; peek addr → SCRATCH0
                 STA     SCRATCH0
-                LDA     (SCRATCH0)      ; low cell
-                PUT                     ; future NOS = low
-                LDA     SCRATCH0
                 CLC
-                ADC     #CELL_SIZE
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; high cell
-                PUSH                    ; TOS = high
+                ADC     #CELL_SIZE      ; addr+2 → SCRATCH1 (carry now clear)
+                STA     SCRATCH1
+                LDA     (SCRATCH1)      ; high cell of d
+                PUT
+                LDA     (SCRATCH0)      ; low cell of d
+                PUSH
                 NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; 2! ( d addr -- ) store double cell
+; 2! ( x1 x2 a-addr -- ) Store the cell pair x1 x2 at a-addr, with x2 at
+; a-addr and x1 at the next consecutive cell. It is equivalent to the sequence
+; SWAP OVER ! CELL+ !.
+; https://forth-standard.org/standard/core/TwoStore
 ;------------------------------------------------------------------------------
         HEADER  "2!", TWOSTORE_ENTRY, TWOSTORE_CFA, 0, TWOFETCH_ENTRY
         CODEPTR TWOSTORE_CODE
@@ -1848,6 +2010,15 @@ MSTAR_DONE:
                 NEXT
         ENDPUBLIC
 
+;------------------------------------------------------------------------------
+; ERASE ( addr u -- ) fill u bytes starting at addr with zero
+;------------------------------------------------------------------------------
+        HEADER  "ERASE", ERASE_ENTRY, ERASE_CFA, 0, FILL_ENTRY
+        CODEPTR DOCOL
+        .word   ZERO_CFA
+        .word   FILL_CFA                ; compile LIT
+        .word   EXIT_CFA
+
 ;==============================================================================
 ; SECTION 7: UART I/O PRIMITIVES
 ;==============================================================================
@@ -1855,7 +2026,7 @@ MSTAR_DONE:
 ;------------------------------------------------------------------------------
 ; EMIT ( char -- ) transmit character via HAL
 ;------------------------------------------------------------------------------
-        HEADER  "EMIT", EMIT_ENTRY, EMIT_CFA, 0, FILL_ENTRY
+        HEADER  "EMIT", EMIT_ENTRY, EMIT_CFA, 0, ERASE_ENTRY
         CODEPTR EMIT_CODE
         PUBLIC  EMIT_CODE
         .a16
@@ -2346,9 +2517,18 @@ MSTAR_DONE:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; BUFFER: ( u "name" -- ) create a buffer of u bytes
+;------------------------------------------------------------------------------
+        HEADER  "BUFFER:", BUFFERCOL_ENTRY, BUFFERCOL_CFA, 0, ALLOT_ENTRY
+        CODEPTR DOCOL
+        .word   CREATE_CFA
+        .word   ALLOT_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; , ( val -- ) compile cell into dictionary
 ;------------------------------------------------------------------------------
-        HEADER  ",", COMMA_ENTRY, COMMA_CFA, 0, ALLOT_ENTRY
+        HEADER  ",", COMMA_ENTRY, COMMA_CFA, 0, BUFFERCOL_ENTRY
         CODEPTR COMMA_CODE
         PUBLIC  COMMA_CODE
         .a16
@@ -3030,11 +3210,23 @@ ABORTQUOTE_CLOOP:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; .( "text" ) Parse and display the text delimited by .( and )
+; https://forth-standard.org/standard/core/Dotp
+;------------------------------------------------------------------------------
+        HEADER  ".(", DOTPAREN_ENTRY, DOTPAREN_CFA, F_IMMEDIATE, ABORTQUOTE_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   ')'
+        .word   PARSE_CFA               ; ( c-addr u ) raw, no uppercasing
+        .word   TYPE_CFA                ; ( c-addr ) discard length
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; CHAR ( "<spaces>name" -- char ) skip leading space delimiters. Parse name
 ; delimited by a space. Put the value of its first character onto the stack.
 ; https://forth-standard.org/standard/core/CHAR
 ;------------------------------------------------------------------------------
-        HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, ABORTQUOTE_ENTRY
+        HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, DOTPAREN_ENTRY
         CODEPTR DOCOL
         .word   BL_CFA
         .word   PARSE_CFA               ; ( c-addr u ) raw, no uppercasing
@@ -5211,7 +5403,7 @@ SEMICOLON_BODY:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; VARIABLE ( -- ) parse name, create variable definition
+; VARIABLE ( "name" -- ) parse name, create variable definition
 ; Runtime: pushes address of body cell onto stack
 ;------------------------------------------------------------------------------
         HEADER  "VARIABLE", VARIABLE_ENTRY, VARIABLE_CFA, 0, SEMICOLON_ENTRY
@@ -5229,7 +5421,7 @@ VARIABLE_BODY:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; CONSTANT ( n -- ) parse name, create constant definition
+; CONSTANT ( n "name" -- ) parse name, create constant definition
 ; Runtime: pushes stored value onto stack
 ;------------------------------------------------------------------------------
         HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, VARIABLE_ENTRY
@@ -5246,11 +5438,39 @@ CONSTANT_BODY:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; 2VARIABLE ( d "name" -- ) parse name, create variable double definition
+; https://forth-standard.org/standard/double/TwoVARIABLE
+;------------------------------------------------------------------------------
+        HEADER  "2VARIABLE", TWOVARIABLE_ENTRY, TWOVARIABLE_CFA, 0, CONSTANT_ENTRY
+        CODEPTR DOCOL
+        .word   CREATE_CFA            ; ( n ) build header
+        .word   ZERO_CFA
+        .word   COMMA_CFA               ; write DOVAR at CFA
+        .word   ZERO_CFA
+        .word   COMMA_CFA               ; allot and initialize one cell
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; 2CONSTANT ( d "name" -- ) parse name, create constant double definition
+; Runtime: pushes stored value onto stack
+; https://forth-standard.org/standard/double/TwoCONSTANT
+;------------------------------------------------------------------------------
+        HEADER  "2CONSTANT", TWOCONSTANT_ENTRY, TWOCONSTANT_CFA, 0, TWOVARIABLE_ENTRY
+        CODEPTR DOCOL
+        .word   CREATE_CFA              ; ( n ) build header
+        .word   SWAP_CFA                ; place in low high order
+        .word   COMMA_CFA               ; store constant low value in body
+        .word   COMMA_CFA               ; store constant high value in body
+        .word   DODOES_CFA
+        .word   TWOFETCH_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; [ ( -- ) enter interpretation state (immediate)
 ; Sets STATE = 0
 ; https://forth-standard.org/standard/core/Bracket
 ;------------------------------------------------------------------------------
-        HEADER  "[", LBRACKET_ENTRY, LBRACKET_CFA, F_IMMEDIATE, CONSTANT_ENTRY
+        HEADER  "[", LBRACKET_ENTRY, LBRACKET_CFA, F_IMMEDIATE, TWOCONSTANT_ENTRY
         CODEPTR LBRACKET_CODE
         PUBLIC  LBRACKET_CODE
         .a16
@@ -5333,12 +5553,26 @@ postpone_notfound_msg:
         .byte   "POSTPONE: word not found", $0D, $0A, $00
 
 ;------------------------------------------------------------------------------
+; [COMPILE] ( "<spaces>name" -- ) deprecated, but included for compatibility.
+; It's essentially the same as POSTPONE
+; https://forth-standard.org/standard/core/BracketCOMPILE
+;------------------------------------------------------------------------------
+        HEADER  "[COMPILE]", BRCOMPILE_ENTRY, BRCOMPILE_CFA, F_IMMEDIATE, POSTPONE_ENTRY
+        CODEPTR DOCOL
+        .word   BL_CFA
+        .word   WORD_CFA
+        .word   FIND_CFA
+        .word   DROP_CFA
+        .word   COMPILECOMMA_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; IMMEDIATE ( -- ) Make the most recent definition an immediate word. An
 ; ambiguous condition exists if the most recent definition does not have a
 ; name or if it was defined as a SYNONYM.
 ; https://forth-standard.org/standard/core/IMMEDIATE
 ;------------------------------------------------------------------------------
-        HEADER  "IMMEDIATE", IMMEDIATE_ENTRY, IMMEDIATE_CFA, 0, POSTPONE_ENTRY
+        HEADER  "IMMEDIATE", IMMEDIATE_ENTRY, IMMEDIATE_CFA, 0, BRCOMPILE_ENTRY
         CODEPTR DOCOL
         .word   LATEST_CFA
         .word   FETCH_CFA              ; ( header-addr )
@@ -5918,9 +6152,30 @@ ENDCASE_LEAVE:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; HOLDS ( c-addr u -- )
+; https://forth-standard.org/standard/core/HOLDS
+;------------------------------------------------------------------------------
+        HEADER  "HOLDS", HOLDS_ENTRY, HOLDS_CFA, 0, HOLD_ENTRY
+        CODEPTR DOCOL
+HOLDS_LOOP:
+        .word   DUP_CFA
+        .word   ZBRANCH_CFA
+        .word   HOLDS_DONE
+        .word   ONEMINUS_CFA
+        .word   TWODUP_CFA
+        .word   PLUS_CFA
+        .word   CFETCH_CFA
+        .word   HOLD_CFA
+        .word   BRANCH_CFA
+        .word   HOLDS_LOOP
+HOLDS_DONE:
+        .word   TWODROP_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; # ( ud -- ud ) format one digit
 ;------------------------------------------------------------------------------
-        HEADER  "#", HASH_ENTRY, HASH_CFA, 0, HOLD_ENTRY
+        HEADER  "#", HASH_ENTRY, HASH_CFA, 0, HOLDS_ENTRY
         CODEPTR DOCOL
         .word   BASE_CFA
         .word   FETCH_CFA              ; ( ud base )

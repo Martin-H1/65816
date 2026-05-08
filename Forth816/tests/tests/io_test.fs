@@ -43,4 +43,15 @@ T{ 1234. D. -> }T
 T{ -1. D. -> }T
 T{ 100000. D. -> }T
 
+
+\ Pictured I/O Tests
+: GP1 <# $41 HOLD $42 HOLD 0 0 #> S" BA" COMPARE ;
+
+T{ GP1 -> 0 }T
+
+T{ 0. <# S" Test" HOLDS #> S" Test" COMPARE -> 0 }T
+
+.( hello }
+: foo 1 .( world ) ;
+
 DONE

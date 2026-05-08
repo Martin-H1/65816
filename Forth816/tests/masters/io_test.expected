@@ -89,5 +89,27 @@ T{ 100000. D. -> }T
 100000  ok 
 
  ok 
+
+ ok 
+\ Pictured I/O Tests
+ ok 
+: GP1 <# $41 HOLD $42 HOLD 0 0 #> S" BA" COMPARE ;
+ ok 
+
+ ok 
+T{ GP1 -> 0 }T
+ ok 
+
+ ok 
+T{ 0. <# S" Test" HOLDS #> S" Test" COMPARE -> 0 }T
+ ok 
+
+ ok 
+.( hello }
+hello } ok 
+: foo 1 .( world ) ;
+world  ok 
+
+ ok 
 DONE
 ###DONE###

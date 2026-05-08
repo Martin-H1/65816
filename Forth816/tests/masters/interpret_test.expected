@@ -46,5 +46,25 @@ T{ -1 ABS -> 1 }T
  ok 
 
  ok 
+\ CHAR [CHAR]
+ ok 
+
+ ok 
+T{ CHAR X     -> $58 }T
+ ok 
+T{ CHAR HELLO -> $48 }T
+ ok 
+
+ ok 
+T{ : GC1 [CHAR] X     ; -> }T
+ ok 
+T{ : GC2 [CHAR] HELLO ; -> }T
+ ok 
+T{ GC1 -> $58 }T
+ ok 
+T{ GC2 -> $48 }T
+ ok 
+
+ ok 
 DONE
 ###DONE###

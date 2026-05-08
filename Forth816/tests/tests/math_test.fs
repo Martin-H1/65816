@@ -76,4 +76,9 @@ T{ $0537 2/ -> $029B }T
 T{ $0537 S>D -> $0537 0 }T
 T{ $8537 S>D -> $8537 -1 }T
 
+\ WITHIN
+T{  1 -5  5 WITHIN -> TRUE }T
+T{ -5  1  5 WITHIN -> FALSE }T
+T{  1  5 -5 WITHIN -> FALSE }T
+
 DONE
