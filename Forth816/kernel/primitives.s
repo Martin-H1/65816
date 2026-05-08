@@ -251,9 +251,22 @@ QDUP_DONE:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; 2ROT ( d1_lo d1_hi d2_lo d2_hi d3_lo d3_hi -- d2_lo d2_hi d3_lo d3_hi d1_lo d1_hi )
+;------------------------------------------------------------------------------
+        HEADER  "2ROT", TWOROT_ENTRY, TWOROT_CFA, 0, TWOOVER_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   5
+        .word   ROLL_CFA               ; ( d1_hi d2_lo d2_hi d3_lo d3_hi d1_lo )
+        .word   LIT_CFA
+        .word   5
+        .word   ROLL_CFA               ; ( d2_lo d2_hi d3_lo d3_hi d1_lo d1_hi )
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; DEPTH ( -- n ) number of items on parameter stack
 ;------------------------------------------------------------------------------
-        HEADER  "DEPTH", DEPTH_ENTRY, DEPTH_CFA, 0, TWOOVER_ENTRY
+        HEADER  "DEPTH", DEPTH_ENTRY, DEPTH_CFA, 0, TWOROT_ENTRY
         CODEPTR DEPTH_CODE
         PUBLIC  DEPTH_CODE
         .a16
@@ -1654,7 +1667,7 @@ DMIN_THEN:
         .word   EXIT_CFA
 
 ;==============================================================================
-; SECTION 5: LOGIC PRIMITIVES
+; SECTION 5: LOGIC CONSTANTS AND PRIMITIVES
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
@@ -5438,10 +5451,94 @@ CONSTANT_BODY:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; VALUE ( n "name" -- ) create a named value initialized to n
+; Runtime: pushes stored value onto stack
+;------------------------------------------------------------------------------
+        HEADER  "VALUE", VALUE_ENTRY, VALUE_CFA, 0, CONSTANT_ENTRY
+        CODEPTR DOCOL
+        .word   BL_CFA
+        .word   WORD_CFA                ; ( n addr ) parse name
+        .word   DOCREATE_CFA            ; ( n ) build header
+        .word   LIT_CFA
+        .word   DOVAL                   ; code pointer for values
+        .word   COMMA_CFA               ; write DOVAL at CFA
+        .word   COMMA_CFA               ; store initial value in body
+        .word   REVEAL_CFA              ; clear F_HIDDEN
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; TO ( n "name" -- ) store n into VALUE or 2VALUE
+; Aborts if target word is not a VALUE or 2VALUE.
+;------------------------------------------------------------------------------
+        HEADER  "TO", TO_ENTRY, TO_CFA, F_IMMEDIATE, VALUE_ENTRY
+        CODEPTR DOCOL
+        .word   BL_CFA
+        .word   WORD_CFA                ; ( n addr )
+        .word   FIND_CFA                ; ( n xt flag )
+        .word   DROP_CFA                ; ( n xt )
+        .word   DUP_CFA                 ; ( n xt xt )
+        .word   FETCH_CFA               ; ( n xt codeptr )
+        .word   DUP_CFA                 ; ( n xt codeptr codeptr )
+        .word   LIT_CFA
+        .word   DOVAL
+        .word   EQUAL_CFA               ; ( n xt codeptr is-val? )
+        .word   OVER_CFA                ; ( n xt codeptr is-val? codeptr )
+        .word   LIT_CFA
+        .word   DO2VAL
+        .word   EQUAL_CFA               ; ( n xt codeptr is-val? is-2val? )
+        .word   OR_CFA                  ; ( n xt codeptr is-val-or-2val? )
+        .word   ZBRANCH_CFA
+        .word   TO_ERROR
+        ; Valid VALUE or 2VALUE — check which one
+        .word   LIT_CFA
+        .word   DOVAL
+        .word   EQUAL_CFA               ; ( n xt is-val? )
+        .word   ZBRANCH_CFA
+        .word   TO_DOUBLE
+        ; Single VALUE path
+        .word   CELLPLUS_CFA            ; ( n body )
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZBRANCH_CFA
+        .word   TO_INTERPRET_SINGLE
+        ; Compile single store
+        .word   LITERAL_CFA             ; compile LIT body
+        .word   LIT_CFA
+        .word   STORE_CFA
+        .word   COMMA_CFA               ; compile !
+        .word   EXIT_CFA
+TO_INTERPRET_SINGLE:
+        .word   STORE_CFA               ; store n at body
+        .word   EXIT_CFA
+TO_DOUBLE:
+        ; 2VALUE path
+        .word   CELLPLUS_CFA            ; ( d_lo d_hi body )
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZBRANCH_CFA
+        .word   TO_INTERPRET_DOUBLE
+        ; Compile double store
+        .word   LITERAL_CFA             ; compile LIT body
+        .word   LIT_CFA
+        .word   TWOSTORE_CFA
+        .word   COMMA_CFA               ; compile 2!
+        .word   EXIT_CFA
+TO_INTERPRET_DOUBLE:
+        .word   TWOSTORE_CFA            ; store d at body
+        .word   EXIT_CFA
+TO_ERROR:
+        .word   TWODROP_CFA             ; drop codeptr and xt
+        .word   DOABORTQUOTE_CFA
+        .word   11
+        .byte   "not a VALUE"
+        .align  CELL_SIZE
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; 2VARIABLE ( d "name" -- ) parse name, create variable double definition
 ; https://forth-standard.org/standard/double/TwoVARIABLE
 ;------------------------------------------------------------------------------
-        HEADER  "2VARIABLE", TWOVARIABLE_ENTRY, TWOVARIABLE_CFA, 0, CONSTANT_ENTRY
+        HEADER  "2VARIABLE", TWOVARIABLE_ENTRY, TWOVARIABLE_CFA, 0, TO_ENTRY
         CODEPTR DOCOL
         .word   CREATE_CFA            ; ( n ) build header
         .word   ZERO_CFA
@@ -5458,7 +5555,6 @@ CONSTANT_BODY:
         HEADER  "2CONSTANT", TWOCONSTANT_ENTRY, TWOCONSTANT_CFA, 0, TWOVARIABLE_ENTRY
         CODEPTR DOCOL
         .word   CREATE_CFA              ; ( n ) build header
-        .word   SWAP_CFA                ; place in low high order
         .word   COMMA_CFA               ; store constant low value in body
         .word   COMMA_CFA               ; store constant high value in body
         .word   DODOES_CFA
@@ -5466,11 +5562,30 @@ CONSTANT_BODY:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; 2VALUE ( x1 x2 "<spaces>name" -- ) Skip leading space delimiters. Parse name
+; delimited by a space. Create a definition for name with the execution
+; semantics of 2@, with an initial value of x1 x2.
+; https://forth-standard.org/standard/double/TwoVALUE
+;------------------------------------------------------------------------------
+        HEADER  "2VALUE", TWOVALUE_ENTRY, TWOVALUE_CFA, 0, TWOCONSTANT_ENTRY
+        CODEPTR DOCOL
+        .word   BL_CFA
+        .word   WORD_CFA                ; ( d_lo d_hi addr )
+        .word   DOCREATE_CFA            ; ( d_lo d_hi )
+        .word   LIT_CFA
+        .word   DO2VAL
+        .word   COMMA_CFA              ; write DO2VAL at CFA
+        .word   COMMA_CFA              ; store d_lo at CFA+2
+        .word   COMMA_CFA              ; store d_hi at CFA+4
+        .word   REVEAL_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; [ ( -- ) enter interpretation state (immediate)
 ; Sets STATE = 0
 ; https://forth-standard.org/standard/core/Bracket
 ;------------------------------------------------------------------------------
-        HEADER  "[", LBRACKET_ENTRY, LBRACKET_CFA, F_IMMEDIATE, TWOCONSTANT_ENTRY
+        HEADER  "[", LBRACKET_ENTRY, LBRACKET_CFA, F_IMMEDIATE, TWOVALUE_ENTRY
         CODEPTR LBRACKET_CODE
         PUBLIC  LBRACKET_CODE
         .a16

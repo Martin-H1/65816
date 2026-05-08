@@ -98,7 +98,7 @@ TRACE_EN:       .res 2                  ; Trace enable flag
 ;
 ; On entry: W = CFA of the word being entered
 ; Action:   Push current IP (Y) onto return stack,
-;           set IP to first cell of body (W+2),
+;           set IP to first cell of body (W+CELL_SIZE),
 ;           then NEXT.
 ;------------------------------------------------------------------------------
         PUBLIC  DOCOL
@@ -107,7 +107,7 @@ TRACE_EN:       .res 2                  ; Trace enable flag
                 PHY                     ; Push IP onto return stack
                 LDA     W               ; W = CFA of this word
                 TAY                     ; IP = body start
-                INY                     ; Body starts at CFA+2
+                INY                     ; Body starts at CFA+CELL_SIZE
                 INY
                 NEXT                    ; Execute first body word
         ENDPUBLIC
@@ -122,10 +122,8 @@ TRACE_EN:       .res 2                  ; Trace enable flag
         .i16
                 LDA     W               ; CFA
                 CLC
-                ADC     #2              ; Address of body
-                DEX
-                DEX
-                STA     0,X             ; Push onto parameter stack
+                ADC     #CELL_SIZE      ; Address of body
+                PUSH                    ; Push onto parameter stack
                 NEXT
         ENDPUBLIC
 
@@ -138,12 +136,44 @@ TRACE_EN:       .res 2                  ; Trace enable flag
         .a16
         .i16
                 PHY
-                LDY     #2
-                LDA     (W),Y           ; Fetch constant value at CFA+2
+                LDY     #CELL_SIZE
+                LDA     (W),Y           ; Fetch constant value at CFA+CELL_SIZE
                 PLY
-                DEX
-                DEX
-                STA     0,X             ; Push value
+                PUSH                    ; Push value
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; DOVAL - Code pointer for VALUE definitions
+; Pushes the value stored at CFA+CELL_SIZE onto parameter stack.
+; Identical to DOCON since VALUE body layout is the same.
+;------------------------------------------------------------------------------
+        PUBLIC  DOVAL
+        .a16
+        .i16
+                PHY
+                LDY     #CELL_SIZE
+                LDA     (W),Y           ; fetch value at CFA+CELL_SIZE
+                PLY
+                PUSH                    ; push value
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; DO2VAL - ( - d_lo d_hi ) Code pointer for 2VALUE definitions
+; Identical behavior to 2FETCH but distinct address for TO safety check.
+;------------------------------------------------------------------------------
+        PUBLIC  DO2VAL
+        .a16
+        .i16
+                PHY
+                LDY     #2*CELL_SIZE
+                LDA     (W),Y           ; fetch d_lo at CFA+2*CELL_SIZE
+                PUSH
+                LDY     #CELL_SIZE
+                LDA     (W),Y           ; fetch d_hi at CFA+CELL_SIZE
+                PLY
+                PUSH                    ; push hi
                 NEXT
         ENDPUBLIC
 
@@ -164,18 +194,16 @@ TRACE_EN:       .res 2                  ; Trace enable flag
                 ; Push IP to return stack (we're entering a colon-like context)
                 PHY                     ; save current IP
 
-                ; Fetch DOES> code address from CFA+2 and set as new IP
-                LDY      #2
+                ; Fetch DOES> code address from CFA+CELL_SIZE and set as new IP
+                LDY      #CELL_SIZE
                 LDA      (W),Y          ; IP = DOES> code
                 TAY                     ; IP = DOES> code
 
                 ; Push body address (CFA+4) onto parameter stack
                 LDA     W
                 CLC
-                ADC     #4
-                DEX
-                DEX
-                STA     0,X             ; push body address
+                ADC     #2*CELL_SIZE
+                PUSH                    ; push body address
                 NEXT
         ENDPUBLIC
 

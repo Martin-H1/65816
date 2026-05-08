@@ -182,6 +182,8 @@ F_LENMASK       = $1F
         .global DOCOL
         .global DOVAR
         .global DOCON
+        .global DOVAL
+        .global DO2VAL
         .global DODOES
         .global RTS_CFA_LIST
 

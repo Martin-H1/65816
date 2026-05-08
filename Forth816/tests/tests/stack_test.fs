@@ -54,4 +54,10 @@ T{ 1 2 TEST>R2 -> 1 2 }T
 
 T{ 42 TESTR@ -> 42 42 }T
 
+\ ROLL
+
+\ 2ROT
+T{       1.       2. 3. 2ROT ->       2. 3.       1. }T
+T{ MAX-2INT MIN-2INT 1. 2ROT -> MIN-2INT 1. MAX-2INT }T
+
 DONE

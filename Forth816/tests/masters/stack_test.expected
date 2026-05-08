@@ -110,5 +110,17 @@ T{ 42 TESTR@ -> 42 42 }T
  ok 
 
  ok 
+\ ROLL
+ ok 
+
+ ok 
+\ 2ROT
+ ok 
+T{       1.       2. 3. 2ROT ->       2. 3.       1. }T
+ ok 
+T{ MAX-2INT MIN-2INT 1. 2ROT -> MIN-2INT 1. MAX-2INT }T
+ ok 
+
+ ok 
 DONE
 ###DONE###
