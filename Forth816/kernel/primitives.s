@@ -3089,35 +3089,23 @@ DOABORTQUOTE_CFA:
                 BEQ     @skip
 
                 ; True: fetch u from inline string header
-                LDA     0,Y             ; fetch u
+                IFETCH                  ; fetch u and IP -> first char
                 STA     SCRATCH0        ; save u
-                INY
-                INY                     ; IP -> first char
 
                 ; Push ( c-addr u )
-                DEX
-                DEX
                 TYA
-                STA     a:0,X           ; c-addr = IP
-
-                DEX
-                DEX
-                LDA     SCRATCH0
-                STA     a:0,X           ; u
+                PHY
+                LDY     SCRATCH0
+                JSR     hal_nputs
+                PLY
 
                 ; Advance IP past string bytes, aligned to even
-                TYA                     ; A = IP
-                CLC
-                ADC     SCRATCH0        ; IP + u
-                INC     A               ; round up
-                AND     #$FFFE          ; align to even
-                TAY                     ; IP updated
-
-                ; Print string via TYPE trampoline
-                PHY                     ; save updated IP
-                LDY     #RTS_CFA_LIST
-                JSR     TYPE_CODE
-                PLY                     ; restore IP (not strictly needed)
+;                TYA                     ; A = IP
+;                CLC
+;                ADC     SCRATCH0        ; IP + u
+;                INC     A               ; round up
+;                AND     #$FFFE          ; align to even
+;                TAY                     ; IP updated
 
                 ; Print newline
                 LDA     #C_RETURN
@@ -3130,10 +3118,8 @@ DOABORTQUOTE_CFA:
 
 @skip:
                 ; Skip over inline string
-                LDA     0,Y             ; fetch u
+                IFETCH                  ; fetch u and advance IP
                 STA     SCRATCH0
-                INY
-                INY                     ; past length cell
                 TYA
                 CLC
                 ADC     SCRATCH0        ; IP + u
