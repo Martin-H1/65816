@@ -2993,21 +2993,14 @@ DODOTQUOTE_CFA:
         .a16
         .i16
                 ; Y = IP, points to length cell inline in caller's thread
-                LDA     0,Y             ; fetch u
+                IFETCH                  ; fetch u and IP points to first byte
                 STA     SCRATCH0        ; save u
-                INY
-                INY                     ; IP now points to first char byte
 
-                ; Push ( c-addr u ) then call TYPE
-                DEX
-                DEX
-                TYA
-                STA     a:0,X           ; push c-addr = IP
-
-                DEX
-                DEX
-                LDA     SCRATCH0
-                STA     a:0,X           ; push u
+                TYA                     ; c-addr for hal call.
+                PHY                     ; save updated IP
+                LDY     SCRATCH0        ; u
+                JSR     hal_nputs
+                PLY                     ; restore IP
 
                 ; Advance IP past string bytes, aligned to even
                 TYA                     ; A = IP
@@ -3017,11 +3010,6 @@ DODOTQUOTE_CFA:
                 AND     #$FFFE          ; align to even
                 TAY                     ; IP updated
 
-                ; Call TYPE via trampoline
-                PHY                     ; save updated IP
-                LDY     #RTS_CFA_LIST
-                JSR     TYPE_CODE
-                PLY                     ; restore IP
                 NEXT
         ENDPUBLIC
 
