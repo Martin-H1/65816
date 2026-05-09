@@ -2091,30 +2091,10 @@ DMIN_THEN:
         .a16
         .i16
                 PHY
-                LDY     0,X             ; u
-                INX
-                INX
-                LDA     0,X             ; addr
-                INX
-                INX
-                PHX
-                PHA
-                TYX                     ; Zero count = no-op
-                BEQ     @done           ; not after INX which clobbers z flag)
-                LDY     #0000
-@loop:
-                SEP     #MEM16
-                .A8
-                LDA     (1,S),Y         ; Fetch byte
-                REP     #MEM16
-                .A16
-                AND     #$00FF
-                JSR     hal_putch
-                INY                     ; Advance pointer
-                DEX
-                BNE     @loop
-@done:          PLA                     ; Clean up stack frame
-                PLX
+                POP
+                TAY                     ; u
+                POP                     ; addr
+                JSR     hal_nputs
                 PLY
                 NEXT
         ENDPUBLIC
