@@ -3094,18 +3094,8 @@ DOABORTQUOTE_CFA:
 
                 ; Push ( c-addr u )
                 TYA
-                PHY
                 LDY     SCRATCH0
                 JSR     hal_nputs
-                PLY
-
-                ; Advance IP past string bytes, aligned to even
-;                TYA                     ; A = IP
-;                CLC
-;                ADC     SCRATCH0        ; IP + u
-;                INC     A               ; round up
-;                AND     #$FFFE          ; align to even
-;                TAY                     ; IP updated
 
                 ; Print newline
                 LDA     #C_RETURN
