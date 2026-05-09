@@ -4963,55 +4963,10 @@ print_udec:
                 LDA     0,X
                 INX
                 INX
-                JSR     print_chex
+                JSR     hal_putchex
                 LDA     #SPACE
                 JSR     hal_putch
-        NEXT
-
-        ; print_ahex - prints lower eight bits of the accumulator in hex
-        ; Inputs:
-        ;   A - byte to print
-        ; Outputs:
-        ;   A - retained
-	.proc print_ahex
-                PHA
-                PHA
-                LSR
-                LSR
-                LSR
-                LSR
-                JSR @print_nybble
-                PLA
-                JSR @print_nybble
-                PLA
-                RTS
-
-@print_nybble:
-                AND #LOWNIB
-                SED
-                CLC
-                ADC #$9990              ; Produce $90-$99 or $00-$05
-                ADC #$9940              ; Produce $30-$39 or $41-$46
-                CLD
-                jmp hal_putch
-        .endproc
-
-        ; print_chex - prints C as a 16 bit hex number to the console.
-        ; Inputs:
-        ;   C - number
-        ; Outputs:
-        ;   C - preserved
-        .proc print_chex
-                PHA
-                PHA
-                XBA
-                JSR print_ahex
-                PLA
-                JSR print_ahex
-                PLA
-                RTS
-        .endproc
-
+                NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
@@ -6696,7 +6651,7 @@ unknown_msg:    .byte "??? ", $00
                 LDA     a:TRACE_EN
                 BEQ     @done           ; FORTH_FALSE = 0, skip if off
                 TYA                     ; Print IP (Y) as 4-digit hex
-                JSR     DOTHEX_CODE::print_chex
+                JSR     hal_putchex
                 LDA     #SPACE
                 JSR     hal_putch
 @done:          RTS

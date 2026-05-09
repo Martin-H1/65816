@@ -16,6 +16,8 @@ HAL_INC = 1
 
 .import hal_lpputs	; prints a length prefixed string to the console.
 
+.import hal_nputs	; prints n characters of a string to the console.
+
 .import hal_cready	; returns true if characters are available.
 
 .import hal_getch	; returns a character from the terminal input buffer.

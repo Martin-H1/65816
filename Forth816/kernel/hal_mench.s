@@ -111,16 +111,37 @@ ENDPUBLIC
 PUBLIC hal_lpputs
 	STRPTR = 1
 	phy
-	phx
+	pha
 	pha
 	ldy #$0000
 	lda (STRPTR,S),Y	; Load the length byte
 	and #$00ff
-	tax
+	tay
+	pla
+	inc
+	jsr hal_nputs
+	pla			; Clean off stack and return
+	ply
+	rts
+ENDPUBLIC
+
+; hal_nputs - prints n bytes to the console
+; Inputs:
+;   C - address of the bytes within the current bank
+;   Y - number of bytes to print.
+; Outputs:
+;   C - preserved
+PUBLIC hal_nputs
+	STRPTR = 1
+	phy
+	phx
+	pha
+	tyx
 	beq @return		; Nothing to print if zero
-@loop:	iny
-	lda (STRPTR,S),Y
+	ldy #0000
+@loop:	lda (STRPTR,S),Y
 	jsr hal_putch
+	iny
 	dex
 	bne @loop
 @return:
