@@ -2909,7 +2909,7 @@ DOSQUOTE_ENTRY:
         .word   COUNT_ENTRY            ; Link field
         .byte   F_HIDDEN | 4           ; Flags + length (4 chars)
         .byte   "(S", $22, ")"         ; '(' 'S' '"' ')'
-        .align  2
+        .align  CELL_SIZE
 DOSQUOTE_CFA:
         CODEPTR DOSQUOTE_CODE
         PUBLIC  DOSQUOTE_CODE
@@ -2948,7 +2948,7 @@ SQUOTE_ENTRY:
         .word   DOSQUOTE_ENTRY          ; Link field
         .byte   F_IMMEDIATE | 2         ; Flags + length (2 chars)
         .byte   "S", $22                ; 'S' '"'
-        .align  2
+        .align  CELL_SIZE
 SQUOTE_CFA:
         CODEPTR DOCOL
 
@@ -3006,7 +3006,7 @@ DODOTQUOTE_ENTRY:
         .word   SQUOTE_ENTRY            ; Link field
         .byte   F_HIDDEN | 3            ; Flags + length (3 chars)
         .byte   $28, $2E, $22           ; '(' '.' '"'
-        .align  2
+        .align  CELL_SIZE
 DODOTQUOTE_CFA:
         CODEPTR DODOTQUOTE_CODE
         PUBLIC  DODOTQUOTE_CODE
@@ -3053,7 +3053,7 @@ DOTQUOTE_ENTRY:
         .word   DODOTQUOTE_ENTRY        ; Link field
         .byte   F_IMMEDIATE | 2         ; Flags + length (2 chars)
         .byte   $2E, $22                ; ."
-        .align  2
+        .align  CELL_SIZE
 DOTQUOTE_CFA:
         CODEPTR DOCOL
 
@@ -3105,7 +3105,7 @@ DOABORTQUOTE_ENTRY:
         .word   DOTQUOTE_ENTRY          ; Link field
         .byte   F_HIDDEN | 8            ; Flags + length (7 chars)
         .byte   "(ABORT", $22, ")"      ; (ABORT")
-        .align  2
+        .align  CELL_SIZE
 DOABORTQUOTE_CFA:
         CODEPTR DOABORTQUOTE_CODE
         PUBLIC  DOABORTQUOTE_CODE
@@ -3188,7 +3188,7 @@ ABORTQUOTE_ENTRY:
         .word   DOABORTQUOTE_ENTRY      ; Link field
         .byte   F_IMMEDIATE | 6         ; Flags + length (6 chars)
         .byte   "ABORT", $22            ; ABORT"
-        .align  2
+        .align  CELL_SIZE
 ABORTQUOTE_CFA:
         CODEPTR DOCOL
         .word   STATE_CFA
@@ -4493,7 +4493,7 @@ QUIT_LOOP:
 ;   +0  link field   (2 bytes) pointer to previous entry, 0 = end of chain
 ;   +2  flags|len    (1 byte)  F_HIDDEN=$40, F_IMMEDIATE=$80, F_LENMASK=$1F
 ;   +3  name chars   (len bytes)
-;       .align 2
+;       .align CELL_SIZE
 ;       CFA:         code pointer (2 bytes) <- execution token
 ;------------------------------------------------------------------------------
         HEADER  "FIND", FIND_ENTRY, FIND_CFA, 0, ACCEPT_ENTRY
@@ -5487,7 +5487,7 @@ TO_ERROR:
         .word   DOABORTQUOTE_CFA
         .word   11
         .byte   "not a VALUE"
-        .align  2
+        .align  CELL_SIZE
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5782,7 +5782,7 @@ TICK_ERR:
         .word   DOABORTQUOTE_CFA
         .word   30
         .byte   "mismatched control structure", C_RETURN, L_FEED
-        .align  2
+        .align  CELL_SIZE
         .word   NOTEQUAL_CFA           ; n1 <> n2 ?
         .word   DOABORTQUOTE_CFA
         .word   30
