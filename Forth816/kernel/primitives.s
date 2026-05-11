@@ -65,7 +65,7 @@ underflow_msg:
         PUBLIC  DUP_CODE
         .a16
         .i16
-                PEEK                    ; Load TOS
+                PEEK_TOS                ; Load TOS
                 PUSH                    ; Push copy
                 NEXT
         ENDPUBLIC
@@ -103,12 +103,12 @@ QDUP_DONE:
         PUBLIC  SWAP_CODE
         .a16
         .i16
-                PEEK                    ; b (TOS)
+                PEEK_TOS                ; b (TOS)
                 STA     SCRATCH0
-                LDA     2,X             ; a (NOS)
-                PUT                     ; TOS = a
+                PEEK_NOS                ; a (NOS)
+                PUT_TOS                 ; TOS = a
                 LDA     SCRATCH0        ; b
-                STA     2,X             ; NOS = b
+                PUT_NOS                 ; NOS = b
                 NEXT
         ENDPUBLIC
 
@@ -120,7 +120,7 @@ QDUP_DONE:
         PUBLIC  OVER_CODE
         .a16
         .i16
-                LDA     2,X             ; a (NOS)
+                PEEK_NOS                ; a (NOS)
                 PUSH                    ; Push copy of a
                 NEXT
         ENDPUBLIC
@@ -153,7 +153,7 @@ QDUP_DONE:
         .a16
         .i16
                 POP                     ; b (TOS)
-                PUT                     ; Overwrite a with b
+                PUT_TOS                 ; Overwrite a with b
                 NEXT
         ENDPUBLIC
 
@@ -165,13 +165,11 @@ QDUP_DONE:
         PUBLIC  TUCK_CODE
         .a16
         .i16
-                DEX
-                DEX
-                LDA     2,X             ; b
-                STA     0,X             ; TOS = b
+                PEEK_TOS                ; b
+                PUSH                    ; TOS = b
                 LDA     4,X             ; a
-                STA     2,X             ; NOS = a
-                LDA     0,X             ; b
+                PUT_NOS                 ; NOS = a
+                PEEK_TOS                ; b
                 STA     4,X             ; Slot below a = b
                 NEXT
         ENDPUBLIC
@@ -197,14 +195,10 @@ QDUP_DONE:
         PUBLIC  TWODUP_CODE
         .a16
         .i16
-                DEX
-                DEX
-                DEX
-                DEX
-                LDA     6,X             ; a
-                STA     2,X             ; Push a
-                LDA     4,X             ; b
-                STA     0,X             ; Push b
+                PEEK_NOS                ; a
+                PUSH                    ; Push a
+                PEEK_NOS                ; b
+                PUSH                    ; Push b
                 NEXT
         ENDPUBLIC
 
@@ -239,14 +233,10 @@ QDUP_DONE:
         PUBLIC  TWOOVER_CODE
         .a16
         .i16
-                DEX
-                DEX
-                DEX
-                DEX
-                LDA     10,X            ; a
-                STA     2,X             ; Push a (NOS)
-                LDA     8,X             ; b
-                STA     0,X             ; Push b
+                LDA     6,X             ; a
+                PUSH                    ; Push a (NOS)
+                LDA     6,X             ; b
+                PUSH                    ; Push b
                 NEXT
         ENDPUBLIC
 
@@ -393,7 +383,7 @@ calc_depth:     TXA
         .a16
         .i16
                 ; Peek at return stack top without permanently popping.
-                RPEEK                   ; Peek R@ value (A = value)
+                RPEEK_TOS               ; Peek R@ value (A = value)
                 PUSH                    ; Push copy onto parameter stack
                 NEXT
         ENDPUBLIC
@@ -532,7 +522,7 @@ calc_depth:     TXA
                 POP                     ; b
                 CLC
                 ADC     0,X             ; a + b
-                PUT                     ; Replace with result
+                PUT_TOS                 ; Replace with result
                 NEXT
         ENDPUBLIC
 
@@ -545,16 +535,12 @@ calc_depth:     TXA
         PUBLIC  PLUSSTORE_CODE
         .a16
         .i16
-                LDA     0,X             ; addr
+                POP                     ; addr
                 STA     SCRATCH0        ; save addr
-                LDA     2,X             ; n
+                POP                     ; n
                 CLC
                 ADC     (SCRATCH0)      ; n + [addr]
                 STA     (SCRATCH0)      ; store back
-                INX
-                INX
-                INX
-                INX
                 NEXT
         ENDPUBLIC
 
@@ -570,7 +556,7 @@ calc_depth:     TXA
                 SEC
                 SBC     0,X             ; a - b
                 DROP
-                PUT
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -585,16 +571,14 @@ calc_depth:     TXA
         .a16
         .i16
                 CLC
-                LDA     a:6,X           ; d1_lo
-                ADC     a:2,X           ; + d2_lo
-                STA     a:6,X           ; result_lo
-                LDA     a:4,X           ; d1_hi
-                ADC     a:0,X           ; + d2_hi + carry
-                STA     a:4,X           ; result_hi
-                INX
-                INX
-                INX
-                INX                     ; drop d2 cells
+                LDA     6,X             ; d1_lo
+                ADC     2,X             ; + d2_lo
+                STA     6,X             ; result_lo
+                LDA     4,X             ; d1_hi
+                ADC     0,X             ; + d2_hi + carry
+                STA     4,X             ; result_hi
+                DROP
+                DROP                    ; drop d2 cells
                 NEXT
         ENDPUBLIC
 
@@ -608,16 +592,14 @@ calc_depth:     TXA
         .a16
         .i16
                 SEC
-                LDA     a:6,X           ; d1_lo
-                SBC     a:2,X           ; - d2_lo
-                STA     a:6,X           ; result_lo
-                LDA     a:4,X           ; d1_hi
-                SBC     a:0,X           ; - d2_hi - borrow
-                STA     a:4,X           ; result_hi
-                INX
-                INX
-                INX
-                INX                     ; drop d2 cells
+                LDA     6,X             ; d1_lo
+                SBC     2,X             ; - d2_lo
+                STA     6,X             ; result_lo
+                LDA     4,X             ; d1_hi
+                SBC     0,X             ; - d2_hi - borrow
+                STA     4,X             ; result_hi
+                DROP
+                DROP                    ; drop d2 cells
                 NEXT
         ENDPUBLIC
 
@@ -646,12 +628,10 @@ calc_depth:     TXA
         PUBLIC  STAR_CODE
         .a16
         .i16
-                LDA     0,X             ; b = multiplier
+                POP                     ; b = multiplier
                 STA     TMPA
-                LDA     2,X             ; a = multiplicand
+                PEEK_TOS                ; a = multiplicand
                 STA     TMPB            ; shifting multiplicand lives in TMPB
-                INX
-                INX
                 STZ     SCRATCH0        ; product accumulator = 0
 .ifndef UNROLL
                 PHY
@@ -694,7 +674,7 @@ calc_depth:     TXA
                 SHIFTADD16
 .endif
                 LDA     SCRATCH0
-                STA     0,X
+                PUT_TOS
 .ifndef UNROLL
                 PLY
 .endif
@@ -833,10 +813,8 @@ calc_depth:     TXA
         .proc   UMSLASHMOD_IMPL
         .a16
         .i16
-                LDA     0,X             ; load divisor
+                POP                     ; load divisor
                 STA     TMPA            ; TMPA = divisor
-                INX
-                INX                     ; pop divisor slot
                 ; Now: 0,X = ud_high (remainder register)
                 ;      2,X = ud_low  (quotient register)
 .ifndef UNROLL
@@ -1043,10 +1021,10 @@ calc_depth:     TXA
         PUBLIC  NEGATE_CODE
         .a16
         .i16
-                PEEK
+                PEEK_TOS
                 EOR     #$FFFF
                 INC     A
-                PUT
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1058,11 +1036,11 @@ calc_depth:     TXA
         PUBLIC  ABS_CODE
         .a16
         .i16
-                PEEK
+                PEEK_TOS
                 BPL     @done
                 EOR     #$FFFF
                 INC     A
-                PUT
+                PUT_TOS
 @done:          NEXT
         ENDPUBLIC
 
@@ -1157,11 +1135,11 @@ DABS_DONE:
         PUBLIC  TWOSLASH_CODE
         .a16
         .i16
-                PEEK
+                PEEK_TOS
                 ; Arithmetic shift right: preserve sign bit
                 CMP     #$8000          ; Set carry if negative
                 ROR     A               ; Shift right, sign bit from carry
-                PUT
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1363,7 +1341,7 @@ MSTAR_DONE:
 @true:          LDA     #FORTH_TRUE     ; Set TOS to true
 @return:
                 DROP                    ; Drop b
-                PUT                     ; Set TOS to result
+                PUT_TOS                 ; Set TOS to result
                 NEXT
         ENDPUBLIC
 
@@ -1523,7 +1501,7 @@ MSTAR_DONE:
 @return:        DROP                    ; drop 3 cells
                 DROP
                 DROP
-                PUT                     ; Put flag in 4th cell
+                PUT_TOS                 ; Put flag in 4th cell
                 NEXT
         ENDPUBLIC
 
@@ -1574,7 +1552,7 @@ MSTAR_DONE:
 @return:        DROP                    ; drop 3 cells
                 DROP
                 DROP
-                PUT                     ; Put flag in 4th cell
+                PUT_TOS                 ; Put flag in 4th cell
                 NEXT
         ENDPUBLIC
 
@@ -1613,7 +1591,7 @@ MSTAR_DONE:
 @return:        DROP                    ; drop 3 cells
                 DROP
                 DROP
-                PUT                     ; Put flag in 4th cell
+                PUT_TOS                 ; Put flag in 4th cell
                 NEXT
         ENDPUBLIC
 
@@ -1706,7 +1684,7 @@ DMIN_THEN:
         .i16
                 POP
                 AND     0,X
-                PUT
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1720,7 +1698,7 @@ DMIN_THEN:
         .i16
                 POP
                 ORA     0,X
-                PUT
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1734,7 +1712,7 @@ DMIN_THEN:
         .i16
                 POP
                 EOR     0,X
-                PUT
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1746,9 +1724,9 @@ DMIN_THEN:
         PUBLIC  INVERT_CODE
         .a16
         .i16
-                PEEK
+                PEEK_TOS
                 EOR     #$FFFF
-                PUT
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1890,13 +1868,13 @@ DMIN_THEN:
         PUBLIC  TWOFETCH_CODE
         .a16
         .i16
-                PEEK                    ; peek addr → SCRATCH0
+                PEEK_TOS                ; peek addr → SCRATCH0
                 STA     SCRATCH0
                 CLC
                 ADC     #CELL_SIZE      ; addr+2 → SCRATCH1 (carry now clear)
                 STA     SCRATCH1
                 LDA     (SCRATCH1)      ; high cell of d
-                PUT
+                PUT_TOS
                 LDA     (SCRATCH0)      ; low cell of d
                 PUSH
                 NEXT
@@ -2044,9 +2022,7 @@ DMIN_THEN:
         PUBLIC  EMIT_CODE
         .a16
         .i16
-                LDA     0,X             ; Char to send
-                INX
-                INX
+                POP                     ; Char to send
                 JSR     hal_putch       ; HAL handles UART details
                 NEXT
         ENDPUBLIC
@@ -2060,9 +2036,7 @@ DMIN_THEN:
         .a16
         .i16
                 JSR     hal_getch       ; Blocking receive, result in A
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2076,9 +2050,7 @@ DMIN_THEN:
         .i16
                 ; Check lookahead buffer first
                 JSR     hal_cready      ; Returns $FFFF or $0000 in A,
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2107,9 +2079,7 @@ DMIN_THEN:
         PUBLIC  CPUTS_CODE
         .a16
         .i16
-                LDA     0,X
-                INX
-                INX
+                POP
                 JSR     hal_cputs
                 NEXT
         ENDPUBLIC
@@ -2300,18 +2270,13 @@ DMIN_THEN:
         PUBLIC  DODO_CODE
         .a16
         .i16
-                LDA     0,Y             ; Load leave target
-                PHA                     ; Push leave target onto return stack
-                INY                     ; Advance past leave target
-                INY
-                LDA     2,X             ; limit
-                PHA                     ; Push limit onto return stack
-                LDA     0,X             ; index
-                PHA                     ; Push index onto return stack
-                INX
-                INX
-                INX
-                INX
+                IFETCH                  ; Load leave target IP += CELL
+                RPUSH                   ; Push leave target onto return stack
+                PEEK_NOS                ; limit
+                RPUSH                   ; Push limit onto return stack
+                POP                     ; index
+                RPUSH                   ; Push index onto return stack
+                DROP
                 NEXT
         ENDPUBLIC
 
@@ -2422,10 +2387,8 @@ DMIN_THEN:
         .a16
         .i16
                 ; Return stack: TOS=index NOS=limit
-                LDA     1,S             ; Index I
-                DEX
-                DEX
-                STA     0,X
+                RPEEK_TOS               ; Index I
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2442,9 +2405,7 @@ DMIN_THEN:
         LOC_LIMIT = 3                   ; inner limit
         LOC_I     = 1                   ; inner index
                 LDA     LOC_J,S         ; Peek J from RSP
-                DEX
-                DEX
-                STA     0,X             ; Push outer index to param stack
+                PUSH                    ; Push outer index to param stack
                 NEXT
         ENDPUBLIC
 
@@ -2895,28 +2856,22 @@ DOSQUOTE_CFA:
         PUBLIC  DOSQUOTE_CODE
         .a16
         .i16
-                LDA     0,Y             ; fetch u
+                IFETCH                  ; fetch u and IP -> first char
                 STA     SCRATCH0        ; save u
-                INY
-                INY                     ; IP -> first char
 
-                DEX
-                DEX
-                TYA
-                STA     a:0,X           ; push c-addr = IP
-
-                DEX
-                DEX
-                LDA     SCRATCH0        ; restore u
-                STA     a:0,X           ; push u
+                TYA                     ; A = IP (c-addr)
+                PUSH                    ; push c-addr = IP
 
                 ; Advance IP past string: IP + u, aligned to even
-                TYA                     ; A = IP (c-addr)
                 CLC
                 ADC     SCRATCH0        ; IP + u
                 INC     A               ; round up
                 AND     #$FFFE          ; align to even
                 TAY                     ; IP updated
+
+                LDA     SCRATCH0        ; restore u
+                PUSH                    ; push u
+
                 NEXT
         ENDPUBLIC
 
@@ -2979,11 +2934,97 @@ SQUOTE_INTERP:                          ; ( c-addr u )
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; (C") runtime ( -- c-addr )
+; IP points to a byte-length counted string.
+; Pushes c-addr (pointing to the length byte), advances IP past string data.
+;------------------------------------------------------------------------------
+DOCQUOTE_ENTRY:
+        .word   SQUOTE_ENTRY            ; Link field
+        .byte   F_HIDDEN | 4            ; Flags + length (4 chars)
+        .byte   "(C", $22, ")"
+        .align  CELL_SIZE
+DOCQUOTE_CFA:
+        CODEPTR DOCQUOTE_CODE
+        PUBLIC  DOCQUOTE_CODE
+        .a16
+        .i16
+                TYA                     ; A = IP = c-addr (points to length byte)
+                PUSH                    ; push c-addr
+                ; Fetch length byte to advance IP
+                SEP     #$20
+                .a8
+                LDA     0,Y             ; fetch length byte at IP
+                REP     #$20
+                .a16
+                AND     #$00FF          ; zero extend
+                STA     SCRATCH0        ; save length
+                ; Advance IP past length byte and string data
+                TYA
+                INC     A               ; skip length byte
+                CLC
+                ADC     SCRATCH0        ; + string length
+                INC     A               ; round up
+                AND     #$FFFE          ; align to even
+                TAY                     ; IP updated
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; C" ( "text" -- c-addr ) compile/interpret counted string
+; Returns address of counted string (length byte followed by chars).
+;------------------------------------------------------------------------------
+CQUOTE_ENTRY:
+        .word   DOCQUOTE_ENTRY          ; Link field
+        .byte   F_IMMEDIATE | 2         ; Flags + length (2 chars)
+        .byte   "C", $22
+        .align  CELL_SIZE
+CQUOTE_CFA:
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   '"'
+        .word   PARSE_CFA               ; ( c-addr u )
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZBRANCH_CFA
+        .word   CQUOTE_INTERP
+        ; --- compile mode ---
+        .word   LIT_CFA
+        .word   DOCQUOTE_CFA
+        .word   COMMA_CFA               ; compile (C")
+        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
+        .word   NIP_CFA                 ; ( c-addr u u )
+        .word   CCOMMA_CFA              ; compile u as byte length
+                                        ; ( c-addr u )
+        .word   ZERO_CFA
+        .word   DODO_CFA
+        .word   0                       ; unused leave target
+CQUOTE_CLOOP:
+        .word   DUP_CFA
+        .word   I_CFA
+        .word   PLUS_CFA
+        .word   CFETCH_CFA
+        .word   CCOMMA_CFA
+        .word   DOLOOP_CFA
+        .word   CQUOTE_CLOOP
+        .word   DROP_CFA
+        .word   ALIGN_CFA
+        .word   EXIT_CFA
+        ; --- interpret mode ---
+CQUOTE_INTERP:                         ; ( c-addr u )
+        .word   PAD_CFA                ; ( c-addr u pad )
+        .word   OVER_CFA               ; ( c-addr u pad u )
+        .word   SWAP_CFA               ; ( c-addr u u pad )
+        .word   PLACE_CFA              ; ( c-addr ) builds counted string at PAD
+        .word   DROP_CFA               ; drop c-addr
+        .word   PAD_CFA                ; ( pad ) return counted string address
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; (.") ( -- )
 ; Runtime code for ."
 ;------------------------------------------------------------------------------
 DODOTQUOTE_ENTRY:
-        .word   SQUOTE_ENTRY            ; Link field
+        .word   CQUOTE_ENTRY            ; Link field
         .byte   F_HIDDEN | 3            ; Flags + length (3 chars)
         .byte   $28, $2E, $22           ; '(' '.' '"'
         .align  CELL_SIZE
