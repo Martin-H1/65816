@@ -1063,11 +1063,11 @@ DABS_DONE:
         PUBLIC  MAX_CODE
         .a16
         .i16
-                LDA     2,X             ; a
+                PEEK_NOS                ; a
                 CMP     0,X             ; a - b (signed)
                 BPL     @endif          ; a >= b, a is max
-                LDA     0,X             ; a < b, overwrite a with b
-                STA     2,X
+                PEEK_TOS                ; a < b, overwrite a with b
+                PUT_NOS
 @endif:         DROP                    ; Drop TOS as NOS is max
                 NEXT
         ENDPUBLIC
@@ -1185,10 +1185,10 @@ DABS_DONE:
         .i16
                 DEX
                 DEX
-                LDA     2,X             ; n
+                PEEK_NOS                ; n
                 BPL     @positive
                 LDA     #$FFFF          ; negative → high cell = $FFFF
-                STA     0,X
+                PUT_TOS
                 NEXT
 @positive:
                 STZ     0,X             ; positive → high cell = 0
@@ -1212,13 +1212,13 @@ DABS_DONE:
         PUBLIC  DNEGATE_CODE
         .a16
         .i16
-                LDA     0,X             ; high cell
+                PEEK_TOS                ; high cell
                 EOR     #$FFFF          ; invert
-                STA     0,X
-                LDA     2,X             ; low cell
+                PUT_TOS
+                PEEK_NOS                ; low cell
                 EOR     #$FFFF          ; invert
                 INC     A               ; +1
-                STA     2,X
+                PUT_NOS
                 BNE     @done           ; no carry
                 INC     0,X             ; propagate carry to high cell
 @done:          NEXT
@@ -1295,7 +1295,7 @@ MSTAR_DONE:
                 STZ     0,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                STA     0,X
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1325,7 +1325,7 @@ MSTAR_DONE:
         PUBLIC  LESS_CODE
         .a16
         .i16
-                LDA     2,X             ; a
+                PEEK_NOS                ; a
                 SEC
                 SBC     0,X             ; a - b
                 BVS     @overflow       ; Overflow-aware signed compare
@@ -1351,7 +1351,7 @@ MSTAR_DONE:
         PUBLIC  GREATER_CODE
         .a16
         .i16
-                LDA     0,X             ; b
+                PEEK_TOS                ; b
                 SEC
                 SBC     2,X             ; b - a (reversed for >)
                 BVS     @overflow       ; Overflow-aware signed compare
@@ -1365,7 +1365,7 @@ MSTAR_DONE:
 @true:          LDA     #FORTH_TRUE     ; Set TOS to true
 @return:
                 DROP                    ; Drop b
-                STA     0,X             ; Set TOS to result
+                PUT_TOS                 ; Set TOS to result
                 NEXT
         ENDPUBLIC
 
@@ -1377,7 +1377,7 @@ MSTAR_DONE:
         PUBLIC  ULESS_CODE
         .a16
         .i16
-                LDA     2,X             ; u1
+                PEEK_NOS                ; u1
                 CMP     0,X             ; u1 - u2 (unsigned)
                 DROP
                 BCC     @true           ; Carry clear = u1 < u2
@@ -1414,10 +1414,10 @@ MSTAR_DONE:
         PUBLIC  ZEROEQ_CODE
         .a16
         .i16
-                LDA     0,X
+                PEEK_TOS
                 BNE     @false
                 LDA     #FORTH_TRUE
-                STA     0,X
+                PUT_TOS
                 NEXT
 @false:         STZ     0,X
                 NEXT
@@ -1431,10 +1431,10 @@ MSTAR_DONE:
         PUBLIC  ZEROLESS_CODE
         .a16
         .i16
-                LDA     0,X
+                PEEK_TOS
                 BPL     @false
                 LDA     #FORTH_TRUE
-                STA     0,X
+                PUT_TOS
                 NEXT
 @false:         STZ     0,X
                 NEXT
@@ -1448,13 +1448,13 @@ MSTAR_DONE:
         PUBLIC  ZEROGT_CODE
         .a16
         .i16
-                LDA     0,X
+                PEEK_TOS
                 BEQ     @false
                 BPL     @true
 @false:         STZ     0,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                STA     0,X
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1466,10 +1466,10 @@ MSTAR_DONE:
         PUBLIC  ZERONE_CODE
         .a16
         .i16
-                LDA     0,X
+                PEEK_TOS
                 BEQ     @return
                 LDA     #FORTH_TRUE
-                STA     0,X
+                PUT_TOS
 @return:        NEXT
         ENDPUBLIC
 
@@ -1482,11 +1482,11 @@ MSTAR_DONE:
         PUBLIC  DEQ_CODE
         .a16
         .i16
-                LDA     a:6,X           ; d1_lo
-                CMP     a:2,X           ; d2_lo
+                LDA     6,X             ; d1_lo
+                CMP     2,X             ; d2_lo
                 BNE     @false
-                LDA     a:4,X           ; d1_hi
-                CMP     a:0,X           ; d2_hi
+                LDA     4,X             ; d1_hi
+                CMP     0,X             ; d2_hi
                 BNE     @false
                 LDA     #FORTH_TRUE
                 BRA     @return
@@ -2206,9 +2206,7 @@ DMIN_THEN:
         PUBLIC  ZBRANCH_CODE
         .a16
         .i16
-                LDA     0,X             ; pop flag
-                INX
-                INX
+                POP                     ; pop flag
                 CMP     #$0000          ; Test flag (INX clobbers zero flag,
                 BNE     @no_branch      ; so use CMP not BEQ/BNE directly)
                 LDA     0,Y             ; Fetch branch target
@@ -2282,9 +2280,7 @@ DMIN_THEN:
                 PHY                     ; Save IP
 
                 ; Pop step from parameter stack
-                LDA     0,X
-                INX
-                INX
+                POP
                 STA     SCRATCH1        ; step
 
                 ; old_diff = index - limit
@@ -2488,9 +2484,7 @@ DMIN_THEN:
                 LDA     UP
                 CLC
                 ADC     #U_CURDEF
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2505,9 +2499,7 @@ DMIN_THEN:
                 LDA     UP
                 CLC
                 ADC     #U_DP
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2522,9 +2514,7 @@ DMIN_THEN:
                 LDA     UP
                 CLC
                 ADC     #U_LATEST
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
