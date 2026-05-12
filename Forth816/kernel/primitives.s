@@ -1810,11 +1810,9 @@ DMIN_THEN:
         .i16
                 PEEK_TOS
                 STA     SCRATCH0
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (SCRATCH0)
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
                 PUT_TOS
                 NEXT
@@ -1831,11 +1829,9 @@ DMIN_THEN:
                 POP                     ; addr
                 STA     SCRATCH0
                 POP                     ; byte
-                SEP     #$20
-                .a8
+                OFF16MEM
                 STA     (SCRATCH0)
-                REP     #$20
-                .a16
+                ON16MEM
                 NEXT
         ENDPUBLIC
 
@@ -1922,12 +1918,10 @@ DMIN_THEN:
                 BEQ     @done
                 DEY                     ; Change count to an index
 @loop:
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_SRCPTR,S),Y
                 STA     (LOC_DSTPTR,S),Y
-                REP     #$20
-                .a16
+                ON16MEM
                 DEY
                 BPL     @loop           ; loop terminates at -1 to copy 0 byte as well.
 @done:          PLA                     ; Drop stack locals
@@ -1957,12 +1951,10 @@ DMIN_THEN:
                 BEQ     @done
                 DEY                     ; Change count to an index
 @loop:
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     LOC_BYTE,S
                 STA     (LOC_DSTPTR,S),Y
-                REP     #$20
-                .a16
+                ON16MEM
                 DEY
                 BPL     @loop
 @done:          PLA                     ; Drop stack locals
@@ -2478,11 +2470,9 @@ DMIN_THEN:
                 INC     A               ; DP += 1
                 STA     (UP),Y          ; Write updated DP back
                 POP                     ; Pop byte off parameter stack
-                SEP     #$20
-                .a8
+                OFF16MEM
                 STA     (SCRATCH1)      ; Store byte at DP pointer
-                REP     #$20
-                .a16
+                ON16MEM
                 PLY
                 NEXT
         ENDPUBLIC
@@ -2769,11 +2759,9 @@ DMIN_THEN:
         .i16
                 PEEK_TOS                ; Copy addr to scratch pointer
                 STA     SCRATCH0
-                SEP     #$20            ; Enter byte transfer mode
-                .a8
+                OFF16MEM
                 LDA     (SCRATCH0)      ; Length byte is at start of string
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF          ; Mask off B part of accumulator
                 INC     0,X             ; addr+1 on TOS (in place, no load/store)
                 PUSH                    ; Push length
@@ -2890,11 +2878,9 @@ DOCQUOTE_CFA:
                 TYA                     ; A = IP = c-addr (points to length byte)
                 PUSH                    ; push c-addr
                 ; Fetch length byte to advance IP
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     0,Y             ; fetch length byte at IP
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF          ; zero extend
                 STA     SCRATCH0        ; save length
                 ; Advance IP past length byte and string data
@@ -3269,8 +3255,7 @@ ABORTQUOTE_CLOOP:
                 LDA     (UP),Y
                 TAY
 
-                SEP     #$20
-                .a8
+                OFF16MEM
 @skip_loop:
                 CPY     SCRATCH1        ; >IN >= source length?
                 BCS     @done           ; end of input
@@ -3283,8 +3268,7 @@ ABORTQUOTE_CLOOP:
                 INY                     ; >IN++
                 BRA     @skip_loop
 @done:
-                REP     #$20            ; Ensure 16-bit accumulator
-                .a16
+                ON16MEM
 
                 ; Write updated >IN back to user area
                 TYA
@@ -3322,19 +3306,16 @@ ABORTQUOTE_CLOOP:
                 ; Store count byte at dest
                 LDY     #0
                 LDA     LOC_COUNT,S
-                SEP     #$20
-                .a8
+                OFF16MEM
                 STA     (LOC_DEST,S),Y  ; count byte at dest+0
-                REP     #$20
-                .a16
+                ON16MEM
 
                 ; Advance dest to dest+1 for char copy
                 LDA     LOC_DEST,S
                 INC     A
                 STA     LOC_DEST,S
 
-                SEP     #$20
-                .a8
+                OFF16MEM
 @copy_loop:
                 TYA
                 CMP     LOC_COUNT,S
@@ -3353,8 +3334,7 @@ ABORTQUOTE_CLOOP:
                 BRA     @copy_loop
 
 @done:
-                REP     #$20
-                .a16
+                ON16MEM
                 PLA                     ; drop LOC_SRC
                 PLA                     ; drop LOC_COUNT
                 PLA                     ; drop LOC_DEST
@@ -3431,11 +3411,9 @@ ABORTQUOTE_CLOOP:
                 BCS     @end_of_input
 
                 ; Fetch char at CURPTR
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_CURPTR)    ; fetch byte
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
 
                 CMP     LOC_CHAR
@@ -3629,11 +3607,9 @@ HEX_BODY:
                 JMP     @done           ; u = 0, done
 @skip:
                 ; Fetch character
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_ADDR)
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
 
                 ; Lowercase to uppercase conversion
@@ -3799,11 +3775,9 @@ HEX_BODY:
                 INC     A               ; Advance ptr to first char
                 STA     LOC_PTR
 
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_ADDR)      ; length byte
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
                 BNE     @has_chars
                 JMP     @fail_return    ; empty string -> fail
@@ -3825,11 +3799,9 @@ HEX_BODY:
                 ;--------------------------------------------------------------
                 ; Check for '-' prefix
                 ;--------------------------------------------------------------
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_PTR)
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
 
                 CMP     #'-'
@@ -3839,11 +3811,9 @@ HEX_BODY:
                 DEC     LOC_COUNT
                 BNE     @skip
                 JMP     @fail_return    ; '-' alone is not valid
-@skip:          SEP     #$20
-                .a8
+@skip:          OFF16MEM
                 LDA     (LOC_PTR)       ; peek next char for base prefix check
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
 @check_dollar:
                 CMP     #'$'
@@ -3878,11 +3848,9 @@ HEX_BODY:
                 ;--------------------------------------------------------------
                 LDY     LOC_COUNT
                 DEY                     ; index of last char
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_PTR),Y     ; fetch last char
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
                 CMP     #'.'
                 BNE     @no_dot
@@ -4082,14 +4050,12 @@ NUMBER_ERR:
                 ; SCRATCH0 is a zero-page cell; storing a byte there in
                 ; 8-bit mode is safe (only the low byte is written).
                 ;------------------------------------------------------
-                SEP     #$20            ; A = 8-bit
-                .a8
+                OFF16MEM
                 LDA     (LOC_ADDR1,S),Y ; byte from string1
                 STA     SCRATCH0        ; save for comparison
                 LDA     (LOC_ADDR2,S),Y ; byte from string2
                 CMP     SCRATCH0        ; str2[Y] - str1[Y]  (unsigned)
-                REP     #$20            ; A = 16-bit (before any branch)
-                .a16
+                ON16MEM
 
                 BEQ     @next_byte      ; bytes equal -> continue
                 BCC     @str1_greater   ; str2[Y] < str1[Y]  -> str1 > str2
@@ -4332,12 +4298,10 @@ QUIT_LOOP:
                 ; Store character in buffer at BUF[count]
                 ; Use Y as byte index; IP already saved in frame
                 LDY     LOC_COUNT
-                SEP     #$20            ; 8-bit stores
-                .a8
+                OFF16MEM
                 LDA     LOC_CHAR
                 STA     (LOC_BUF),Y     ; BUF[count] = char
-                REP     #$20
-                .a16
+                ON16MEM
 
                 JSR     hal_putch       ; Echo character
 
@@ -4444,11 +4408,9 @@ QUIT_LOOP:
                 LDA     a:0,X           ; addr (counted string)
                 STA     LOC_ADDR
 
-                SEP     #$20            ; 8-bit fetch
-                .a8
+                OFF16MEM
                 LDA     (LOC_ADDR)      ; length byte of search string
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
                 STA     LOC_LEN         ; cache search name length
 
@@ -4467,11 +4429,9 @@ QUIT_LOOP:
                 ADC     #CELL_SIZE      ; Point to flags|len byte
                 STA     LOC_NAMEPTR     ; Temporarily use LOC_NAMEPTR as ptr
 
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_NAMEPTR)   ; flags|len byte
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
                 STA     LOC_FLAGS       ; Save full flags|len
 
@@ -4499,12 +4459,10 @@ QUIT_LOOP:
 
                 LDY     #0              ; Byte index
 @cmp_loop:
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_NAMEPTR),Y ; Entry name byte
                 CMP     (LOC_CFA),Y     ; Search string byte
-                REP     #$20
-                .a16
+                ON16MEM
                 BNE     @follow_link    ; Mismatch -> try next entry
 
                 INY
@@ -5127,11 +5085,9 @@ WORDS_SKIP:
 
                 ; --- Read length byte from addr+0 ---
                 LDY     #0
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_ENTRY),Y   ; length byte at addr+0
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #$00FF
                 STA     LOC_NAMELEN
 
@@ -5149,12 +5105,10 @@ WORDS_SKIP:
                 BEQ     @name_shifted
                 DEY                     ; Y = namelen-1 (zero based)
 @shift_loop:
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (LOC_SRC),Y     ; read src[Y]
                 STA     (LOC_DST),Y     ; write dst[Y]
-                REP     #$20
-                .a16
+                ON16MEM
                 DEY
                 BPL     @shift_loop     ; loop until Y goes negative
 @name_shifted:
@@ -5163,11 +5117,9 @@ WORDS_SKIP:
                 LDY     #CELL_SIZE
                 LDA     LOC_NAMELEN
                 ORA     #F_HIDDEN
-                SEP     #$20
-                .a8
+                OFF16MEM
                 STA     (LOC_ENTRY),Y   ; addr[2] = F_HIDDEN|namelen
-                REP     #$20
-                .a16
+                ON16MEM
 
                 ; --- Write LINK field at addr+0 ---
                 LDY     #0
@@ -5595,11 +5547,9 @@ CREATE_BODY:
                 CLC
                 ADC     #CELL_SIZE      ; point to flags byte
                 STA     SCRATCH0
-                SEP     #$20
-                .a8
+                OFF16MEM
                 LDA     (SCRATCH0)      ; flags|len byte
-                REP     #$20
-                .a16
+                ON16MEM
                 AND     #F_LENMASK      ; isolate name length
                 CLC
                 ADC     SCRATCH0        ; flags addr + namelen
@@ -5965,7 +5915,7 @@ ENDCASE_LEAVE:
         PUBLIC  DOQDO_CODE
         .a16
         .i16
-                LDA     2,X             ; limit
+                PEEK_NOS                ; limit
                 CMP     0,X             ; index
                 BNE     @enter_loop     ; limit <> index so enter loop
                 ; limit = index: skip loop, jump to leave target
@@ -5977,7 +5927,7 @@ ENDCASE_LEAVE:
 @enter_loop:
                 IFETCH                  ; load leave target and advance IP
                 PHA                     ; push leave target onto return stack
-                LDA     2,X             ; limit
+                PEEK_NOS                ; limit
                 PHA                     ; push limit onto return stack
                 POP                     ; index
                 PHA                     ; push index onto return stack
