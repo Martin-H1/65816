@@ -396,7 +396,7 @@ calc_depth:     TXA
         PUBLIC  TWOTOR_CODE
         .a16
         .i16
-                LDA     2,X             ; x1 (NOS)
+                PEEK_NOS                ; x1 (NOS)
                 RPUSH                   ; push x1 first
                 POP                     ; x2 (TOS)
                 RPUSH                   ; push x2 on top
@@ -417,7 +417,7 @@ calc_depth:     TXA
                 RPOP                    ; x2 (TOS of return stack)
                 PUSH                    ; x2 (TOS)
                 RPOP                    ; x1
-                STA     2,X             ; x1 (NOS)
+                PUT_NOS                 ; x1 (NOS)
                 NEXT
         ENDPUBLIC
 
@@ -430,9 +430,9 @@ calc_depth:     TXA
         PUBLIC  TWORFETCH_CODE
         .a16
         .i16
-                LDA     3,S             ; x1
+                RPEEK_NOS               ; x1
                 PUSH                    ; x1 (future NOS)
-                LDA     1,S             ; x2 (TOS of return stack)
+                RPEEK_TOS               ; x2 (TOS of return stack)
                 PUSH                    ; x2 (TOS)
                 NEXT
         ENDPUBLIC
@@ -552,7 +552,7 @@ calc_depth:     TXA
         PUBLIC  MINUS_CODE
         .a16
         .i16
-                LDA     2,X             ; a
+                PEEK_NOS                ; a
                 SEC
                 SBC     0,X             ; a - b
                 DROP
@@ -1738,9 +1738,7 @@ DMIN_THEN:
         PUBLIC  LSHIFT_CODE
         .a16
         .i16
-                LDA     0,X             ; shift count
-                INX
-                INX
+                POP                     ; shift count
                 PHY                     ; Save IP (TAY below clobbers it)
                 TAY
                 BEQ     @done
@@ -1748,7 +1746,7 @@ DMIN_THEN:
 @loop:          ASL     A
                 DEY
                 BNE     @loop
-                STA     0,X
+                PUT_TOS
 @done:          PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
@@ -1761,9 +1759,7 @@ DMIN_THEN:
         PUBLIC  RSHIFT_CODE
         .a16
         .i16
-                LDA     0,X
-                INX
-                INX
+                POP
                 PHY                     ; Save IP (TAY below clobbers it)
                 TAY
                 BEQ     @done
@@ -1771,7 +1767,7 @@ DMIN_THEN:
 @loop:          LSR     A
                 DEY
                 BNE     @loop
-                STA     0,X
+                PUT_TOS
 @done:          PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
@@ -1803,13 +1799,9 @@ DMIN_THEN:
         PUBLIC  STORE_CODE
         .a16
         .i16
-                LDA     0,X             ; addr
+                POP                     ; addr
                 STA     SCRATCH0
-                INX
-                INX
-                LDA     0,X             ; val
-                INX
-                INX
+                POP                     ; val
                 STA     (SCRATCH0)
                 NEXT
         ENDPUBLIC
@@ -1930,17 +1922,11 @@ DMIN_THEN:
                 LOC_SRCPTR = 1
                 LOC_DSTPTR = 3
                 PHY                     ; Save IP
-                LDA     0,X             ; pop u (byte count) to Y
-                INX
-                INX
+                POP                     ; pop u (byte count) to Y
                 TAY
-                LDA     0,X             ; pop dst to LOC_DSTPTR
-                INX
-                INX
+                POP                     ; pop dst to LOC_DSTPTR
                 PHA
-                LDA     0,X             ; pop src to LOC_SRCPTR
-                INX
-                INX
+                POP                     ; pop src to LOC_SRCPTR
                 PHA
                 TYA                     ; Test for zero count = no-op
                 BEQ     @done
@@ -2444,9 +2430,7 @@ DMIN_THEN:
                 LDY     #U_DP
                 LDA     (UP),Y          ; Fetch DP
                 PLY
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2594,9 +2578,7 @@ DMIN_THEN:
                 LDA     UP
                 CLC
                 ADC     #U_BASE
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2611,9 +2593,7 @@ DMIN_THEN:
                 LDA     UP
                 CLC
                 ADC     #U_STATE
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2628,9 +2608,7 @@ DMIN_THEN:
                 LDA     UP
                 CLC
                 ADC     #U_TOIN
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2646,15 +2624,11 @@ DMIN_THEN:
                 ; Push TIB address
                 LDY     #U_TIB
                 LDA     (UP),Y
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 ; Push source length
                 LDY     #U_SOURCELEN
                 LDA     (UP),Y
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 PLY
                 NEXT
         ENDPUBLIC
@@ -2670,9 +2644,7 @@ DMIN_THEN:
                 LDA     UP
                 CLC
                 ADC     #U_SOURCELEN
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2687,9 +2659,7 @@ DMIN_THEN:
                 LDA     UP
                 CLC
                 ADC     #U_TIB
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2704,9 +2674,7 @@ DMIN_THEN:
                 PHY
                 LDY     #U_PAD
                 LDA     (UP),Y
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 PLY
                 NEXT
         ENDPUBLIC
@@ -2722,9 +2690,7 @@ DMIN_THEN:
                 LDA     UP
                 CLC
                 ADC     #U_HLD
-                DEX
-                DEX
-                STA     0,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -2826,7 +2792,7 @@ DMIN_THEN:
         PUBLIC  COUNT_CODE
         .a16
         .i16
-                LDA     0,X             ; Copy addr to scratch pointer
+                PEEK_TOS                ; Copy addr to scratch pointer
                 STA     SCRATCH0
                 SEP     #$20            ; Enter byte transfer mode
                 .a8
@@ -2835,9 +2801,7 @@ DMIN_THEN:
                 .a16
                 AND     #$00FF          ; Mask off B part of accumulator
                 INC     0,X             ; addr+1 on TOS (in place, no load/store)
-                DEX
-                DEX
-                STA     0,X             ; Push length
+                PUSH                    ; Push length
                 NEXT
         ENDPUBLIC
 
@@ -5842,15 +5806,12 @@ TICK_ERR:
         PUBLIC  DOOF_CODE
         .a16
         .i16
-                LDA     0,X             ; pop val (TOS)
-                INX
-                INX
+                POP                     ; pop val (TOS)
                 CMP     0,X             ; peek n (NOS)
                 BNE     @nomatch
 
                 ; Match: drop n
-                INX
-                INX
+                DROP
                 INY                     ; skip branch target
                 INY
                 NEXT
