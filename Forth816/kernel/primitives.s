@@ -307,9 +307,7 @@ calc_depth:     TXA
         .i16
                 PHY                     ; save IP
 
-                LDA     a:0,X           ; fetch n
-                INX
-                INX                     ; drop n
+                POP                     ; fetch n
                 STA     SCRATCH0        ; save n
                 CMP     #00             ; n=0, nothing to do
                 BEQ     @return
@@ -322,7 +320,7 @@ calc_depth:     TXA
                 ADC     SCRATCH0
                 STA     SCRATCH1        ; SCRATCH1 = addr of x_n
                 LDA     (SCRATCH1)      ; fetch x_n
-                PHA                     ; save on hw stack
+                RPUSH                   ; save on return stack
 
                 ; Shift x_0..x_n-1 up by one cell
 @shift_loop:
@@ -337,8 +335,8 @@ calc_depth:     TXA
                 CMP     SCRATCH1        ; reached PSP (x_0 position)?
                 BNE     @shift_loop
 
-                PLA                     ; restore x_n
-                STA     a:0,X           ; store at TOS (x_0 position)
+                RPOP                    ; restore x_n
+                PUT_TOS                 ; store at TOS (x_0 position)
 
 @return:        PLY                     ; restore IP
                 NEXT
@@ -1315,7 +1313,7 @@ MSTAR_DONE:
                 STZ     0,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                STA     0,X
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1366,8 +1364,7 @@ MSTAR_DONE:
                 BRA     @return
 @true:          LDA     #FORTH_TRUE     ; Set TOS to true
 @return:
-                INX                     ; Drop b
-                INX
+                DROP                    ; Drop b
                 STA     0,X             ; Set TOS to result
                 NEXT
         ENDPUBLIC
@@ -1382,13 +1379,12 @@ MSTAR_DONE:
         .i16
                 LDA     2,X             ; u1
                 CMP     0,X             ; u1 - u2 (unsigned)
-                INX
-                INX
+                DROP
                 BCC     @true           ; Carry clear = u1 < u2
                 STZ     0,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                STA     0,X
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1400,15 +1396,13 @@ MSTAR_DONE:
         PUBLIC  UGREATER_CODE
         .a16
         .i16
-                LDA     0,X             ; u2
-                CMP     2,X             ; u2 - u1 (reversed)
-                INX
-                INX
+                POP                     ; u2
+                CMP     0,X             ; u2 - u1 (reversed)
                 BCC     @true
                 STZ     0,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                STA     0,X
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1535,13 +1529,13 @@ MSTAR_DONE:
         .a16
         .i16
                 ; Compare high cells first
-                LDA     a:4,X           ; ud1_hi
-                CMP     a:0,X           ; ud2_hi
+                LDA     4,X             ; ud1_hi
+                CMP     0,X             ; ud2_hi
                 BCC     @true           ; ud1_hi < ud2_hi unsigned
                 BNE     @false          ; ud1_hi > ud2_hi
                 ; High cells equal, compare low cells
-                LDA     a:6,X           ; ud1_lo
-                CMP     a:2,X           ; ud2_lo
+                LDA     6,X             ; ud1_lo
+                CMP     2,X             ; ud2_lo
                 BCC     @true
 @false:
                 LDA     #FORTH_FALSE
@@ -1568,9 +1562,9 @@ MSTAR_DONE:
         .a16
         .i16
                 ; Compare high cells (signed)
-                LDA     a:4,X           ; d1_hi
+                LDA     4,X             ; d1_hi
                 SEC
-                SBC     a:0,X           ; d1_hi - d2_hi
+                SBC     0,X             ; d1_hi - d2_hi
                 BEQ     @equal_hi       ; high cells equal, check low
                 BVS     @overflow
                 BMI     @true           ; negative, no overflow -> d1 < d2
@@ -1580,8 +1574,8 @@ MSTAR_DONE:
                 BRA     @false
 @equal_hi:
                 ; High cells equal: unsigned compare of low cells
-                LDA     a:6,X           ; d1_lo
-                CMP     a:2,X           ; d2_lo
+                LDA     6,X             ; d1_lo
+                CMP     2,X             ; d2_lo
                 BCC     @true
 @false:
                 LDA     #FORTH_FALSE
@@ -1784,10 +1778,10 @@ DMIN_THEN:
         PUBLIC  FETCH_CODE
         .a16
         .i16
-                LDA     0,X             ; addr
+                PEEK_TOS                ; addr
                 STA     SCRATCH0
                 LDA     (SCRATCH0)      ; fetch 16-bit value
-                STA     0,X
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1814,7 +1808,7 @@ DMIN_THEN:
         PUBLIC  CFETCH_CODE
         .a16
         .i16
-                LDA     0,X
+                PEEK_TOS
                 STA     SCRATCH0
                 SEP     #$20
                 .a8
@@ -1822,7 +1816,7 @@ DMIN_THEN:
                 REP     #$20
                 .a16
                 AND     #$00FF
-                STA     0,X
+                PUT_TOS
                 NEXT
         ENDPUBLIC
 
@@ -1834,13 +1828,9 @@ DMIN_THEN:
         PUBLIC  CSTORE_CODE
         .a16
         .i16
-                LDA     0,X             ; addr
+                POP                     ; addr
                 STA     SCRATCH0
-                INX
-                INX
-                LDA     0,X             ; byte
-                INX
-                INX
+                POP                     ; byte
                 SEP     #$20
                 .a8
                 STA     (SCRATCH0)
@@ -2107,9 +2097,7 @@ DMIN_THEN:
         .a16
         .i16
                 PHY
-                LDA     0,X             ; n
-                INX
-                INX
+                POP                     ; n
                 TAY
                 BEQ     @done           ; Zero = no-op
 @loop:
@@ -2146,9 +2134,7 @@ DMIN_THEN:
         PUBLIC  EXECUTE_CODE
         .a16
         .i16
-                LDA     0,X             ; xt = CFA
-                INX
-                INX
+                POP                     ; xt = CFA
                 STA     W               ; W = CFA
                 LDA     (W)             ; Fetch code pointer
                 STA     SCRATCH0
