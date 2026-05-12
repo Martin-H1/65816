@@ -284,14 +284,14 @@ calc_depth:     TXA
         .a16
         .i16
                 STX     SCRATCH0        ; SCRATCH0 = stack base (PSP)
-                LDA     0,X             ; u
+                PEEK_TOS                ; u
                 INC     A               ; u+1 (skip u itself)
                 ASL     A               ; * 2 (cell size)
                 CLC
                 ADC     SCRATCH0        ; X + (u+1)*2
                 STA     SCRATCH0
                 LDA     (SCRATCH0)      ; Fetch xu
-                STA     0,X             ; Replace u with xu
+                PUT_TOS                 ; Replace u with xu
                 NEXT
         ENDPUBLIC
 
@@ -1080,11 +1080,11 @@ DABS_DONE:
         PUBLIC  MIN_CODE
         .a16
         .i16
-                LDA     2,X             ; a
+                PEEK_NOS                ; a
                 CMP     0,X             ; a - b (signed)
                 BMI     @endif          ; a < b, a is min
-                LDA     0,X             ; a >= b, overwrite a with b
-                STA     2,X
+                PEEK_TOS                ; a >= b, overwrite a with b
+                PUT_NOS
 @endif:         DROP                    ; Drop TOS as NOS is min
                 NEXT
         ENDPUBLIC
@@ -1947,17 +1947,11 @@ DMIN_THEN:
                 LOC_DSTPTR = 1
                 LOC_BYTE = 3
                 PHY                     ; Save IP
-                LDA     0,X             ; pop fill byte to LOC_BYTE
-                INX
-                INX
+                POP                     ; pop fill byte to LOC_BYTE
                 PHA
-                LDA     0,X             ; pop u (byte count) to Y
-                INX
-                INX
+                POP                     ; pop u (byte count) to Y
                 TAY
-                LDA     0,X             ; pop addr to LOC_DTSPTR
-                INX
-                INX
+                POP                     ; pop addr to LOC_DTSPTR
                 PHA
                 TYA                     ; Test for zero count = no-op
                 BEQ     @done
@@ -2435,8 +2429,7 @@ DMIN_THEN:
                 ADC     0,X             ; Advance to DP + n
                 STA     (UP),Y          ; Store new DP
                 PLY
-                INX                     ; Drop n
-                INX
+                DROP                    ; Drop n
                 NEXT
         ENDPUBLIC
 
@@ -2464,9 +2457,7 @@ DMIN_THEN:
                 CLC                     ; DP += CELL_SIZE
                 ADC     #CELL_SIZE
                 STA     (UP),Y          ; Write updated DP back
-                LDA     0,X             ; Pop val off parameter stack
-                INX
-                INX
+                POP                     ; Pop val off parameter stack
                 STA     (SCRATCH0)      ; Store val at DP
                 PLY
                 NEXT
@@ -2486,9 +2477,7 @@ DMIN_THEN:
                 STA     SCRATCH1
                 INC     A               ; DP += 1
                 STA     (UP),Y          ; Write updated DP back
-                LDA     0,X             ; Pop byte off parameter stack
-                INX
-                INX
+                POP                     ; Pop byte off parameter stack
                 SEP     #$20
                 .a8
                 STA     (SCRATCH1)      ; Store byte at DP pointer
@@ -3323,20 +3312,12 @@ ABORTQUOTE_CLOOP:
 
                 PHY
 
-                LDA     0,X             ; dest (TOS)
+                POP                     ; dest (TOS)
                 PHA                     ; LOC_DEST
-                LDA     2,X             ; u (NOS)
+                POP                     ; u (NOS)
                 PHA                     ; LOC_COUNT
-                LDA     4,X             ; c-addr (3OS)
+                POP                     ; c-addr (3OS)
                 PHA                     ; LOC_SRC
-
-                ; drop all three params from parameter stack
-                INX
-                INX
-                INX
-                INX
-                INX
-                INX
 
                 ; Store count byte at dest
                 LDY     #0
@@ -4053,25 +4034,17 @@ NUMBER_ERR:
                 ; after the byte loop. Both addresses go onto the hw stack
                 ; as locals so (LOC,S),Y indirect indexed addressing works.
                 ;----------------------------------------------------------
-                LDA     0,X             ; u2
+                POP                     ; u2
                 STA     SCRATCH1        ; SCRATCH1 = u2 (preserved for length cmp)
-                INX
-                INX
 
-                LDA     0,X             ; addr2
-                INX
-                INX
+                POP                     ; addr2
                 PHA                     ; hw stack: [addr2][saved_IP]
                                         ; -> addr2 now at LOC_ADDR2 = 3,S
 
-                LDA     0,X             ; u1
+                POP                     ; u1
                 STA     TMPB            ; TMPB = u1 (preserved for length cmp)
-                INX
-                INX
 
-                LDA     0,X             ; addr1
-                INX
-                INX
+                POP                     ; addr1
                 PHA                     ; hw stack: [addr1][addr2][saved_IP]
                                         ; -> addr1 now at LOC_ADDR1 = 1,S
 
@@ -4158,9 +4131,7 @@ NUMBER_ERR:
                 PLY                     ; discard addr2
                 PLY                     ; Restore IP
 
-                DEX
-                DEX
-                STA     0,X             ; Push result onto parameter stack
+                PUSH                    ; Push result onto parameter stack
                 NEXT
         ENDPUBLIC
 
@@ -4627,9 +4598,7 @@ compile_only_msg:
         .i16
                 LDA     #@error_undef
                 JSR     hal_cputs
-                LDA     a:0,X
-                DEX
-                DEX
+                POP
                 JSR     hal_lpputs
                 LDA     #@crlf
                 JSR     hal_cputs
@@ -4769,9 +4738,7 @@ INTERPRET_COMPILE_NORMAL:
         PUBLIC  DOT_CODE
         .a16
         .i16
-                LDA     0,X
-                INX
-                INX
+                POP
                 ; Print trailing space
                 STA     SCRATCH0
                 JSR     print_sdec
@@ -4860,9 +4827,7 @@ print_udec:
         PUBLIC  UDOT_CODE
         .a16
         .i16
-                LDA     0,X
-                INX
-                INX
+                POP
                 STA     SCRATCH0
                 JSR     DOT_CODE::print_udec
                 LDA     #SPACE
@@ -4895,9 +4860,7 @@ print_udec:
         .a16
         .i16
                 ; Print TOS as 4-digit hex
-                LDA     0,X
-                INX
-                INX
+                POP
                 JSR     hal_putchex
                 LDA     #SPACE
                 JSR     hal_putch
