@@ -2,8 +2,8 @@ This is a summary of our previous session writing an ITC threaded ANS Forth
 (ANSI 1994) for the 65816 CPU. Since the 65816 is natively 16-bit, a 16-bit
 cell size is used for speed and simplicity.
 
-The first target board is a single board computer has with the w65c265 with
-32KB RAM and 32 KB ROM. The Forth kernel will be located in the ROM, and the
+The first target board is a single board computer with the w65c265 with
+32KB RAM and 32KB ROM. The Forth kernel will be located in the ROM, and the
 user will interact using the chip's UART serial interface.
 
 The memory map of the system is:
@@ -20,8 +20,10 @@ $0500 - $05FF   User Area
                 +$0A  >IN          parse offset
                 +$0C  SOURCE-LEN   current source length
                 +$0E  HANDLER      exception handler
+                +$10  SAVEDP       saved DP for definition rollback
+                +$12  SAVELATEST   saved LATEST for definition rollback
 $0600 - $06FF   Terminal Input Buffer (TIB)
-$0700 - $7EFF   RAM Dictionary (user definitions grow upward) 
+$0700 - $7EFF   RAM Dictionary (user definitions grow upward)
 $8000 - $FFFF   ROM (kernel primitives, core word set)
 
 Note: The debug build is loaded at $4000-$7FFF to allow testing in RAM.
@@ -52,13 +54,13 @@ op codes, CA65 syntax, and 65816 best programming practices. I've retained a
 summary of some of those issues:
 
 The valid 65816 branch instructions for future reference:
-Condition    Unsigned  	     	    Signed
-=	     BEQ	     	     BEQ
-≠	     BNE	     	     BNE
-<	     BCC	     	     BMI (with overflow check)
-≥	     BCS	     	     BPL (with overflow check)
->	     reverse operands + BCC  reverse operands + BMI
-≤	     reverse operands + BCS  reverse operands + BPL
+Condition    Unsigned              Signed
+=            BEQ                  BEQ
+≠            BNE                  BNE
+<            BCC                  BMI (with overflow check)
+≥            BCS                  BPL (with overflow check)
+>            reverse operands + BCC  reverse operands + BMI
+≤            reverse operands + BCS  reverse operands + BPL
 
 The 65816 CMP only supports immediate, direct page, absolute, and indexed
 memory operands - never a register directly. For comparing against Y or X
@@ -70,16 +72,19 @@ only operate on memory operands or immediate values - never directly on X or Y
 registers. To use X or Y as a source you always need TXA/TYA first, or store to
 a zero page location and use that.
 
-The CA65 asssembler doesn't support escaping the " character in string
+The CA65 assembler doesn't support escaping the " character in string
 constants. This caused problems using the HEADER macro for words with " in the
 name (e.g. ABORT"). To resolve this we skipped the HEADER macro for these words
 and wrote header bytes manually, including the quote character as a numeric
 byte value $22.
 
-Word defintions end in NEXT, so a word definition can't JSR directly to another
-word definition. That's because the JSR requires and RTS return. When this is
+Word definitions end in NEXT, so a word definition can't JSR directly to another
+word definition. That's because the JSR requires an RTS return. When this is
 required, this is worked around by using the RTS_CFA_LIST trampoline.
-TONUMBER_CODE calling UMSTAR_CODE is example of this pattern. An alternate approach is to split the definition into a separate _IMPL subroutine that both definitions can JSR to. UMSLASHMOD uses this approach.
+
+TONUMBER_CODE calling UMSTAR_CODE is an example of this pattern. An alternate
+approach is to split the definition into a separate _IMPL subroutine that both
+definitions can JSR to. UMSLASHMOD uses this approach.
 
 The 65816 supports stack relative addressing which is used to create stack local
 variables within a procedure. This reduces the need for direct page space, and
@@ -96,12 +101,11 @@ requirements around using this technique.
 However, any primitive that uses zero page variables must have D=$0000, and
 any caller that has D pointing to a stack frame must save/restore D around
 such calls. TONUMBER_CODE is an example of this technique because it calls
-UMSTAR which uses page zero scratch variables. This includescalls via the
-RTS_CFA_LIST trampoline must be preceded by PHD/LDA #0/TCD and followed by
-PLD to ensure NEXT has D=$0000.
+UMSTAR which uses page zero scratch variables. Calls via the RTS_CFA_LIST
+trampoline must ensure D=$0000. If needed precede by PHD/LDA #0/TCD and
+follow by PLD to ensure NEXT has D=$0000.
 
 Here are additional 65816 gotchas:
-
 STZ only supports direct page and absolute addressing — no indirect modes.
 Use LDA #0 / STA (addr) instead.
 INC, DEC, LDY, LDX don't support stack-relative addressing — only LDA/STA do.
@@ -109,55 +113,161 @@ JSR indirect doesn't exist — use JMP indirect instead (safe since Forth words
 end in NEXT anyway).
 BGE, BLE, BLT, BGT don't exist — see the branch table above in the summary.
 PEA $0000 / PLB / PLB is a cleaner way to set the Data Bank Register than
-SEP / LDA #0 / PHA / PLB
+SEP / LDA #0 / PHA / PLB.
 
 PHY/PLY around loops:
+
 * Any primitive that uses LDY #n or TAY as a loop counter must save and restore
-Y with PHY/PLY since Y holds the Forth instruction pointer (IP). However, when
-Y is saved in the stackframe this can be omitted.
+  Y with PHY/PLY since Y holds the Forth instruction pointer (IP). However, when
+  Y is saved in the stack frame this can be omitted.
 * BEQ/BNE after INX/INX: INX/INX clobbers the zero flag, so you can't test the
-just-popped value with BEQ/BNE directly after. Save to a zero page variable,
-stack local, or use CMP #0 after the pops.
+  just-popped value with BEQ/BNE directly after. Save to a zero page variable,
+  stack local, or use CMP #0 after the pops.
 
 Register discipline for assembly primitives:
-A — free to clobber
-X — parameter stack pointer, must be preserved (or explicitly adjusted for push/pop)
-Y — instruction pointer (IP), must be preserved with PHY/PLY if used
-S — return stack pointer, managed by hardware stack operations
-D — must be $0000 on entry and exit via NEXT
+A  — free to clobber
+X  — parameter stack pointer, must be preserved (or explicitly adjusted for push/pop)
+Y  — instruction pointer (IP), must be preserved with PHY/PLY if used
+S  — return stack pointer, managed by hardware stack operations
+D  — must be $0000 on entry and exit via NEXT
 DB — must remain zero
 
-Current interpreter status
+Any routine that clobbers Y is responsible for saving and restoring it with
+PHY/PLY. This applies even to internal subroutines called via JSR — the callee
+preserves Y, not the caller.
+
+Current interpreter status:
 * All Forth standard section 6.1 core words implemented.
   See: https://forth-standard.org/standard/words
-* Forth standard section 6.2 core extension words in progress.
-* Stack underflow protection
-* MARKER and FORGET for dictionary cleanup
-* SEE decompiler
-* Forth based regression tests
-* Dictionary checkpoint, rollback, and commit to avoid memory leaks.
+* Forth standard section 6.2 core extension words mostly implemented (see TODO).
+* Double number support with true 32-bit >NUMBER and NUMBER?.
+* Stack underflow protection.
+* MARKER and FORGET for dictionary cleanup.
+* SEE decompiler.
+* Forth based regression tests with Python test runner.
+* Dictionary checkpoint, rollback, and commit to avoid memory leaks on failed
+  definitions.
+* Compiler security numbers and ?PAIRS checking for all control structures.
 * Release and Debug builds. Release executes in ROM with an origin of $8000,
-  Debug executes in high RAM with at $4000, and includes a TRACE facility and
+  Debug executes in high RAM at $4000, and includes a TRACE facility and
   more aggressive stack underflow checking.
 
+New words implemented and tested:
+
+Double number support:
+
+* NUMBER upgraded to true 32-bit double accumulation.
+* NUMBER? upgraded to support trailing dot double literals (e.g. 1234.).
+* 2LIT / 2LITERAL — runtime and compile-time double literals.
+* D+ D- D= D< DU< — double arithmetic and comparison.
+* DABS DNEGATE — double sign operations.
+* D. D.R — double output.
+* D>S S>D M+ — single/double conversion and mixed arithmetic.
+* D0= D0< DMAX DMIN D2* D2/ — double predicates and shifts.
+* 2VARIABLE 2CONSTANT 2VALUE — double defining words.
+* 2ROT — rotate three double numbers.
+* M*/ — mixed multiply-divide.
+
+CORE-EXT words implemented:
+
+* .( — print string immediately, works in both interpret and compile mode.
+* .R U.R — right-justified signed and unsigned output.
+* ERASE — fill memory with zeros.
+* WITHIN — range check.
+* BUFFER: — create a named buffer.
+* [COMPILE] — force compilation of next word regardless of immediate flag.
+* HOLDS — prepend string to pictured numeric output.
+* VALUE / TO — mutable named values with safety check (aborts if TO used on
+  CONSTANT).
+* 2VALUE — double mutable named value.
+* C" — counted string literal (compile semantics only; interpret semantics
+  undefined by ANS).
+* UNUSED — available dictionary space.
+
+Compiler security:
+
+* ?PAIRS ( n1 n2 -- ) — aborts with "mismatched control structure" if values
+  differ or stack underflow. Must be F_IMMEDIATE.
+* Compiler security numbers defined in constants.inc:
+    CS_BEGIN_AGAIN  = 1
+    CS_IF_ELSE_THEN = 2
+    CS_DO_LOOP      = 3
+    CS_WHILE_REPEAT = 4
+    CS_CASE_ENDCASE = 5
+    CS_OF_ENDOF     = 6
+* All control structures (IF/ELSE/THEN, BEGIN/UNTIL/AGAIN/WHILE/REPEAT,
+  DO/?DO/LOOP/+LOOP, CASE/OF/ENDOF/ENDCASE) push and verify security numbers.
+
+Dictionary rollback:
+
+* CHECKPOINT ( -- ) saves DP and LATEST to U_SAVEDP and U_SAVELATEST.
+* ROLLBACK ( -- ) restores DP and LATEST from checkpoint, clears checkpoint.
+* COMMIT ( -- ) clears checkpoint after successful definition.
+* do_checkpoint / do_rollback — internal subroutines called via JSR from
+* DOCREATE and ABORT respectively. Both preserve Y with PHY/PLY internally.
+* DOCREATE calls do_checkpoint automatically via JSR.
+* REVEAL is now a DOCOL definition that calls COMMIT after clearing F_HIDDEN.
+* ABORT calls do_rollback via JSR before resetting stacks.
+* DOVAL / DO2VAL — separate code pointers from DOCON to allow TO safety
+  checking. TO checks the code pointer of the target word and aborts if not
+  DOVAL or DO2VAL.
+
+New macros:
+
+* IFETCH — LDA 0,Y / INY / INY — fetch inline cell from instruction stream.
+* PUSHIP — pushes Y (IP) onto parameter stack.
+* IPFETCH — IFETCH followed by PUSH.
+* POPIP — pops TOS into Y (IP).
+* CELL+ — add one cell size to TOS (replaces LIT 2 PLUS pattern).
+
+New HAL functions:
+
+* hal_nputs ( addr Y=count -- ) — print N characters from address, Y is
+  word-sized lengt. Used by TYPE and DOABORTQUOTE. Replaces earlier JSR to
+  TYPE using trampoline in DOABORTQUOTE.
+
+Regression test infrastructure:
+
+* forth_test.py — Python 3 script using pyserial to send test files over serial,
+  capture output, compare to masters, and report results.
+  Key options: --delay MS (character delay), --generate-masters, --no-preamble.
+  Line endings: converts \n to \r for the target board. Flushes receive buffer
+  after preamble with reset_input_buffer() and a 1 second delay.
+* preamble.fs — loaded before each test file. Defines ttester framework
+  (T{/->/ }T), RECOVERED? ( -- flag ) for error recovery testing, DONE
+  sentinel word, and MARKER RESET-TEST for dictionary cleanup between tests.
+* Test files in tests/tests/, masters in tests/masters/, output in tests/output/.
+* Completed test files: compare_test, compiler_test, double_test, error_test,
+  harness_test, interpret_test, io_test, loop_test, math_test, memory_test,
+  number_test, stack_test, value_test.
+
 Important bugs found and fixed:
-WORD was not updating >IN correctly after TCD relocated the direct page.
-Fix: use (LOC_UP),Y with Y=#U_TOIN instead of STA (U_TOIN).
-#<QUIT_BODY in ABORT_CODE loaded only the low byte of the address.
-Fix: use #QUIT_BODY for the full 16-bit address. Search for other #< usages
-throughout the codebase.
-(DOES>) was destroying A with AND #1 alignment test before storing the CFA
-address. Fix: save tentative CFA to SCRATCH0 first, then test alignment and
-increment SCRATCH0 if odd.
-CREATE must reserve a placeholder cell at CFA+2 for the DOES> code address,
-otherwise , overwrites it with body data. Body data starts at CFA+4.
-ca65 linker bug: hal_mench.o must be listed first in the linker command or
-hal_cputs resolves incorrectly. Document in Makefile.
-RECURSE/LATEST>CFA — refactored using U_CURDEF in DOCREATE
+
+* WORD was not updating >IN correctly after TCD relocated the direct page.
+  Fix: use (LOC_UP),Y with Y=#U_TOIN instead of STA (U_TOIN).
+* #<QUIT_BODY in ABORT_CODE loaded only the low byte of the address.
+  Fix: use #QUIT_BODY for the full 16-bit address.
+* (DOES>) was destroying A with AND #1 alignment test before storing the CFA
+  address. Fix: save tentative CFA to SCRATCH0 first, then test alignment and
+  increment SCRATCH0 if odd.
+* CREATE must reserve a placeholder cell at CFA+2 for the DOES> code address,
+  otherwise , overwrites it with body data. Body data starts at CFA+4.
+* ca65 linker bug: hal_mench.o must be listed first in the linker command or
+  hal_cputs resolves incorrectly. Document in Makefile.
+* RECURSE/LATEST>CFA — refactored using U_CURDEF in DOCREATE.
+* DOMARKER_CODE was clobbering Y (the IP) with LDY instructions. Fix: wrap with
+  PHY/PLY.
+* /MOD was implementing symmetric division instead of floored. Fix: rewritten
+  as DOCOL using S>D and FM/MOD.
+* DOABORTQUOTE inline string length must be a 16-bit word cell, not a byte.
+  hal_nputs uses Y as a word-sized length to handle this correctly.
+* S" in interpret mode stores strings in PAD which gets overwritten by
+  subsequent S" calls. Tests that need two strings simultaneously must use C"
+  or CREATE inside word definitions. C" interpret semantics are undefined by
+  ANS; only use C" in word definitions.
 
 Coding style rules established:
 Three classes of routines each with their own pattern:
-
 Simple loops — use PHY/PLY with Y as counter only. See SPACES_CODE.
 Buffer walks — push addr and count onto hardware stack, use (offset,S),Y with
 Y as byte index. See TYPE_CODE.
@@ -167,56 +277,65 @@ sample_coding_style.s.
 
 Additional rules:
 
-After TCD, all parameter stack accesses via X must use absolute forced
-addressing: LDA a:0,X.
-Zero page values needed throughout a routine must be fetched into locals
-immediately after reserving the frame but before TCD.
-Result must be pushed to parameter stack before frame teardown since TSC
-clobbers A.
-Use $FF ^ F_HIDDEN not ~F_HIDDEN for byte complement — ca65 produces a large
-constant with ~.
-Any call via the trampoline must ensure D=$0000. If needed preceed by
-PHD/LDA #0/TCD and followed by PLD to ensure NEXT has D=$0000.
-BRANCH and ZBRANCH use absolute addresses not offsets for branch targets.
+* After TCD, all parameter stack accesses via X must use absolute forced
+  addressing: LDA a:0,X.
+* Zero page values needed throughout a routine must be fetched into locals
+  immediately after reserving the frame but before TCD.
+* Result must be pushed to parameter stack before frame teardown since TSC
+  clobbers A.
+* Use $FF ^ F_HIDDEN not ~F_HIDDEN for byte complement — ca65 produces a large
+  constant with ~.
+* BRANCH and ZBRANCH use absolute addresses not offsets for branch targets.
+* Do not use numeric literals for character codes; use named constants such as
+  C_RETURN, BKSP, DEL, SPACE, L_FEED defined in constants.inc.
+* Use a single @return label with BRA from success and fall-through from
+  failure, with stack teardown done once.
+* Result push order: DEX/DEX, STA a:0,X, TSC/CLC/ADC/TCS, PLY, PLD, NEXT.
+* Flags set by the last operation should be exploited where possible.
+* Any routine that uses LDY clobbers Y (the IP) and must save/restore with
+  PHY/PLY. This is the callee's responsibility, not the caller's.
+* ABORT" strings use a 16-bit word length cell followed by string bytes,
+  aligned. to even boundary. Use ?PAIRS with LIT_CFA before the security
+  number constant.
 
-Debugging tools added:
+Debugging tools:
 
-TRACEOUT in a .ifdef DEBUG block calls DOTHEX_CODE::print_chex to print the
-current IP.
-trace_decode.py — Python 3 script that reads the CA65 map file and translates
-hex IP values in trace output to symbol names with offsets. Parses the "Exports
-list by name" section. Subtracts 2 from addresses to compensate for NEXT
-pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
+* TRACEOUT in a .ifdef DEBUG block calls DOTHEX_CODE::print_chex to print the
+  current IP.
+* trace_decode.py — Python 3 script that reads the CA65 map file and translates
+  hex IP values in trace output to symbol names with offsets.
 
 TODO items carried forward:
-* Sort out the extra cell in CREATE using DOVAR.
-* Weird bug : foo if 1. d- then; "mismatched control structure"
-* Stretch Goal. Implement the remaining CORE-EXT words:
-  DEFER, :NONAME, REFILL, SAVE-INPUT/RESTORE-INPUT, S\", M*/, SOURCE-ID.
-* Add a warning when the user redefines a literal as a word.
-* Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
-    - Replace INX/INX and DEX/DEX pairs with DROP and ADVANCE to hide cell size
-    - ADC #2 / SBC #2 used for cell arithmetic
-    - Frame layout offsets like LOC_ADDR = 1, LOC_PTR = 3 etc.
-      these could be expressed as LOC_ADDR = 1, LOC_PTR = LOC_ADDR + CELL_SIZE
-    - The CFA alignment rounding in FIND and DOCREATE
-    - >NUMBER and NUMBER? stack manipulation
+- Sort out the extra cell in CREATE using DOVAR. Currently DOVAR pushes CFA+2
+  (the DOES> placeholder) but body data compiled by C, after CREATE starts at
+  CFA+4. VARIABLE works correctly since it uses its own ZERO/COMMA for the data
+  cell. A future fix should give CREATE its own runtime word that pushes CFA+4.
+- Weird bug: ": foo if 1. d- then ;" gives "mismatched control structure".
+- Stretch Goal. Implement the remaining CORE-EXT words:
+  DEFER, :NONAME, REFILL, SAVE-INPUT/RESTORE-INPUT, S", SOURCE-ID.
+- Add a warning when the user redefines a word.
+- Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
+  (opportunistic — do a function at a time):
 
-HAL TODO items
-* hal_mench.s was reused from another project and the source isn't the same as
-  the other modules. I also plan to resuse my robot control module. To make
-  the source consistent I want to create a Python pretty printer. It reads
-  source from a file, tokenizes it, and outputs it formatted the same as the
-  other modules.
+  Replace INX/INX and DEX/DEX pairs with DROP and ADVANCE macros.
+  ADC #2 / SBC #2 used for cell arithmetic.
+  Frame layout offsets expressible as LOC_PTR = LOC_ADDR + CELL_SIZE.
+  The CFA alignment rounding in FIND and DOCREATE.
+
+HAL TODO items:
+- hal_mench.s was reused from another project and the source isn't the same as
+  the other modules. To make the source consistent, create a Python pretty
+  printer that reads source from a file, tokenizes it, and outputs it formatted
+  the same as the other modules:
+
   1. Function header comments flush with left margin.
   2. Labels flush with left margin and case preserved.
-  3. First indent eight spaces no tabs. PUBLIC, .a16, .i16, .proc, etc
+  3. First indent eight spaces, no tabs. PUBLIC, .a16, .i16, .proc, etc.
   4. Second indent for opcodes at sixteen spaces. Opcodes are upper case.
-  5. Third indent-twenty four spaces for operand. Register operands upper case.
-  6. Comments at column 40 with no taps.
-* Two dependancies on the Mench monitor remain. Relocate that code to the HAL
+  5. Third indent twenty-four spaces for operand. Register operands upper case.
+  6/ Comments at column 40 with no tabs.
+- Two dependencies on the Mench monitor remain. Relocate that code to the HAL
   and implement the HAL's interrupt hooks API.
-* It's easy to overrun the Mench monitors serial I/O routines. I'd guess that
-  the monitor's routines use small buffers to fit within the on chip RAM.
-* Pretty print and write Forth wrappers for my 65816 robot control library.
-* Add a block oriented mass storage interface to the HAL.
+- It's easy to overrun the Mench monitor's serial I/O routines due to small buffers.
+- Pretty print and write Forth wrappers for the 65816 robot control library.
+- Add a block oriented mass storage interface to the HAL.
