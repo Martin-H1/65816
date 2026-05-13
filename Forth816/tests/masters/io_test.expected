@@ -105,6 +105,30 @@ T{ 0. <# S" Test" HOLDS #> S" Test" COMPARE -> 0 }T
  ok 
 
  ok 
+45 10 .R
+        45 ok 
+-45 10 .R
+       -45 ok 
+
+ ok 
+10 10 U.R
+        10 ok 
+-1 10 U.R
+     65535 ok 
+
+ ok 
+-12. 10 D.R
+       -12 ok 
+
+ ok 
+100000. 12 d.r
+      100000 ok 
+
+ ok 
+-100000. 12 d.r
+     -100000 ok 
+
+ ok 
 .( hello }
 hello } ok 
 : foo 1 .( world ) ;

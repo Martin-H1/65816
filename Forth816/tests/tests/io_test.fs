@@ -51,6 +51,18 @@ T{ GP1 -> 0 }T
 
 T{ 0. <# S" Test" HOLDS #> S" Test" COMPARE -> 0 }T
 
+45 10 .R
+-45 10 .R
+
+10 10 U.R
+-1 10 U.R
+
+-12. 10 D.R
+
+100000. 12 d.r
+
+-100000. 12 d.r
+
 .( hello }
 : foo 1 .( world ) ;
 

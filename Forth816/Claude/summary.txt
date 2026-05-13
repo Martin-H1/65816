@@ -189,8 +189,7 @@ pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 TODO items carried forward:
 * Sort out the extra cell in CREATE using DOVAR.
 * Stretch Goal. Implement the remaining CORE-EXT words:
-  DEFER, :NONAME, REFILL, SAVE-INPUT/RESTORE-INPUT, S\", M*/,
-  .R, U.R, D.R, UNUSED, SOURCE-ID.
+  DEFER, :NONAME, REFILL, SAVE-INPUT/RESTORE-INPUT, S\", M*/, SOURCE-ID.
 * Add a warning when the user redefines a literal as a word.
 * Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
     - Replace INX/INX and DEX/DEX pairs with DROP and ADVANCE to hide cell size

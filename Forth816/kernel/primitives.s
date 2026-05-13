@@ -6145,6 +6145,76 @@ SIGN_DONE:
         .word   MINUS_CFA              ; ( c-addr u )
         .word   EXIT_CFA
 
+;------------------------------------------------------------------------------
+; .R ( n1 n2 -- ) Display n1 right aligned in a field n2 characters wide. If
+; the number of characters required to display n1 is greater than n2, all
+; digits are displayed with no leading spaces in a field as wide as necessary.
+; https://forth-standard.org/standard/core/DotR
+;------------------------------------------------------------------------------
+        HEADER  ".R", DOTR_ENTRY, DOTR_CFA, 0, HASHGT_ENTRY
+        CODEPTR DOCOL
+        .word   SWAP_CFA               ; ( n2 n1 )
+        .word   DUP_CFA                ; ( n2 n1 n1 )
+        .word   TOR_CFA                ; ( n2 n1 ) R: ( n1 )
+        .word   ABS_CFA                ; ( n2 n1 ) R: ( n1 )
+        .word   LIT_CFA
+        .word   0                      ; ( n2 n1 0 ) R: ( n1 )
+        .word   LESSHASH_CFA           ; <# begin pictured output
+        .word   HASHS_CFA              ; #S convert all digits
+        .word   RFROM_CFA              ; ( n2 n1 )
+        .word   SIGN_CFA               ; add '-' if negative
+        .word   HASHGT_CFA             ; #> ( n2 c-addr u )
+        .word   ROT_CFA                ; #> ( c-addr u n2 )
+        .word   OVER_CFA               ; #> ( c-addr u n2 u )
+        .word   MINUS_CFA              ; #> ( c-addr u n )
+        .word   SPACES_CFA             ; #> ( c-addr u )
+        .word   TYPE_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; U.R ( u n -- ) Display u right aligned in a field n characters wide. If the
+; number of characters required to display u is greater than n, all digits are
+; displayed with no leading spaces in a field as wide as necessary.
+; https://forth-standard.org/standard/core/UDotR
+;------------------------------------------------------------------------------
+        HEADER  "U.R", UDOTR_ENTRY, UDOTR_CFA, 0, DOTR_ENTRY
+        CODEPTR DOCOL
+        .word   TOR_CFA                ; ( u ) R: ( n )
+        .word   LIT_CFA
+        .word   0                      ; ( u 0 ) R: ( n )
+        .word   LESSHASH_CFA           ; <# begin pictured output
+        .word   HASHS_CFA              ; #S convert all digits
+        .word   HASHGT_CFA             ; #> ( c-addr u )
+        .word   RFROM_CFA              ; ( c-addr u n )
+        .word   OVER_CFA               ; #> ( c-addr u n u )
+        .word   MINUS_CFA              ; #> ( c-addr u n-u )
+        .word   SPACES_CFA             ; #> ( c-addr u )
+        .word   TYPE_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; D.R ( d n -- ) Display d right aligned in a field n characters wide. If the
+; number of characters required to display d is greater than n, all digits are
+; displayed with no leading spaces in a field as wide as necessary.
+; https://forth-standard.org/standard/double/DDotR
+;------------------------------------------------------------------------------
+        HEADER  "D.R", DDOTR_ENTRY, DDOTR_CFA, 0, UDOTR_ENTRY
+        CODEPTR DOCOL
+        .word   TOR_CFA                ; ( d_lo d_hi ) R: ( n )
+        .word   TUCK_CFA               ; ( d_hi d_lo d_hi ) R: ( n )
+        .word   DABS_CFA               ; ( d_hi ud_lo ud_hi ) R: ( n )
+        .word   LESSHASH_CFA           ; <# begin pictured output
+        .word   HASHS_CFA              ; #S convert all digits
+        .word   ROT_CFA                ; ( ud_lo ud_hi d_hi )
+        .word   SIGN_CFA               ; add '-' if negative
+        .word   HASHGT_CFA             ; #> ( c-addr u )
+        .word   RFROM_CFA              ; #> ( c-addr u n )
+        .word   OVER_CFA               ; #> ( c-addr u n u )
+        .word   MINUS_CFA              ; #> ( c-addr u n-u )
+        .word   SPACES_CFA             ; #> ( c-addr u )
+        .word   TYPE_CFA
+        .word   EXIT_CFA
+
 ;==============================================================================
 ; SECTION 15: The Programming-Tools word set
 ;==============================================================================
@@ -6156,7 +6226,7 @@ SIGN_DONE:
 ; Stubbed out with FALSE for compatibility.
 ; https://forth-standard.org/standard/core/ENVIRONMENTq
 ;------------------------------------------------------------------------------
-        HEADER  "ENVIRONMENT?", ENVIRONMENTQ_ENTRY, ENVIRONMENTQ_CFA, 0, HASHGT_ENTRY
+        HEADER  "ENVIRONMENT?", ENVIRONMENTQ_ENTRY, ENVIRONMENTQ_CFA, 0, DDOTR_ENTRY
         CODEPTR DOCOL
         .word   TWODROP_CFA            ; discard c-addr u
         .word   FALSE_CFA              ; false - not supported
@@ -6475,6 +6545,19 @@ primitive_msg:  .byte "primitive", $00
 unknown_msg:    .byte "??? ", $00
 ;notfound_msg:   .byte "Word not found", $0D, $0A, $00
 
+;------------------------------------------------------------------------------
+; UNUSED (  -- u ) u is the amount of space remaining in the region addressed
+; by HERE, in address units.
+; https://forth-standard.org/standard/core/UNUSED
+;------------------------------------------------------------------------------
+        HEADER  "UNUSED", UNUSED_ENTRY, UNUSED_CFA, 0, SEE_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   DICT_END
+        .word   HERE_CFA
+        .word   MINUS_CFA
+        .word   EXIT_CFA
+
 .ifdef DEBUG
 ;------------------------------------------------------------------------------
 ; TRACEOUT ( -- ) Prints current IP to console in hex.
@@ -6495,7 +6578,7 @@ unknown_msg:    .byte "??? ", $00
 ;------------------------------------------------------------------------------
 ; TRACEON ( -- ) enable execution tracing
 ;------------------------------------------------------------------------------
-        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, SEE_ENTRY
+        HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, UNUSED_ENTRY
         CODEPTR TRACEON_CODE
         PUBLIC  TRACEON_CODE
         .a16
@@ -6526,5 +6609,5 @@ unknown_msg:    .byte "??? ", $00
 .ifdef DEBUG
 	LAST_WORD = TRACEOFF_ENTRY
 .else
-	LAST_WORD = SEE_ENTRY
+	LAST_WORD = UNUSED_ENTRY
 .endif
