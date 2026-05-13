@@ -1,35 +1,70 @@
 \ c_quote_test.fs - C" regression tests
+ ok 
 
+ ok 
 \ Length byte is correct
+ ok 
 T{ C" hi" C@ -> 2 }T
+ ok 
 T{ C" hello" C@ -> 5 }T
+ ok 
 T{ C" " C@ -> 0 }T
+ ok 
 
+ ok 
 \ First character is correct
+ ok 
 : abc C" ABC" ;
+ ok 
 : xyz C" XYZ" ;
+ ok 
 T{ abc 1+ C@ -> 65 }T      \ 'A' = $41 = 65
+ ok 
 T{ xyz 1+ C@ -> 88 }T      \ 'X' = $58 = 88
+ ok 
 
+ ok 
 \ Last character is correct
+ ok 
 T{ abc 3 + C@ -> 67 }T     \ 'C' = $43 = 67
+ ok 
 
+ ok 
 \ C" in a definition - string lives in dictionary not PAD
+ ok 
 : CSTR1 C" testing" ;
+ ok 
 : CSTR2 C" hello" ;
+ ok 
 T{ CSTR1 C@ -> 7 }T
+ ok 
 T{ CSTR2 C@ -> 5 }T
+ ok 
 
+ ok 
 \ Two calls don't collide since strings are in dictionary
+ ok 
 T{ CSTR1 COUNT NIP -> 7 }T
+ ok 
 T{ CSTR2 COUNT NIP -> 5 }T
+ ok 
 
+ ok 
 \ Natural use case - FIND with counted string
+ ok 
 : FIND-DUP C" DUP" FIND NIP ;
+ ok 
 : FIND-IF C" IF" FIND NIP ;
+ ok 
 : FIND-NOTAWORD C" NOTAWORD" FIND NIP ;
+ ok 
 T{ FIND-DUP -> 1 }T
+ ok 
 T{ FIND-IF -> -1 }T
+ ok 
 T{ FIND-NOTAWORD -> 0 }T
+ ok 
 
+ ok 
 DONE
+###DONE###
