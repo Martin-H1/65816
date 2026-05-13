@@ -42,7 +42,7 @@ TIB_SIZE        = $0100
 
 ; RAM dictionary
 DICT_BASE       = $0700         ; RAM dictionary start
-DICT_END        = $7FFF         ; RAM dictionary end
+DICT_TOP        = $7FFF         ; RAM dictionary end
 
 ; ANS Forth boolean values
 FORTH_TRUE      = $FFFF

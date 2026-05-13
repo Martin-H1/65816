@@ -24,6 +24,8 @@ $0600 - $06FF   Terminal Input Buffer (TIB)
 $0700 - $7EFF   RAM Dictionary (user definitions grow upward) 
 $8000 - $FFFF   ROM (kernel primitives, core word set)
 
+Note: The debug build is loaded at $4000-$7FFF to allow testing in RAM.
+
 The Forth is written using the CA65 assembler with the following register
 allocations:
   X  = Parameter Stack Pointer (PSP)
@@ -173,8 +175,8 @@ Result must be pushed to parameter stack before frame teardown since TSC
 clobbers A.
 Use $FF ^ F_HIDDEN not ~F_HIDDEN for byte complement — ca65 produces a large
 constant with ~.
-Any call via the trampoline must be preceded by PHD/LDA #0/TCD and followed by
-PLD to ensure NEXT has D=$0000.
+Any call via the trampoline must ensure D=$0000. If needed preceed by
+PHD/LDA #0/TCD and followed by PLD to ensure NEXT has D=$0000.
 BRANCH and ZBRANCH use absolute addresses not offsets for branch targets.
 
 Debugging tools added:
@@ -188,6 +190,7 @@ pre-increment. Known INTERPRET_BODY offsets are mapped to named labels.
 
 TODO items carried forward:
 * Sort out the extra cell in CREATE using DOVAR.
+* Weird bug : foo if 1. d- then; "mismatched control structure"
 * Stretch Goal. Implement the remaining CORE-EXT words:
   DEFER, :NONAME, REFILL, SAVE-INPUT/RESTORE-INPUT, S\", M*/, SOURCE-ID.
 * Add a warning when the user redefines a literal as a word.

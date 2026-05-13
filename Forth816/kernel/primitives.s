@@ -145,9 +145,28 @@ QDUP_DONE:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; -ROT ( a b c -- c a b )
+;------------------------------------------------------------------------------
+        HEADER  "-ROT", MROT_ENTRY, MROT_CFA, 0, ROT_ENTRY
+        CODEPTR MROT_CODE
+        PUBLIC  MROT_CODE
+        .a16
+        .i16
+                LDA     4,X             ; a (bottom)
+                STA     SCRATCH0
+                LDA     0,X             ; c (TOS)
+                STA     4,X             ; bottom slot = c
+                LDA     2,X             ; b (NOS)
+                STA     0,X             ; TOS = b
+                LDA     SCRATCH0        ; a
+                STA     2,X             ; NOS = a
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; NIP ( a b -- b )
 ;------------------------------------------------------------------------------
-        HEADER  "NIP", NIP_ENTRY, NIP_CFA, 0, ROT_ENTRY
+        HEADER  "NIP", NIP_ENTRY, NIP_CFA, 0, MROT_ENTRY
         CODEPTR NIP_CODE
         PUBLIC  NIP_CODE
         .a16
@@ -1246,6 +1265,63 @@ MSTAR_DONE:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; M*/ ( d1 n1 +n2 -- d2 ) Multiply d1 by n1 producing the 3-cell intermediate
+; result t. Divide t by +n2 giving the double-cell quotient d2. An ambiguous
+; condition exists if +n2 is zero or negative, or the quotient lies outside of
+; the range of a double-precision signed integer.
+; https://forth-standard.org/standard/double/MTimesDiv
+;------------------------------------------------------------------------------
+        HEADER  "M*/", MSTARS_ENTRY, MSTARSS_CFA, 0, MSTAR_ENTRY
+        CODEPTR DOCOL
+        .word   TOR_CFA                ; ( d1 n1 ) R: ( +n2 )
+        .word   STOD_CFA               ; ( d1 n1_lo n1_hi ) R: ( +n2 )
+        .word   TOR_CFA                ; ( d1 n1_lo ) R: ( +n2 n1_hi )
+        .word   ABS_CFA                ; ( d1 n1_lo ) R: ( +n2 n1_hi )
+        .word   MROT_CFA               ; ( n1_lo d1 ) R: ( +n2 n1_hi )
+        .word   STOD_CFA               ; ( n1_lo d1 ) R: ( +n2 n1_hi )
+        .word   RFROM_CFA
+        .word   XOR_CFA
+        .word   RFROM_CFA
+        .word   SWAP_CFA
+        .word   TOR_CFA
+        .word   TOR_CFA
+        .word   DABS_CFA
+        .word   ROT_CFA
+        .word   TUCK_CFA
+        .word   UMSTAR_CFA
+        .word   TWOSWAP_CFA
+        .word   UMSTAR_CFA
+        .word   SWAP_CFA
+        .word   TOR_CFA
+        .word   ZERO_CFA
+        .word   DPLUS_CFA
+        .word   RFROM_CFA
+        .word   MROT_CFA
+        .word   RFETCH_CFA
+        .word   UMSLASHMOD_CFA
+        .word   MROT_CFA
+        .word   RFROM_CFA
+        .word   UMSLASHMOD_CFA
+        .word   MROT_CFA
+        .word   RFROM_CFA
+        .word   ZBRANCH_CFA
+        .word   MSTARS_ELSE
+        .word   ZBRANCH_CFA
+        .word   MSTARS_SKIP
+        .word   LIT_CFA
+        .word   1
+        .word   ZERO_CFA
+        .word   DPLUS_CFA
+MSTARS_SKIP:
+        .word   DNEGATE_CFA
+        .word   BRANCH_CFA
+        .word   MSTARS_THEN
+MSTARS_ELSE:
+        .word   DROP_CFA
+MSTARS_THEN:
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; */MOD ( n1 n2 n3 -- n4 n5 ) Multiply n1 by n2 producing the intermediate
 ; double-cell result d. Divide d by n3 producing the single-cell remainder n4
 ; and the single-cell quotient n5. An ambiguous condition exists if n3 is zero,
@@ -1255,7 +1331,7 @@ MSTAR_DONE:
 ; phrase >R M* R>
 ; https://forth-standard.org/standard/core/TimesDivMOD
 ;------------------------------------------------------------------------------
-        HEADER  "*/MOD", SSMOD_ENTRY, SSMOD_CFA, 0, MSTAR_ENTRY
+        HEADER  "*/MOD", SSMOD_ENTRY, SSMOD_CFA, 0, MSTARS_ENTRY
         CODEPTR DOCOL
         .word   TOR_CFA                ; ( n1 n2 ) R: ( n3 )
         .word   MSTAR_CFA              ; ( d ) 32-bit result
@@ -6553,7 +6629,7 @@ unknown_msg:    .byte "??? ", $00
         HEADER  "UNUSED", UNUSED_ENTRY, UNUSED_CFA, 0, SEE_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
-        .word   DICT_END
+        .word   DICT_TOP
         .word   HERE_CFA
         .word   MINUS_CFA
         .word   EXIT_CFA

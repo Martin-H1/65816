@@ -205,21 +205,19 @@ make tests
 ### What is complete
 - Full inner interpreter (NEXT, DOCOL, DOVAR, DOCON, DODOES)
 - All primitive words assembled and linked
+- All Forth-standard.org CORE words.
 - UART I/O with polling via HAL
-- QUIT outer interpreter loop skeleton
-- ACCEPT line editor with backspace support
-- NUMBER conversion routine.
-- WORD parser is complete.
-- Dictionary search (FIND)
 - System initialization and hardware vectors
 - 16-bit math funnctions
+- 32-bit double math funnctions
 - ":", ";", and conditionals and flow control.
 - Extensive unit tests for primitive verification
 
 ### What needs completion
-- FORGET keyword for dictionary clean up.
-- Double number support (>NUMBER upgrade)
-- SEE keyword for word decompliation
+- Sort out the extra cell in CREATE using DOVAR.
+- Stretch Goal. Implement the remaining CORE-EXT words:
+  DEFER, :NONAME, REFILL, SAVE-INPUT/RESTORE-INPUT, S\", M*/, SOURCE-ID.
+- Add a warning when the user redefines a literal as a word.
 - hal_mench.s was reused from another project and the source isn't the same as
   the other modules. I also plan to resuse a 65c22 VIA driver module. To make
   the source consistant I want to create a Python pretty printer. It reads

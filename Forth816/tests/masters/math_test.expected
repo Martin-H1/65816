@@ -164,5 +164,49 @@ T{  1  5 -5 WITHIN -> FALSE }T
  ok 
 
  ok 
+\ 2CONSTANT
+ ok 
+$FFFF $3FFF 2CONSTANT HI-2INT
+ ok 
+$0000 $C000 2CONSTANT LO-2INT
+ ok 
+
+ ok 
+: ?floored [ -3 2 / -2 = ] LITERAL IF 1 0 D- THEN ;
+ ok 
+
+ ok 
+T{       5.       7             11 M*/ ->  3. }T
+ ok 
+T{       5.      -7             11 M*/ -> -3. ?floored }T
+ ok 
+T{      -5.       7             11 M*/ -> -3. ?floored }T
+ ok 
+T{      -5.      -7             11 M*/ ->  3. }T
+ ok 
+T{ MAX-2INT       8             16 M*/ -> HI-2INT }T
+ ok 
+T{ MAX-2INT      -8             16 M*/ -> HI-2INT DNEGATE ?floored }T
+ ok 
+T{ MIN-2INT       8             16 M*/ -> LO-2INT }T
+ ok 
+T{ MIN-2INT      -8             16 M*/ -> LO-2INT DNEGATE }T
+ ok 
+
+ ok 
+T{ MAX-2INT MAX-INT        MAX-INT M*/ -> MAX-2INT }T
+ ok 
+T{ MAX-2INT MAX-INT 2/     MAX-INT M*/ -> MAX-INT 1- HI-2INT NIP }T
+ ok 
+T{ MIN-2INT LO-2INT NIP DUP NEGATE M*/ -> MIN-2INT }T
+ ok 
+T{ MIN-2INT LO-2INT NIP 1- MAX-INT M*/ -> MIN-INT 3 + HI-2INT NIP 2 + }T
+ ok 
+T{ MAX-2INT LO-2INT NIP DUP NEGATE M*/ -> MAX-2INT DNEGATE }T
+ ok 
+T{ MIN-2INT MAX-INT            DUP M*/ -> MIN-2INT }T
+ ok 
+
+ ok 
 DONE
 ###DONE###
