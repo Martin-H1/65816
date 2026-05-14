@@ -135,12 +135,12 @@ QDUP_DONE:
         .i16
                 LDA     4,X             ; a (bottom)
                 STA     SCRATCH0
-                LDA     2,X             ; b
+                PEEK_NOS                ; b
                 STA     4,X             ; bottom slot = b
-                LDA     0,X             ; c (TOS)
-                STA     2,X             ; middle slot = c
+                PEEK_TOS                ; c (TOS)
+                PUT_NOS                 ; middle slot = c
                 LDA     SCRATCH0        ; a
-                STA     0,X             ; TOS = a
+                PUT_TOS                 ; TOS = a
                 NEXT
         ENDPUBLIC
 
@@ -154,12 +154,12 @@ QDUP_DONE:
         .i16
                 LDA     4,X             ; a (bottom)
                 STA     SCRATCH0
-                LDA     0,X             ; c (TOS)
+                PEEK_TOS                ; c (TOS)
                 STA     4,X             ; bottom slot = c
-                LDA     2,X             ; b (NOS)
-                STA     0,X             ; TOS = b
+                PEEK_NOS                ; b (NOS)
+                PUT_TOS                 ; TOS = b
                 LDA     SCRATCH0        ; a
-                STA     2,X             ; NOS = a
+                PUT_NOS                 ; NOS = a
                 NEXT
         ENDPUBLIC
 
@@ -462,71 +462,47 @@ calc_depth:     TXA
 ; ZERO ( -- 0 ) pushes zero, shortcut to LIT 0.
 ;------------------------------------------------------------------------------
         HEADER  "ZERO", ZERO_ENTRY, ZERO_CFA, 0, TWORFETCH_ENTRY
-        CODEPTR ZERO_CODE
-        PUBLIC  ZERO_CODE
-        .a16
-        .i16
-                DEX
-                DEX
-                STZ     0,X             ; push zero
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   0                       ; push zero
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MIN-INT ( -- n ) pushes lowest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MIN-INT", MININT_ENTRY, MININT_CFA, 0, ZERO_ENTRY
-        CODEPTR MININT_CODE
-        PUBLIC  MININT_CODE
-        .a16
-        .i16
-                LDA     #$8000
-                PUSH
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   $8000                   ; Sign bit only
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MAX-INT ( -- n ) pushes highest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MAX-INT", MAXINT_ENTRY, MAXINT_CFA, 0, MININT_ENTRY
-        CODEPTR MAXINT_CODE
-        PUBLIC  MAXINT_CODE
-        .a16
-        .i16
-                LDA     #$7FFF
-                PUSH
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   $7FFF                   ; Sign bit only
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MIN-2INT ( -- d ) pushes lowest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MIN-2INT", MINTWOINT_ENTRY, MINTWOINT_CFA, 0, MAXINT_ENTRY
-        CODEPTR MINTWOINT_CODE
-        PUBLIC  MINTWOINT_CODE
-        .a16
-        .i16
-                LDA     #$0000
-                PUSH
-                LDA     #$8000
-                PUSH
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   ZERO_CFA
+        .word   MININT_CFA              ; Sign bit only
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MAX-2INT ( -- d ) pushes highest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MAX-2INT", MAXTWOINT_ENTRY, MAXTWOINT_CFA, 0, MINTWOINT_ENTRY
-        CODEPTR MAXTWOINT_CODE
-        PUBLIC  MAXTWOINT_CODE
-        .a16
-        .i16
-                LDA     #$FFFF
-                PUSH
-                LDA     #$7FFF
-                PUSH
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   $FFFF
+        .word   MAXINT_CFA              ; Sign bit clear, all other bits set.
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; + ( a b -- a+b )
@@ -1722,27 +1698,19 @@ DMIN_THEN:
 ; TRUE ( -- TRUE )
 ;------------------------------------------------------------------------------
         HEADER  "TRUE", TRUE_ENTRY, TRUE_CFA, 0, WITHIN_ENTRY
-        CODEPTR TRUE_CODE
-        PUBLIC  TRUE_CODE
-        .a16
-        .i16
-                LDA     #FORTH_TRUE
-                PUSH
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   FORTH_TRUE             ; ( TRUE )
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; FALSE ( -- FALSE )
 ;------------------------------------------------------------------------------
         HEADER  "FALSE", FALSE_ENTRY, FALSE_CFA, 0, TRUE_ENTRY
-        CODEPTR FALSE_CODE
-        PUBLIC  FALSE_CODE
-        .a16
-        .i16
-                LDA     #FORTH_FALSE
-                PUSH
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   FORTH_FALSE            ; ( TRUE )
+        .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; AND ( a b -- a&b )
@@ -5026,8 +4994,7 @@ CFANAME_LOOP:
         ; Match found
         .word   NIP_CFA                ; ( entry )
         .word   HEADERNAME_CFA         ; ( c-addr u )
-        .word   LIT_CFA
-        .word   $FFFF
+        .word   TRUE_CFA
         .word   EXIT_CFA
 
 CFANAME_NEXT:
@@ -5038,8 +5005,7 @@ CFANAME_NEXT:
 
 CFANAME_NOTFOUND:
         .word   TWODROP_CFA            ; ( )
-        .word   LIT_CFA
-        .word   $0000
+        .word   FALSE_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -6233,8 +6199,7 @@ SIGN_DONE:
         .word   DUP_CFA                ; ( n2 n1 n1 )
         .word   TOR_CFA                ; ( n2 n1 ) R: ( n1 )
         .word   ABS_CFA                ; ( n2 n1 ) R: ( n1 )
-        .word   LIT_CFA
-        .word   0                      ; ( n2 n1 0 ) R: ( n1 )
+        .word   ZERO_CFA               ; ( n2 n1 0 ) R: ( n1 )
         .word   LESSHASH_CFA           ; <# begin pictured output
         .word   HASHS_CFA              ; #S convert all digits
         .word   RFROM_CFA              ; ( n2 n1 )
@@ -6256,8 +6221,7 @@ SIGN_DONE:
         HEADER  "U.R", UDOTR_ENTRY, UDOTR_CFA, 0, DOTR_ENTRY
         CODEPTR DOCOL
         .word   TOR_CFA                ; ( u ) R: ( n )
-        .word   LIT_CFA
-        .word   0                      ; ( u 0 ) R: ( n )
+        .word   ZERO_CFA               ; ( u 0 ) R: ( n )
         .word   LESSHASH_CFA           ; <# begin pictured output
         .word   HASHS_CFA              ; #S convert all digits
         .word   HASHGT_CFA             ; #> ( c-addr u )
