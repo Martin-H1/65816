@@ -5915,27 +5915,27 @@ defer_uninit_msg:
         .word   BL_CFA
         .word   WORD_CFA
         .word   FIND_CFA
-        .word   DROP_CFA               ; ( xt word-xt )
+        .word   DROP_CFA               ; ( [xt] word-xt )
         .word   DUP_CFA
-        .word   FETCH_CFA              ; ( xt word-xt codeptr )
+        .word   FETCH_CFA              ; ( [xt] word-xt codeptr )
         .word   LIT_CFA
         .word   DODEFER
-        .word   EQUAL_CFA              ; ( xt word-xt is-defer? )
+        .word   EQUAL_CFA              ; ( [xt] word-xt is-defer? )
         .word   ZBRANCH_CFA
         .word   IS_ERROR
-        ; Valid DEFER
         .word   STATE_CFA
         .word   FETCH_CFA
         .word   ZBRANCH_CFA
         .word   IS_INTERPRET
-        ; Compile mode: compile LIT xt+2 STORE
-        .word   CELLPLUS_CFA           ; ( xt body-addr )
+        ; Compile mode: xt NOT on stack, word-xt is TOS
+        .word   CELLPLUS_CFA           ; ( body-addr )
         .word   LITERAL_CFA            ; compile body-addr
         .word   LIT_CFA
         .word   STORE_CFA
         .word   COMMA_CFA              ; compile !
         .word   EXIT_CFA
 IS_INTERPRET:
+        ; Interpret mode: ( xt word-xt )
         .word   CELLPLUS_CFA           ; ( xt body-addr )
         .word   STORE_CFA              ; store xt
         .word   EXIT_CFA
