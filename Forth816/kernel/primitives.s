@@ -2818,16 +2818,11 @@ DMIN_THEN:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; (S") runtime ( -- c-addr u )
+; (SQ) runtime for S" ( -- c-addr u )
 ; IP points to length cell followed by string bytes.
 ; Pushes c-addr and u, advances IP past string data.
 ;------------------------------------------------------------------------------
-DOSQUOTE_ENTRY:
-        .word   COUNT_ENTRY            ; Link field
-        .byte   F_HIDDEN | 4           ; Flags + length (4 chars)
-        .byte   "(S", $22, ")"         ; '(' 'S' '"' ')'
-        .align  CELL_SIZE
-DOSQUOTE_CFA:
+        HEADER  "(SQ)", DOSQUOTE_ENTRY, DOSQUOTE_CFA, F_HIDDEN, COUNT_ENTRY
         CODEPTR DOSQUOTE_CODE
         PUBLIC  DOSQUOTE_CODE
         .a16
@@ -2854,13 +2849,9 @@ DOSQUOTE_CFA:
 ;------------------------------------------------------------------------------
 ; S" ( " test\"" -- c-addr u ) parses string terminated by a quote in input
 ; buffer and returns a a pointer and character count.
+; Note: HEADERQ appends " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-SQUOTE_ENTRY:
-        .word   DOSQUOTE_ENTRY          ; Link field
-        .byte   F_IMMEDIATE | 2         ; Flags + length (2 chars)
-        .byte   "S", $22                ; 'S' '"'
-        .align  CELL_SIZE
-SQUOTE_CFA:
+        HEADERQ  "S", SQUOTE_ENTRY, SQUOTE_CFA, F_IMMEDIATE, DOSQUOTE_ENTRY
         CODEPTR DOCOL
 
         ; --- parse the string (both modes need it) ---
@@ -3041,12 +3032,7 @@ SQUOTE_INTERP:                          ; ( c-addr u )
 ; Compile mode: resolves escapes and compiles via (S") runtime.
 ; Interpret mode: resolves escapes into PAD, returns ( pad u ).
 ;------------------------------------------------------------------------------
-SBACKSLASHQUOTE_ENTRY:
-        .word   PROCESSESCAPES_ENTRY   ; Link field
-	.byte   F_IMMEDIATE | 3
-        .byte   "S", $5C, $22           ; S \ "
-        .align  CELL_SIZE
-SBACKSLASHQUOTE_CFA:
+        HEADERQ  "S\", SBACKSLASHQUOTE_ENTRY, SBACKSLASHQUOTE_CFA, F_IMMEDIATE, PROCESSESCAPES_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   $22                     ; '"' delimiter
@@ -3091,16 +3077,11 @@ SBACKSLASH_INTERP:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; (C") runtime ( -- c-addr )
+; (CQ) runtime for C" ( -- c-addr )
 ; IP points to a byte-length counted string.
 ; Pushes c-addr (pointing to the length byte), advances IP past string data.
 ;------------------------------------------------------------------------------
-DOCQUOTE_ENTRY:
-        .word   SBACKSLASHQUOTE_ENTRY   ; Link field
-        .byte   F_HIDDEN | 4            ; Flags + length (4 chars)
-        .byte   "(C", $22, ")"
-        .align  CELL_SIZE
-DOCQUOTE_CFA:
+        HEADER  "(CQ)", DOCQUOTE_ENTRY, DOCQUOTE_CFA, F_HIDDEN, SBACKSLASHQUOTE_ENTRY
         CODEPTR DOCQUOTE_CODE
         PUBLIC  DOCQUOTE_CODE
         .a16
@@ -3127,13 +3108,9 @@ DOCQUOTE_CFA:
 ;------------------------------------------------------------------------------
 ; C" ( "text" -- c-addr ) compile/interpret counted string
 ; Returns address of counted string (length byte followed by chars).
+; Note: HEADERQ appends " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-CQUOTE_ENTRY:
-        .word   DOCQUOTE_ENTRY          ; Link field
-        .byte   F_IMMEDIATE | 2         ; Flags + length (2 chars)
-        .byte   "C", $22
-        .align  CELL_SIZE
-CQUOTE_CFA:
+        HEADERQ  "C", CQUOTE_ENTRY, CQUOTE_CFA, F_IMMEDIATE, DOCQUOTE_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   '"'
@@ -3175,15 +3152,10 @@ CQUOTE_INTERP:                         ; ( c-addr u )
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; (.") ( -- )
+; (.Q) ( -- )
 ; Runtime code for ."
 ;------------------------------------------------------------------------------
-DODOTQUOTE_ENTRY:
-        .word   CQUOTE_ENTRY            ; Link field
-        .byte   F_HIDDEN | 3            ; Flags + length (3 chars)
-        .byte   $28, $2E, $22           ; '(' '.' '"'
-        .align  CELL_SIZE
-DODOTQUOTE_CFA:
+        HEADER  "(.Q)", DODOTQUOTE_ENTRY, DODOTQUOTE_CFA, F_HIDDEN, CQUOTE_ENTRY
         CODEPTR DODOTQUOTE_CODE
         PUBLIC  DODOTQUOTE_CODE
         .a16
@@ -3212,13 +3184,9 @@ DODOTQUOTE_CFA:
 ;------------------------------------------------------------------------------
 ; ." ( " test\"" -- ) parses text in the input buffer and outputs to console.
 ; https://forth-standard.org/standard/core/Dotq
+; Note: HEADERQ appends " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-DOTQUOTE_ENTRY:
-        .word   DODOTQUOTE_ENTRY        ; Link field
-        .byte   F_IMMEDIATE | 2         ; Flags + length (2 chars)
-        .byte   $2E, $22                ; ."
-        .align  CELL_SIZE
-DOTQUOTE_CFA:
+        HEADERQ  ".", DOTQUOTE_ENTRY, DOTQUOTE_CFA, F_IMMEDIATE, DODOTQUOTE_ENTRY
         CODEPTR DOCOL
 
         ; --- parse the string (both modes need it) ---
@@ -3260,17 +3228,12 @@ DOTQUOTE_INTERP:                        ; ( c-addr u )
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; (ABORT") ( i * x x1 -- | i * x ) ( R: j * x -- | j * x )
+; (ABORTQ) ( i * x x1 -- | i * x ) ( R: j * x -- | j * x )
 ; POP x1 and if any bit is not zero, display the msg and perform an abort
 ; sequence that includes the function of ABORT.
 ; https://forth-standard.org/standard/core/ABORTq
 ;------------------------------------------------------------------------------
-DOABORTQUOTE_ENTRY:
-        .word   DOTQUOTE_ENTRY          ; Link field
-        .byte   F_HIDDEN | 8            ; Flags + length (7 chars)
-        .byte   "(ABORT", $22, ")"      ; (ABORT")
-        .align  CELL_SIZE
-DOABORTQUOTE_CFA:
+        HEADER  "(ABORTQ)", DOABORTQUOTE_ENTRY, DOABORTQUOTE_CFA, F_HIDDEN, DOTQUOTE_ENTRY
         CODEPTR DOABORTQUOTE_CODE
         PUBLIC  DOABORTQUOTE_CODE
         .a16
@@ -3322,14 +3285,10 @@ DOABORTQUOTE_CFA:
 ; Run-time: ( i * x x1 -- | i * x ) ( R: j * x -- | j * x )
 ; POP x1 and if any bit is not zero, display the msg and perform an abort
 ; sequence that includes the function of ABORT.
+; Note: HEADERQ appends " to name field to workaround CA65 limitation.
 ; https://forth-standard.org/standard/core/ABORTq
 ;------------------------------------------------------------------------------
-ABORTQUOTE_ENTRY:
-        .word   DOABORTQUOTE_ENTRY      ; Link field
-        .byte   F_IMMEDIATE | 6         ; Flags + length (6 chars)
-        .byte   "ABORT", $22            ; ABORT"
-        .align  CELL_SIZE
-ABORTQUOTE_CFA:
+        HEADERQ  "ABORT", ABORTQUOTE_ENTRY, ABORTQUOTE_CFA, F_IMMEDIATE, DOABORTQUOTE_ENTRY
         CODEPTR DOCOL
         .word   STATE_CFA
         .word   FETCH_CFA

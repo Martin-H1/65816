@@ -162,6 +162,24 @@ cfa_lbl:
 .endmacro
 
 ;------------------------------------------------------------------------------
+; HEADERQ - Creates a dictionary entry header in ROM for words ending in ".
+;           Identical to HEADER, except it appends " to str_name
+; Usage: HEADERQ "NAME", entry_label, cfa_label, flags, prev
+;------------------------------------------------------------------------------
+.macro  HEADERQ  str_name, entry_lbl, cfa_lbl, flags, prev
+entry_lbl:
+        .ifnblank prev
+          .word prev
+        .else
+          .word 0
+        .endif
+        .byte (flags | (.strlen(str_name) + 1))
+        .byte str_name, $22
+        .align 2
+cfa_lbl:
+.endmacro
+
+;------------------------------------------------------------------------------
 ; CODEPTR - Emit code pointer cell after a HEADER
 ;
 ; For primitive (CODE) words, code_label is the machine code routine.
