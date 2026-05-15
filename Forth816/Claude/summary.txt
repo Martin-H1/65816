@@ -311,8 +311,7 @@ TODO items carried forward:
   CFA+4. VARIABLE works correctly since it uses its own ZERO/COMMA for the data
   cell. A future fix should give CREATE its own runtime word that pushes CFA+4.
 - Weird bug: ": foo if 1. d- then ;" gives "mismatched control structure".
-- Stretch Goal. Implement the remaining CORE-EXT words:
-  DEFER, :NONAME, REFILL
+- Stretch Goal. Implement the remaining CORE-EXT words: :NONAME, REFILL
 - Add a warning when the user redefines a word.
 - Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
   (opportunistic — do a function at a time):

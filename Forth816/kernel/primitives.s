@@ -5897,9 +5897,142 @@ TICK_ERR:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; DEFER-UNINITIALIZED ( -- ) called when uninitialized DEFER is executed
+;------------------------------------------------------------------------------
+        HEADER  "DEFER-UNINITIALIZED", DEFERUNINITIALIZED_ENTRY, DEFERUNINITIALIZED_CFA, F_HIDDEN, BRACKETTICK_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   defer_uninit_msg
+        .word   CPUTS_CFA
+        .word   EXIT_CFA
+defer_uninit_msg:
+        .byte   "deferred word is uninitialized", C_RETURN, L_FEED, $00
+
+;------------------------------------------------------------------------------
+; DEFER ( "name" -- ) create a deferred word
+;------------------------------------------------------------------------------
+        HEADER  "DEFER", DEFER_ENTRY, DEFER_CFA, 0, DEFERUNINITIALIZED_ENTRY
+        CODEPTR DOCOL
+        .word   BL_CFA
+        .word   WORD_CFA
+        .word   DOCREATE_CFA
+        .word   LIT_CFA
+        .word   DODEFER
+        .word   COMMA_CFA              ; write DODEFER at CFA
+        .word   LIT_CFA
+        .word   DEFERUNINITIALIZED_CFA ; initialize body to warning word
+        .word   COMMA_CFA
+        .word   REVEAL_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; DEFER! ( xt defer-xt -- ) store xt into defer word's body
+;------------------------------------------------------------------------------
+        HEADER  "DEFER!", DEFERSTORE_ENTRY, DEFERSTORE_CFA, 0, DEFER_ENTRY
+        CODEPTR DOCOL
+        .word   CELLPLUS_CFA           ; ( xt body-addr )
+        .word   STORE_CFA              ; store xt into body
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; DEFER@ ( defer-xt -- xt ) fetch xt from defer word's body
+;------------------------------------------------------------------------------
+        HEADER  "DEFER@", DEFERFETCH_ENTRY, DEFERFETCH_CFA, 0, DEFERSTORE_ENTRY
+        CODEPTR DOCOL
+        .word   CELLPLUS_CFA           ; ( body-addr )
+        .word   FETCH_CFA              ; fetch xt from body
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; IS ( xt "name" -- ) store xt into named defer word
+; Interpretation: store immediately
+; Compilation: compile code to store at runtime
+;------------------------------------------------------------------------------
+        HEADER  "IS", IS_ENTRY, IS_CFA, F_IMMEDIATE, DEFERFETCH_ENTRY
+        CODEPTR DOCOL
+        .word   BL_CFA
+        .word   WORD_CFA
+        .word   FIND_CFA
+        .word   DROP_CFA               ; ( xt word-xt )
+        .word   DUP_CFA
+        .word   FETCH_CFA              ; ( xt word-xt codeptr )
+        .word   LIT_CFA
+        .word   DODEFER
+        .word   EQUAL_CFA              ; ( xt word-xt is-defer? )
+        .word   ZBRANCH_CFA
+        .word   IS_ERROR
+        ; Valid DEFER
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZBRANCH_CFA
+        .word   IS_INTERPRET
+        ; Compile mode: compile LIT xt+2 STORE
+        .word   CELLPLUS_CFA           ; ( xt body-addr )
+        .word   LITERAL_CFA            ; compile body-addr
+        .word   LIT_CFA
+        .word   STORE_CFA
+        .word   COMMA_CFA              ; compile !
+        .word   EXIT_CFA
+IS_INTERPRET:
+        .word   CELLPLUS_CFA           ; ( xt body-addr )
+        .word   STORE_CFA              ; store xt
+        .word   EXIT_CFA
+IS_ERROR:
+        .word   LIT_CFA
+        .word   FORTH_TRUE
+        .word   DOABORTQUOTE_CFA
+        .word   .strlen("not a DEFER")
+        .byte   "not a DEFER"
+        .align  CELL_SIZE
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; ACTION-OF ( "name" -- xt ) fetch xt from named defer word
+; Interpretation: fetch immediately
+; Compilation: compile code to fetch at runtime
+;------------------------------------------------------------------------------
+        HEADER  "ACTION-OF", ACTIONOF_ENTRY, ACTIONOF_CFA, F_IMMEDIATE, IS_ENTRY
+        CODEPTR DOCOL
+        .word   BL_CFA
+        .word   WORD_CFA
+        .word   FIND_CFA
+        .word   DROP_CFA               ; ( word-xt )
+        .word   DUP_CFA
+        .word   FETCH_CFA              ; ( word-xt codeptr )
+        .word   LIT_CFA
+        .word   DODEFER
+        .word   EQUAL_CFA              ; ( word-xt is-defer? )
+        .word   ZBRANCH_CFA
+        .word   ACTIONOF_ERROR
+        ; Valid DEFER
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZBRANCH_CFA
+        .word   ACTIONOF_INTERPRET
+        ; Compile mode: compile LIT body-addr FETCH
+        .word   CELLPLUS_CFA           ; ( body-addr )
+        .word   LITERAL_CFA            ; compile body-addr
+        .word   LIT_CFA
+        .word   FETCH_CFA
+        .word   COMMA_CFA              ; compile @
+        .word   EXIT_CFA
+ACTIONOF_INTERPRET:
+        .word   CELLPLUS_CFA           ; ( body-addr )
+        .word   FETCH_CFA              ; fetch xt
+        .word   EXIT_CFA
+ACTIONOF_ERROR:
+        .word   LIT_CFA
+        .word   FORTH_TRUE
+        .word   DOABORTQUOTE_CFA
+        .word   .strlen("not a DEFER")
+        .byte   "not a DEFER"
+        .align  CELL_SIZE
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; ?PAIRS ( n1 n2 -- ) abort if n1 <> n2 or stack underflow
 ;------------------------------------------------------------------------------
-        HEADER  "?PAIRS", QPAIRS_ENTRY, QPAIRS_CFA, F_IMMEDIATE, BRACKETTICK_ENTRY
+        HEADER  "?PAIRS", QPAIRS_ENTRY, QPAIRS_CFA, F_IMMEDIATE, ACTIONOF_ENTRY
         CODEPTR DOCOL
         .word   DEPTH_CFA
         .word   LIT_CFA
