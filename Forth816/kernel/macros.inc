@@ -164,17 +164,17 @@ cfa_lbl:
 ;------------------------------------------------------------------------------
 ; HEADERQ - Creates a dictionary entry header in ROM for words ending in ".
 ;           Identical to HEADER, except it appends " to str_name
-; Usage: HEADERQ "NAME", entry_label, cfa_label, flags, prev
+; Usage: HEADERQ "NAME", "", entry_label, cfa_label, flags, prev
 ;------------------------------------------------------------------------------
-.macro  HEADERQ  str_name, entry_lbl, cfa_lbl, flags, prev
+.macro  HEADERQ  str_name, str_suffix, entry_lbl, cfa_lbl, flags, prev
 entry_lbl:
         .ifnblank prev
           .word prev
         .else
           .word 0
         .endif
-        .byte (flags | (.strlen(str_name) + 1))
-        .byte str_name, $22
+        .byte (flags | (.strlen(str_name) + .strlen(str_suffix) + 1))
+        .byte str_name, $22, str_suffix
         .align 2
 cfa_lbl:
 .endmacro

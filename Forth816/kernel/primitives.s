@@ -1801,7 +1801,7 @@ DMIN_THEN:
                 PHY                     ; Save IP (TAY below clobbers it)
                 TAY
                 BEQ     @done
-                LDA     0,X
+                PEEK_TOS
 @loop:          LSR     A
                 DEY
                 BNE     @loop
@@ -1913,12 +1913,12 @@ DMIN_THEN:
         PUBLIC  TWOSTORE_CODE
         .a16
         .i16
-                LDA     0,X             ; peek addr → SCRATCH0
+                PEEK_TOS                ; peek addr → SCRATCH0
                 STA     SCRATCH0
                 CLC
                 ADC     #CELL_SIZE      ; addr+2 → SCRATCH1 (carry now clear)
                 STA     SCRATCH1
-                LDA     2,X             ; low cell of d
+                PEEK_NOS                ; low cell of d
                 STA     (SCRATCH0)      ; store at addr
                 LDA     4,X             ; high cell of d
                 STA     (SCRATCH1)      ; store at addr+2
@@ -2818,11 +2818,12 @@ DMIN_THEN:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; (SQ) runtime for S" ( -- c-addr u )
+; (S") runtime for S" ( -- c-addr u )
 ; IP points to length cell followed by string bytes.
 ; Pushes c-addr and u, advances IP past string data.
+; Note: HEADERQ adds " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-        HEADER  "(SQ)", DOSQUOTE_ENTRY, DOSQUOTE_CFA, F_HIDDEN, COUNT_ENTRY
+        HEADERQ "(S", ")", DOSQUOTE_ENTRY, DOSQUOTE_CFA, F_HIDDEN, COUNT_ENTRY
         CODEPTR DOSQUOTE_CODE
         PUBLIC  DOSQUOTE_CODE
         .a16
@@ -2849,9 +2850,9 @@ DMIN_THEN:
 ;------------------------------------------------------------------------------
 ; S" ( " test\"" -- c-addr u ) parses string terminated by a quote in input
 ; buffer and returns a a pointer and character count.
-; Note: HEADERQ appends " to name field to workaround CA65 limitation.
+; Note: HEADERQ adds " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-        HEADERQ  "S", SQUOTE_ENTRY, SQUOTE_CFA, F_IMMEDIATE, DOSQUOTE_ENTRY
+        HEADERQ "S", "", SQUOTE_ENTRY, SQUOTE_CFA, F_IMMEDIATE, DOSQUOTE_ENTRY
         CODEPTR DOCOL
 
         ; --- parse the string (both modes need it) ---
@@ -3031,8 +3032,9 @@ SQUOTE_INTERP:                          ; ( c-addr u )
 ; S\" ( "text\" -- c-addr u ) string with escape sequences
 ; Compile mode: resolves escapes and compiles via (S") runtime.
 ; Interpret mode: resolves escapes into PAD, returns ( pad u ).
+; Note: HEADERQ adds " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-        HEADERQ  "S\", SBACKSLASHQUOTE_ENTRY, SBACKSLASHQUOTE_CFA, F_IMMEDIATE, PROCESSESCAPES_ENTRY
+        HEADERQ "S\", "", SBACKSLASHQUOTE_ENTRY, SBACKSLASHQUOTE_CFA, F_IMMEDIATE, PROCESSESCAPES_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   $22                     ; '"' delimiter
@@ -3077,11 +3079,12 @@ SBACKSLASH_INTERP:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; (CQ) runtime for C" ( -- c-addr )
+; (C") runtime for C" ( -- c-addr )
 ; IP points to a byte-length counted string.
 ; Pushes c-addr (pointing to the length byte), advances IP past string data.
+; Note: HEADERQ adds " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-        HEADER  "(CQ)", DOCQUOTE_ENTRY, DOCQUOTE_CFA, F_HIDDEN, SBACKSLASHQUOTE_ENTRY
+        HEADERQ "(C", ")", DOCQUOTE_ENTRY, DOCQUOTE_CFA, F_HIDDEN, SBACKSLASHQUOTE_ENTRY
         CODEPTR DOCQUOTE_CODE
         PUBLIC  DOCQUOTE_CODE
         .a16
@@ -3108,9 +3111,9 @@ SBACKSLASH_INTERP:
 ;------------------------------------------------------------------------------
 ; C" ( "text" -- c-addr ) compile/interpret counted string
 ; Returns address of counted string (length byte followed by chars).
-; Note: HEADERQ appends " to name field to workaround CA65 limitation.
+; Note: HEADERQ adds " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-        HEADERQ  "C", CQUOTE_ENTRY, CQUOTE_CFA, F_IMMEDIATE, DOCQUOTE_ENTRY
+        HEADERQ "C", "", CQUOTE_ENTRY, CQUOTE_CFA, F_IMMEDIATE, DOCQUOTE_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   '"'
@@ -3152,10 +3155,11 @@ CQUOTE_INTERP:                         ; ( c-addr u )
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; (.Q) ( -- )
+; (.") ( -- )
 ; Runtime code for ."
+; Note: HEADERQ adds " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-        HEADER  "(.Q)", DODOTQUOTE_ENTRY, DODOTQUOTE_CFA, F_HIDDEN, CQUOTE_ENTRY
+        HEADERQ "(.", ")", DODOTQUOTE_ENTRY, DODOTQUOTE_CFA, F_HIDDEN, CQUOTE_ENTRY
         CODEPTR DODOTQUOTE_CODE
         PUBLIC  DODOTQUOTE_CODE
         .a16
@@ -3184,9 +3188,9 @@ CQUOTE_INTERP:                         ; ( c-addr u )
 ;------------------------------------------------------------------------------
 ; ." ( " test\"" -- ) parses text in the input buffer and outputs to console.
 ; https://forth-standard.org/standard/core/Dotq
-; Note: HEADERQ appends " to name field to workaround CA65 limitation.
+; Note: HEADERQ adds " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-        HEADERQ  ".", DOTQUOTE_ENTRY, DOTQUOTE_CFA, F_IMMEDIATE, DODOTQUOTE_ENTRY
+        HEADERQ ".", "", DOTQUOTE_ENTRY, DOTQUOTE_CFA, F_IMMEDIATE, DODOTQUOTE_ENTRY
         CODEPTR DOCOL
 
         ; --- parse the string (both modes need it) ---
@@ -3228,12 +3232,13 @@ DOTQUOTE_INTERP:                        ; ( c-addr u )
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; (ABORTQ) ( i * x x1 -- | i * x ) ( R: j * x -- | j * x )
+; (ABORT") ( i * x x1 -- | i * x ) ( R: j * x -- | j * x )
 ; POP x1 and if any bit is not zero, display the msg and perform an abort
 ; sequence that includes the function of ABORT.
 ; https://forth-standard.org/standard/core/ABORTq
+; Note: HEADERQ adds " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-        HEADER  "(ABORTQ)", DOABORTQUOTE_ENTRY, DOABORTQUOTE_CFA, F_HIDDEN, DOTQUOTE_ENTRY
+        HEADERQ "(ABORT", ")", DOABORTQUOTE_ENTRY, DOABORTQUOTE_CFA, F_HIDDEN, DOTQUOTE_ENTRY
         CODEPTR DOABORTQUOTE_CODE
         PUBLIC  DOABORTQUOTE_CODE
         .a16
@@ -3279,16 +3284,16 @@ DOTQUOTE_INTERP:                        ; ( c-addr u )
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; ABORTQ Compilation: ( "msg<quote>" -- )
+; ABORT" Compilation: ( "msg<quote>" -- )
 ; Parse the msg delimited by a ". Append the run-time semantics given below to
 ; the current definition.
 ; Run-time: ( i * x x1 -- | i * x ) ( R: j * x -- | j * x )
 ; POP x1 and if any bit is not zero, display the msg and perform an abort
 ; sequence that includes the function of ABORT.
-; Note: HEADERQ appends " to name field to workaround CA65 limitation.
 ; https://forth-standard.org/standard/core/ABORTq
+; Note: HEADERQ adds " to name field to workaround CA65 limitation.
 ;------------------------------------------------------------------------------
-        HEADERQ  "ABORT", ABORTQUOTE_ENTRY, ABORTQUOTE_CFA, F_IMMEDIATE, DOABORTQUOTE_ENTRY
+        HEADERQ "ABORT", "", ABORTQUOTE_ENTRY, ABORTQUOTE_CFA, F_IMMEDIATE, DOABORTQUOTE_ENTRY
         CODEPTR DOCOL
         .word   STATE_CFA
         .word   FETCH_CFA
