@@ -2633,9 +2633,24 @@ DMIN_THEN:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; #SOURCEID ( -- addr ) address of source ID variable
+;------------------------------------------------------------------------------
+        HEADER  "#SOURCEID", HASHSOURCEID_ENTRY, HASHSOURCEID_CFA, 0, SOURCE_ENTRY
+        CODEPTR HASHSOURCEID_CODE
+        PUBLIC  HASHSOURCEID_CODE
+        .a16
+        .i16
+                LDA     UP
+                CLC
+                ADC     #U_SOURCEID
+                PUSH
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; #TIB ( -- addr ) address of source length variable
 ;------------------------------------------------------------------------------
-        HEADER  "#TIB", HASHTIB_ENTRY, HASHTIB_CFA, 0, SOURCE_ENTRY
+        HEADER  "#TIB", HASHTIB_ENTRY, HASHTIB_CFA, 0, HASHSOURCEID_ENTRY
         CODEPTR HASHTIB_CODE
         PUBLIC  HASHTIB_CODE
         .a16
@@ -2895,12 +2910,193 @@ SQUOTE_INTERP:                          ; ( c-addr u )
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; PROCESS-ESCAPES ( c-addr u dest -- dest u' )
+; Copy u bytes from c-addr to dest, resolving escape sequences.
+; Returns original dest and actual byte count written.
+;------------------------------------------------------------------------------
+        HEADER  "PROCESS-ESCAPES", PROCESSESCAPES_ENTRY, PROCESSESCAPES_CFA, F_HIDDEN, SQUOTE_ENTRY
+        CODEPTR PROCESSESCAPES_CODE
+        PUBLIC  PROCESSESCAPES_CODE
+        .a16
+        .i16
+        LOC_DEST     = 1        ; destination pointer (advances during loop)
+        LOC_SRC      = 3        ; source pointer (advances during loop)
+        LOC_COUNT    = 5        ; bytes written count
+        LOC_SIZE     = LOC_COUNT + 1
+
+                PHD
+                PHY
+
+                TSC
+                SEC
+                SBC     #LOC_SIZE
+                TCS
+
+                ; Load arguments from parameter stack
+                POP                     ; dest
+                STA     LOC_DEST,S
+                PEEK_NOS                ; c-addr
+                STA     LOC_SRC,S
+                LDA     LOC_DEST,S
+                PUT_NOS                 ; put back the original dest
+                PEEK_TOS                ; u (remaining count)
+                TAY                     ; Y = u (loop counter)
+
+                TSC                     ; point direct page to stack frame
+                TCD
+
+                STZ     LOC_COUNT       ; byte count written = 0
+                TYA
+                BNE     @loop
+                JMP     @return         ; empty string
+
+@loop:
+                OFF16MEM
+                LDA     (LOC_SRC)
+                ON16MEM
+                AND     #$00FF
+
+                CMP     #$5C            ; '\'
+                BNE     @store
+
+                ; Backslash: consume it, fetch escape char
+                INC     LOC_SRC
+                DEY
+                BEQ     @return         ; trailing backslash — ignore
+
+                OFF16MEM
+                LDA     (LOC_SRC)
+                ON16MEM
+                AND     #$00FF
+
+                CMP     #'n'
+                BNE     @not_n
+                LDA     #L_FEED
+                BRA     @store
+@not_n:
+                CMP     #'r'
+                BNE     @not_r
+                LDA     #C_RETURN
+                BRA     @store
+@not_r:
+                CMP     #'t'
+                BNE     @not_t
+                LDA     #HTAB
+                BRA     @store
+@not_t:
+                CMP     #'a'
+                BNE     @not_a
+                LDA     #BELL
+                BRA     @store
+@not_a:
+                CMP     #'b'
+                BNE     @not_b
+                LDA     #BKSP
+                BRA     @store
+@not_b:
+                CMP     #'l'
+                BNE     @not_l
+                LDA     #L_FEED
+                BRA     @store
+@not_l:
+                CMP     #'f'
+                BNE     @not_f
+                LDA     #F_FEED
+                BRA     @store
+@not_f:
+                CMP     #'v'
+                BNE     @not_v
+                LDA     #VTAB
+                BRA     @store
+@not_v:
+                CMP     #'0'
+                BNE     @store          ; \\ \" and unknown: store char as-is
+                LDA     #NULL
+@store:
+                OFF16MEM
+                STA     (LOC_DEST)
+                ON16MEM
+                INC     LOC_DEST
+                INC     LOC_SRC
+                INC     LOC_COUNT
+                DEY
+                BEQ     @return
+                JMP     @loop
+
+@return:
+                LDA     LOC_COUNT
+                STA     a:0,X           ; put u' (TOS)
+
+                TSC
+                CLC
+                ADC     #LOC_SIZE
+                TCS
+                PLY
+                PLD
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; S\" ( "text\" -- c-addr u ) string with escape sequences
+; Compile mode: resolves escapes and compiles via (S") runtime.
+; Interpret mode: resolves escapes into PAD, returns ( pad u ).
+;------------------------------------------------------------------------------
+SBACKSLASHQUOTE_ENTRY:
+        .word   PROCESSESCAPES_ENTRY   ; Link field
+	.byte   F_IMMEDIATE | 3
+        .byte   "S", $5C, $22           ; S \ "
+        .align  CELL_SIZE
+SBACKSLASHQUOTE_CFA:
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   $22                     ; '"' delimiter
+        .word   PARSE_CFA               ; ( c-addr u ) raw string
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZBRANCH_CFA
+        .word   SBACKSLASH_INTERP
+        ;----------------------------------------------------------------------
+        ; Compile mode
+        ;----------------------------------------------------------------------
+        .word   LIT_CFA
+        .word   DOSQUOTE_CFA
+        .word   COMMA_CFA               ; compile (S")
+        .word   HERE_CFA                ; ( c-addr u len-addr )
+        .word   ZERO_CFA
+        .word   COMMA_CFA               ; compile placeholder length cell
+        .word   HERE_CFA                ; ( c-addr u len-addr dest )
+        .word   SWAP_CFA                ; ( c-addr u dest len-addr )
+        .word   TOR_CFA                 ; RS: ( len-addr )
+        .word   PROCESSESCAPES_CFA      ; ( dest u' )
+        .word   RFROM_CFA               ; ( dest u' len-addr )
+        .word   OVER_CFA                ; ( dest u' len-addr u' )
+        .word   SWAP_CFA                ; ( dest u' u' len-addr )
+        .word   STORE_CFA               ; patch length cell with u'
+        ; Advance DP by u'
+        .word   SWAP_CFA                ; ( u' dest )
+        .word   DROP_CFA                ; ( u' )
+        .word   DP_CFA
+        .word   FETCH_CFA               ; ( u' dp )
+        .word   PLUS_CFA                ; ( dp+u' )
+        .word   DP_CFA
+        .word   STORE_CFA               ; DP += u'
+        .word   ALIGN_CFA               ; align DP
+        .word   EXIT_CFA
+        ;----------------------------------------------------------------------
+        ; Interpret mode
+        ;----------------------------------------------------------------------
+SBACKSLASH_INTERP:
+        .word   PAD_CFA                 ; ( c-addr u pad )
+        .word   PROCESSESCAPES_CFA      ; ( pad u' )
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; (C") runtime ( -- c-addr )
 ; IP points to a byte-length counted string.
 ; Pushes c-addr (pointing to the length byte), advances IP past string data.
 ;------------------------------------------------------------------------------
 DOCQUOTE_ENTRY:
-        .word   SQUOTE_ENTRY            ; Link field
+        .word   SBACKSLASHQUOTE_ENTRY   ; Link field
         .byte   F_HIDDEN | 4            ; Flags + length (4 chars)
         .byte   "(C", $22, ")"
         .align  CELL_SIZE
@@ -4686,40 +4882,90 @@ INTERPRET_COMPILE_NORMAL:
         .word   INTERPRET_LOOP
 
 ;------------------------------------------------------------------------------
+; SOURCE-ID ( -- 0 | -1 ) Identifies the input source as follows:
+; 0 - console
+; -1 - string (via evaluate)
+; https://forth-standard.org/standard/core/SOURCE-ID
+;------------------------------------------------------------------------------
+        HEADER  "SOURCE-ID", SOURCEID_ENTRY, SOURCEID_CFA, 0, INTERPRET_ENTRY
+        CODEPTR DOCOL
+        .word   HASHSOURCEID_CFA
+        .word   FETCH_CFA
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; SAVE-INPUT ( -- xn ... x1 n ) x1 through xn describe the current state of
+; the input source specification for later use by RESTORE-INPUT.
+; https://forth-standard.org/standard/core/SAVE-INPUT
+;------------------------------------------------------------------------------
+        HEADER  "SAVE-INPUT", SAVEINPUT_ENTRY, SAVEINPUT_CFA, 0, SOURCEID_ENTRY
+        CODEPTR DOCOL
+        .word   HASHSOURCEID_CFA
+        .word   FETCH_CFA              ; ( src-id )
+        .word   TOIN_CFA
+        .word   FETCH_CFA              ; ( src-id toin )
+        .word   SOURCE_CFA             ; ( src-id toin tib sourcelen )
+        .word   LIT_CFA
+        .word   4                      ; ( src-id toin tib sourcelen 4 )
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
+; RESTORE-INPUT ( xn ... x1 n -- flag ) Attempt to restore the input source
+; specification to the state described by x1 through xn. flag is true if the
+; input source specification cannot be so restored. An ambiguous condition
+; exists if the input source represented by the arguments is not the same as
+; the current input source.
+; https://forth-standard.org/standard/core/RESTORE-INPUT
+;------------------------------------------------------------------------------
+        HEADER  "RESTORE-INPUT", RESTOREINPUT_ENTRY, RESTOREINPUT_CFA, 0, SAVEINPUT_ENTRY
+        CODEPTR DOCOL
+        ; Restore source state
+        .word   DROP_CFA               ; number of parameters isn't needed.
+        .word   HASHTIB_CFA            ; ( src-id toin tib srclen srclen-addr )
+        .word   STORE_CFA              ; restore #TIB
+        .word   TICKTIB_CFA            ; ( toin tib tib-addr )
+        .word   STORE_CFA              ; restore 'TIB
+        .word   TOIN_CFA               ; ( toin toin-addr )
+        .word   STORE_CFA              ; restore >IN
+        .word   HASHSOURCEID_CFA
+        .word   STORE_CFA              ; restore SOURCE-ID
+        .word   FALSE_CFA              ; False as it was restored.
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; EVALUATE ( ix c-addr u -- jx ) takes a string and interprets it as if it
 ; had been typed at the keyboard. It temporarily replaces the input source
 ; with the given string, runs the interpreter, then restores the original
 ; input source.
 ;------------------------------------------------------------------------------
-        HEADER  "EVALUATE", EVALUATE_ENTRY, EVALUATE_CFA, 0, INTERPRET_ENTRY
+        HEADER  "EVALUATE", EVALUATE_ENTRY, EVALUATE_CFA, 0, RESTOREINPUT_ENTRY
         CODEPTR DOCOL
         ; Save current source state onto return stack
-        .word   TOIN_CFA
-        .word   FETCH_CFA              ; ( c-addr u toin )
-        .word   SOURCE_CFA             ; ( c-addr u toin tib sourcelen )
-        .word   TOR_CFA                ; R: ( sourcelen )
-        .word   TOR_CFA                ; R: ( sourcelen tib )
-        .word   TOR_CFA                ; R: ( sourcelen tib toin )
-        ; Set up new source ( c-addr u )
-        .word   HASHTIB_CFA
-        .word   STORE_CFA              ; #TIB = u ( )
-        .word   TICKTIB_CFA
-        .word   STORE_CFA              ; 'TIB = c-addr ( c-addr u )
-        .word   ZERO_CFA
-        .word   TOIN_CFA
-        .word   STORE_CFA              ; >IN = 0
+        .word   SAVEINPUT_CFA          ; ( src-id c-addr u toin tib srclen 4 )
+        .word   TOR_CFA
+        .word   TOR_CFA
+        .word   TOR_CFA
+        .word   TOR_CFA
+        .word   TOR_CFA                ; ( c-adddr u ) R: unchanged
+        ; Set up new source
+        .word   TRUE_CFA               ; ( c-addr u -1 ) R: unchanged
+        .word   MROT_CFA               ; ( -1 c-addr u ) R: unchanged
+        .word   ZERO_CFA               ; ( -1 c-addr u 0 ) R: unchanged
+        .word   MROT_CFA               ; ( -1 0 c-addr u ) R: unchanged
+        .word   LIT_CFA
+        .word   4                      ; ( -1 0 c-addr u 4 ) R: unchanged
+        .word   RESTOREINPUT_CFA       ; ( flag )  R: unchanged
+        .word   DROP_CFA               ; ( ) R: unchanged
         ; Interpret the string
-        .word   INTERPRET_CFA
+        .word   INTERPRET_CFA          ; ( results ) R: unchanged
         ; Restore source state
         .word   RFROM_CFA
-        .word   TOIN_CFA
-        .word   STORE_CFA              ; restore >IN
         .word   RFROM_CFA
-        .word   TICKTIB_CFA
-        .word   STORE_CFA              ; restore 'TIB
         .word   RFROM_CFA
-        .word   HASHTIB_CFA
-        .word   STORE_CFA              ; restore #TIB
+        .word   RFROM_CFA
+        .word   RFROM_CFA              ; ( toin tib srclen 3 )
+        .word   RESTOREINPUT_CFA
+        .word   DROP_CFA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------

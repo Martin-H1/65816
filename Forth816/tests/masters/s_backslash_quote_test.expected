@@ -1,0 +1,138 @@
+\ s_backslash_quote_test.fs - S\" escape sequence regression tests
+ ok 
+
+ ok 
+\ Character constants from constants.inc
+ ok 
+$07 CONSTANT BELL
+ ok 
+$08 CONSTANT BKSP
+ ok 
+$09 CONSTANT HTAB
+ ok 
+$0A CONSTANT L_FEED
+ ok 
+$0D CONSTANT C_RETURN
+ ok 
+
+ ok 
+\ Basic string with no escapes
+ ok 
+: STR-PLAIN S\" hello" ;
+ ok 
+T{ STR-PLAIN NIP -> 5 }T
+ ok 
+
+ ok 
+\ Newline escape
+ ok 
+: STR-NEWLINE S\" hi\nbye" ;
+ ok 
+T{ STR-NEWLINE NIP -> 6 }T
+ ok 
+T{ STR-NEWLINE DROP 2 + C@ -> L_FEED }T
+ ok 
+
+ ok 
+\ Carriage return escape
+ ok 
+: STR-CR S\" hi\rbye" ;
+ ok 
+T{ STR-CR NIP -> 6 }T
+ ok 
+T{ STR-CR DROP 2 + C@ -> C_RETURN }T
+ ok 
+
+ ok 
+\ Tab escape
+ ok 
+: STR-TAB S\" hi\tbye" ;
+ ok 
+T{ STR-TAB NIP -> 6 }T
+ ok 
+T{ STR-TAB DROP 2 + C@ -> HTAB }T
+ ok 
+
+ ok 
+\ Backslash escape
+ ok 
+: STR-BACKSLASH S\" hi\\bye" ;
+ ok 
+T{ STR-BACKSLASH NIP -> 6 }T
+ ok 
+T{ STR-BACKSLASH DROP 2 + C@ -> $5C }T
+ ok 
+
+ ok 
+\ Quote escape
+ ok 
+: STR-QUOTE S\" hi\"bye" ;
+error: Undefined word BYE"
+T{ STR-QUOTE NIP -> 6 }T
+error: Undefined word STR-QUOTE
+T{ STR-QUOTE DROP 2 + C@ -> $22 }T
+error: Undefined word STR-QUOTE
+
+ ok 
+\ Null escape
+ ok 
+: STR-NULL S\" hi\0bye" ;
+ ok 
+T{ STR-NULL NIP -> 6 }T
+ ok 
+T{ STR-NULL DROP 2 + C@ -> 0 }T
+ ok 
+
+ ok 
+\ Bell escape
+ ok 
+: STR-BELL S\" hi\abye" ;
+ ok 
+T{ STR-BELL NIP -> 6 }T
+ ok 
+T{ STR-BELL DROP 2 + C@ -> BELL }T
+ ok 
+
+ ok 
+\ Backspace escape
+ ok 
+: STR-BKSP S\" hi\bbye" ;
+ ok 
+T{ STR-BKSP NIP -> 6 }T
+ ok 
+T{ STR-BKSP DROP 2 + C@ -> BKSP }T
+ ok 
+
+ ok 
+\ Multiple escapes
+ ok 
+: STR-MULTI S\" \r\n" ;
+ ok 
+T{ STR-MULTI NIP -> 2 }T
+ ok 
+T{ STR-MULTI DROP C@ -> C_RETURN }T
+ ok 
+T{ STR-MULTI DROP 1+ C@ -> L_FEED }T
+ ok 
+
+ ok 
+\ Empty string
+ ok 
+: STR-EMPTY S\" " ;
+ ok 
+T{ STR-EMPTY NIP -> 0 }T
+ ok 
+
+ ok 
+\ Escape at end of string
+ ok 
+: STR-END S\" hello\n" ;
+ ok 
+T{ STR-END NIP -> 6 }T
+ ok 
+T{ STR-END DROP 5 + C@ -> L_FEED }T
+ ok 
+
+ ok 
+DONE
+###DONE###

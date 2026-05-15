@@ -35,6 +35,7 @@ U_HLD           = $12           ; Address within PAD for formated I/O
 U_CURDEF        = $14           ; CFA of word being compiled
 U_SAVEDP        = $16           ; Saved value to prevent memory leak
 U_SAVELATEST    = $18           ; if there's an exception during compile
+U_SOURCEID      = $1A           ; ID of current input source.
 
 ; Terminal Input Buffer
 TIB_BASE        = $0600

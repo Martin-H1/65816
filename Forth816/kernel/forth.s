@@ -280,6 +280,9 @@ RTS_CFA_LIST:
                 LDY     #U_SOURCELEN
                 STA     (UP),Y          ; SOURCE-LEN = 0
 
+                LDY     #U_SOURCEID
+                STA     (UP),Y          ; SOURCE-ID = 0
+
                 ; --- User area: PAD and HLD = PAD_BASE ---
                 LDA     #PAD_BASE
                 LDY     #U_PAD
