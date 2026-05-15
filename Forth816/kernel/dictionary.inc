@@ -185,6 +185,7 @@ F_LENMASK       = $1F
         .global DOVAL
         .global DO2VAL
         .global DODOES
+        .global DODEFER
         .global RTS_CFA_LIST
 
 ; Tracing functions in the DEBUG build.

@@ -208,6 +208,24 @@ TRACE_EN:       .res 2                  ; Trace enable flag
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; DODEFER - runtime for DEFER words
+; Body at W+2 contains the xt to execute.
+; Fetches xt and dispatches via EXECUTE pattern.
+;------------------------------------------------------------------------------
+        PUBLIC  DODEFER
+        .a16
+        .i16
+                PHY                     ; save IP
+                LDY     #2
+                LDA     (W),Y           ; fetch xt from body
+                PLY                     ; restore IP
+                STA     W               ; W = xt
+                LDA     (W)             ; fetch code pointer
+                STA     SCRATCH0
+                JMP     (SCRATCH0)      ; dispatch
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; RTS_CFA_LIST trampoline used to handle the NEXT at the end of code that
 ; is entered via a JSR. This allows assembly primitives to call each other.
 ;------------------------------------------------------------------------------
