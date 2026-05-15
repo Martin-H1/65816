@@ -5613,9 +5613,7 @@ TO_ERROR:
         .word   LIT_CFA
         .word   FORTH_TRUE
         .word   DOABORTQUOTE_CFA
-        .word   11
-        .byte   "not a VALUE"
-        .align  CELL_SIZE
+        PWString "not a VALUE"
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5981,9 +5979,7 @@ IS_ERROR:
         .word   LIT_CFA
         .word   FORTH_TRUE
         .word   DOABORTQUOTE_CFA
-        .word   .strlen("not a DEFER")
-        .byte   "not a DEFER"
-        .align  CELL_SIZE
+        PWString "not a DEFER"
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -6024,9 +6020,7 @@ ACTIONOF_ERROR:
         .word   LIT_CFA
         .word   FORTH_TRUE
         .word   DOABORTQUOTE_CFA
-        .word   .strlen("not a DEFER")
-        .byte   "not a DEFER"
-        .align  CELL_SIZE
+        PWString "not a DEFER"
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -6039,14 +6033,10 @@ ACTIONOF_ERROR:
         .word   2
         .word   LESS_CFA               ; DEPTH < 2 ?
         .word   DOABORTQUOTE_CFA
-        .word   30
-        .byte   "mismatched control structure", C_RETURN, L_FEED
-        .align  CELL_SIZE
+        PWStringCRLF "mismatched control structure"
         .word   NOTEQUAL_CFA           ; n1 <> n2 ?
         .word   DOABORTQUOTE_CFA
-        .word   30
-        .byte   "mismatched control structure", C_RETURN, L_FEED
-        .align  CELL_SIZE
+        PWStringCRLF "mismatched control structure"
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------

@@ -192,6 +192,25 @@ cfa_lbl:
 ; (No combined macro for PRIM+body since ca65 can't open a .proc in a macro)
 ; Use HEADER + CODEPTR + .proc separately - see primitives.s for pattern.
 
+; Macro to define length byte prefixed string
+.macro PBString Arg
+        .byte   .strlen(Arg), Arg
+.endmacro
+
+; Macro to define length a length word prefixed string
+.macro PWString Arg
+        .word .strlen(Arg)
+        .byte Arg
+        .align CELL_SIZE
+.endmacro
+
+; Macro to define length a length word prefixed string ending with CRLF
+.macro PWStringCRLF Arg
+        .word .strlen(Arg)+2
+        .byte Arg, C_RETURN, L_FEED
+        .align CELL_SIZE
+.endmacro
+
 ;==============================================================================
 ; W65C265 ROM MONITOR CONSTANTS
 ; From the WDC W65C265 monitor ROM listing.
