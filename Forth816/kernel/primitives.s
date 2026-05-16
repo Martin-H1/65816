@@ -5448,11 +5448,32 @@ COLON_BODY:
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; :NONAME ( -- xt ) begin anonymous definition, return xt
+;------------------------------------------------------------------------------
+        HEADER  ":NONAME", NONAME_ENTRY, NONAME_CFA, 0, COLON_ENTRY
+        CODEPTR DOCOL
+        .word   CHECKPOINT_CFA          ; save DP and LATEST
+        .word   LATEST_CFA
+        .word   FETCH_CFA              ; ( latest ) save current LATEST
+        .word   HERE_CFA               ; ( latest xt )
+        .word   LIT_CFA
+        .word   DOCOL
+        .word   COMMA_CFA              ; compile DOCOL at HERE
+        .word   RBRACKET_CFA           ; enter compile mode
+        ; Stack: ( latest xt ) xt stays for caller
+        ; We need LATEST restored before ; calls REVEAL
+        ; Store saved LATEST back so REVEAL sees the right entry
+        .word   SWAP_CFA               ; ( xt latest )
+        .word   LATEST_CFA
+        .word   STORE_CFA              ; restore LATEST ( xt )
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; ; ( -- ) close colon definition: compile EXIT, reveal, interpret mode
 ; Immediate word - executes during compilation.
 ; https://forth-standard.org/standard/core/Semi
 ;------------------------------------------------------------------------------
-        HEADER  ";", SEMICOLON_ENTRY, SEMICOLON_CFA, F_IMMEDIATE, COLON_ENTRY
+        HEADER  ";", SEMICOLON_ENTRY, SEMICOLON_CFA, F_IMMEDIATE, NONAME_ENTRY
         CODEPTR DOCOL
 SEMICOLON_BODY:
         .word   LIT_CFA

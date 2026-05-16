@@ -1,0 +1,98 @@
+\ noname_test.fs - :NONAME regression tests
+ ok 
+
+ ok 
+\ Basic :NONAME creates executable xt
+ ok 
+:NONAME 42 ; CONSTANT ANSWER-XT
+ ok 
+T{ ANSWER-XT EXECUTE -> 42 }T
+ ok 
+
+ ok 
+\ :NONAME with parameters
+ ok 
+:NONAME + ; CONSTANT ADD-XT
+ ok 
+T{ 3 4 ADD-XT EXECUTE -> 7 }T
+ ok 
+
+ ok 
+\ :NONAME stored in a DEFER
+ ok 
+DEFER MYACTION
+ ok 
+:NONAME 99 ; IS MYACTION
+ ok 
+T{ MYACTION -> 99 }T
+ ok 
+
+ ok 
+\ :NONAME xt can be stored in a VARIABLE
+ ok 
+VARIABLE XT-VAR
+ ok 
+:NONAME 123 ; XT-VAR !
+ ok 
+T{ XT-VAR @ EXECUTE -> 123 }T
+ ok 
+
+ ok 
+\ Multiple :NONAME definitions are independent
+ ok 
+:NONAME 1 ; CONSTANT XT1
+ ok 
+:NONAME 2 ; CONSTANT XT2
+ ok 
+T{ XT1 EXECUTE -> 1 }T
+ ok 
+T{ XT2 EXECUTE -> 2 }T
+ ok 
+
+ ok 
+\ :NONAME with local stack manipulation
+ ok 
+:NONAME DUP * ; CONSTANT SQUARE-XT
+ ok 
+T{ 5 SQUARE-XT EXECUTE -> 25 }T
+ ok 
+
+ ok 
+\ :NONAME does not affect LATEST
+ ok 
+LATEST @ VALUE LATEST-BEFORE
+ ok 
+LATEST @ TO LATEST-BEFORE       \ capture LATEST after LATEST-BEFORE creation
+ ok 
+:NONAME 0 ; DROP                \ anonymous def
+ ok 
+T{ LATEST @ LATEST-BEFORE = -> -1 }T
+ ok 
+
+ ok 
+\ :NONAME works with control structures
+ ok 
+:NONAME IF 1 ELSE 0 THEN ; CONSTANT BOOL-XT
+ ok 
+T{ -1 BOOL-XT EXECUTE -> 1 }T
+ ok 
+T{ 0 BOOL-XT EXECUTE -> 0 }T
+ ok 
+
+ ok 
+\ Failed :NONAME rolls back dictionary
+ ok 
+VARIABLE HERE-BEFORE
+ ok 
+HERE HERE-BEFORE !
+ ok 
+:NONAME UNDEFINED-XYZ ;
+error: Undefined word UNDEFINED-XYZ
+T{ HERE HERE-BEFORE @ = -> -1 }T
+ ok 
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+DONE
+###DONE###

@@ -1,0 +1,83 @@
+\ defer_test.fs - DEFER, DEFER!, DEFER@, IS, ACTION-OF regression tests
+ ok 
+
+ ok 
+\ Basic DEFER and IS
+ ok 
+DEFER MYDEFER
+ ok 
+: RETURNS42 42 ;
+ ok 
+T{ ' RETURNS42 IS MYDEFER MYDEFER -> 42 }T
+ ok 
+
+ ok 
+\ IS in compile mode
+ ok 
+: SET-MYDEFER ['] RETURNS42 IS MYDEFER ;
+ ok 
+: RETURNS99 99 ;
+ ok 
+T{ ' RETURNS99 IS MYDEFER MYDEFER -> 99 }T
+ ok 
+T{ SET-MYDEFER MYDEFER -> 42 }T
+ ok 
+
+ ok 
+\ DEFER@ fetches current xt
+ ok 
+T{ ' MYDEFER DEFER@ ' RETURNS42 = -> -1 }T
+ ok 
+
+ ok 
+\ ACTION-OF in interpret mode
+ ok 
+T{ ACTION-OF MYDEFER ' RETURNS42 = -> -1 }T
+ ok 
+
+ ok 
+\ ACTION-OF in compile mode
+ ok 
+: GET-ACTION ACTION-OF MYDEFER ;
+ ok 
+T{ GET-ACTION ' RETURNS42 = -> -1 }T
+ ok 
+
+ ok 
+\ DEFER! stores xt directly
+ ok 
+T{ ' RETURNS99 ' MYDEFER DEFER! MYDEFER -> 99 }T
+ ok 
+
+ ok 
+\ Uninitialized DEFER prints warning but does not abort
+ ok 
+DEFER UNINIT-DEFER
+ ok 
+UNINIT-DEFER
+deferred word is uninitialized
+ ok 
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ IS safety check - not a DEFER
+ ok 
+55 CONSTANT NOTADEFER
+ ok 
+T{ ' RETURNS42 IS NOTADEFER -> }T
+not a DEFER
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+\ ACTION-OF safety check - not a DEFER
+ ok 
+T{ ACTION-OF NOTADEFER -> }T
+not a DEFER
+T{ RECOVERED? -> -1 }T
+ ok 
+
+ ok 
+DONE
+###DONE###
