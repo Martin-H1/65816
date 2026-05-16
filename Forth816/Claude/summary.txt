@@ -306,7 +306,6 @@ Debugging tools:
   hex IP values in trace output to symbol names with offsets.
 
 TODO items carried forward:
-- Weird bug: ": foo if 1. d- then ;" gives "mismatched control structure".
 - Add a warning when the user redefines a word. GForth output:
   : foo 1 ;
   : foo 2 ;

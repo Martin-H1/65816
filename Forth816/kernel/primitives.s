@@ -468,9 +468,18 @@ calc_depth:     TXA
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; ONE ( -- 1 ) pushes one, shortcut to LIT 1.
+;------------------------------------------------------------------------------
+        HEADER  "ONE", ONE_ENTRY, ONE_CFA, 0, ZERO_ENTRY
+        CODEPTR DOCOL
+        .word   LIT_CFA
+        .word   1                       ; push one
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; MIN-INT ( -- n ) pushes lowest single precision integer
 ;------------------------------------------------------------------------------
-        HEADER  "MIN-INT", MININT_ENTRY, MININT_CFA, 0, ZERO_ENTRY
+        HEADER  "MIN-INT", MININT_ENTRY, MININT_CFA, 0, ONE_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
         .word   $8000                   ; Sign bit only
@@ -1153,8 +1162,7 @@ DABS_DONE:
         HEADER  "D2/", DTWOSLASH_ENTRY, DTWOSLASH_CFA, 0, DTWOSTAR_ENTRY
         CODEPTR DOCOL
         .word   DUP_CFA
-        .word   LIT_CFA
-        .word   1
+        .word   ONE_CFA
         .word   AND_CFA
         .word   LIT_CFA
         .word   15
@@ -1284,8 +1292,7 @@ MSTAR_DONE:
         .word   MSTARS_ELSE
         .word   ZBRANCH_CFA
         .word   MSTARS_SKIP
-        .word   LIT_CFA
-        .word   1
+        .word   ONE_CFA
         .word   ZERO_CFA
         .word   DPLUS_CFA
 MSTARS_SKIP:
@@ -4804,24 +4811,37 @@ INTERPRET_NOTEMPTY:
 
         ; Not found - drop the zero and try NUMBER
         .word   DROP_CFA                ; ( addr )
-        .word   NUMBER_CFA              ; ( n | throws addr )
+        .word   DEPTH_CFA               ; ( addr depth-before )
+        .word   TOR_CFA                 ; ( addr ) RS: ( depth-before )
+        .word   NUMBER_CFA              ; ( n | d_lo d_hi | throws addr )
+        .word   DEPTH_CFA               ; ( [n | d_lo d_hi] depth-after )
+        .word   RFROM_CFA               ; ( ... depth-after depth-before )
+        .word   MINUS_CFA               ; ( ... d-d ) 0=single 1=double
 
         ; It's a number - check STATE
-        .word   STATE_CFA               ; ( n addr-of-STATE )
-        .word   FETCH_CFA               ; ( n state )
-        .word   ZEROEQ_CFA              ; ( n flag ) true if interpreting
+        .word   STATE_CFA               ; ( [n | d_lo d_hi] d-d addr-of-STATE )
+        .word   FETCH_CFA               ; ( [n | d_lo d_hi] d-d state )
+        .word   ZEROEQ_CFA              ; ( ... d-d flag ) true if interpreting
         .word   ZBRANCH_CFA
         .word   INTERPRET_COMPILE_LIT
         ; Interpreting: number is already on stack, just loop
+        .word   DROP_CFA                ; ( [n | d_lo d_hi] ) drop d-d
         .word   BRANCH_CFA
         .word   INTERPRET_LOOP
 
-INTERPRET_COMPILE_LIT:
-        ; Compiling: emit LIT followed by the number
-        .word   LIT_CFA
-        .word   LIT_CFA                 ; push the CFA of LIT
-        .word   COMPILECOMMA_CFA        ; compile LIT into definition
-        .word   COMPILECOMMA_CFA        ; compile the number value itself
+INTERPRET_COMPILE_LIT:                  ; ( ... d-d ) 0=single 1=double
+        .word   ZBRANCH_CFA
+        .word   INTERPRET_COMPILE_SINGLE
+
+INTERPRET_COMPILE_DOUBLE:               ; ( d_lo d_hi )
+        ; Double: compile 2LIT d_lo d_hi
+        .word   TWOLITERAL_CFA          ; compile 2LIT d_lo d_hi
+        .word   BRANCH_CFA
+        .word   INTERPRET_LOOP
+
+INTERPRET_COMPILE_SINGLE:               ; ( n )
+         ; Compiling: emit LIT followed by the number
+        .word   LITERAL_CFA             ; Compile LIT followed by n
         .word   BRANCH_CFA
         .word   INTERPRET_LOOP
 
@@ -5720,8 +5740,7 @@ TO_ERROR:
         .word   DUP_CFA                ; ( xt flag flag | here 0 0 )
         .word   ZBRANCH_CFA
         .word   POSTPONE_NOTFOUND
-        .word   LIT_CFA
-        .word   1
+        .word   ONE_CFA
         .word   EQUAL_CFA              ; ( xt flag ) true if non-immediate
         .word   ZBRANCH_CFA
         .word   POSTPONE_IMMEDIATE
