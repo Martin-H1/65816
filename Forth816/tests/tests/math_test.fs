@@ -85,7 +85,7 @@ T{  1  5 -5 WITHIN -> FALSE }T
 $FFFF $3FFF 2CONSTANT HI-2INT
 $0000 $C000 2CONSTANT LO-2INT
 
-: ?floored [ -3 2 / -2 = ] LITERAL IF 1 0 D- THEN ;
+: ?floored [ -3 2 / -2 = ] LITERAL IF 1. D- THEN ;
 
 T{       5.       7             11 M*/ ->  3. }T
 T{       5.      -7             11 M*/ -> -3. ?floored }T

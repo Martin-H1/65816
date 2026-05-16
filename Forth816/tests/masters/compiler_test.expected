@@ -1,89 +1,173 @@
 \ compiler_test.fs - Compiler and defining word regression tests
+ ok 
 
+ ok 
 \ : and ;
+ ok 
 : FOO 42 ;
+ ok 
 T{ FOO -> 42 }T
+ ok 
 
+ ok 
 \ CONSTANT
+ ok 
 55 CONSTANT LIMIT
+ ok 
 T{ LIMIT -> 55 }T
+ ok 
 
+ ok 
 1234. 2CONSTANT TESTK
+ ok 
 T{ TESTK -> 1234 0 }T
+ ok 
 
+ ok 
 \ CREATE/DOES>
+ ok 
 : KONS CREATE , DOES> @ ;
+ ok 
 55 KONS KLIMIT
+ ok 
 T{ KLIMIT -> 55 }T
+ ok 
 
+ ok 
 \ VARIABLE
+ ok 
 VARIABLE DATE
+ ok 
 T{ 12 DATE ! DATE @ -> 12 }T
+ ok 
 
+ ok 
 \ ' and [']
+ ok 
 : BAR ['] DUP ;
+ ok 
 T{ ' DUP BAR = -> -1 }T
+ ok 
 
+ ok 
 \ IF/THEN
+ ok 
 : TEST-IF1 1 IF 99 THEN ;
+ ok 
 T{ TEST-IF1 -> 99 }T
+ ok 
 
+ ok 
 : TEST-IF2 0 IF 99 THEN ;
+ ok 
 T{ TEST-IF2 -> }T
+ ok 
 
+ ok 
 \ IF/ELSE/THEN
+ ok 
 : TEST-IF3 1 IF 99 ELSE 42 THEN ;
+ ok 
 T{ TEST-IF3 -> 99 }T
+ ok 
 
+ ok 
 : TEST-IF4 0 IF 99 ELSE 42 THEN ;
+ ok 
 T{ TEST-IF4 -> 42 }T
+ ok 
 
+ ok 
 \ CASE/OF/ENDOF/ENDCASE
+ ok 
 : TEST-CASE ( n -- n )
     CASE
         1 OF 10 ENDOF
         2 OF 20 ENDOF
         30 SWAP
     ENDCASE ;
+ ok 
 T{ 1 TEST-CASE -> 10 }T
+ ok 
 T{ 2 TEST-CASE -> 20 }T
+ ok 
 T{ 3 TEST-CASE -> 30 }T
+ ok 
 
+ ok 
 \ CELL, CELLS, CELL+
+ ok 
 T{ CELL -> 2 }T
+ ok 
 T{ 2 CELLS -> 4 }T
+ ok 
 T{ 3 CELL+ -> 5 }T
+ ok 
 
+ ok 
 \ BL
+ ok 
 T{ BL -> 32 }T
+ ok 
 
+ ok 
 \ ?DUP
+ ok 
 T{ 0 ?DUP -> 0 }T
+ ok 
 T{ 5 ?DUP -> 5 5 }T
+ ok 
 
+ ok 
 \ COMPILE
+ ok 
 T{ : [c1] [COMPILE] DUP ; IMMEDIATE -> }T
+ ok 
 T{ 123 [c1] -> 123 123 }T
+ ok 
 
+ ok 
 \ POSTPONE
+ ok 
 T{ : GT4 POSTPONE GT1 ; IMMEDIATE -> }T
+POSTPONE: word not found
 T{ : GT5 GT4 ; -> }T
+error: Undefined word GT4
 T{ GT5 -> 123 }T
+error: Undefined word GT5
 T{ : GT6 345 ; IMMEDIATE -> }T
+ ok 
 T{ : GT7 POSTPONE GT6 ; -> }T
+ ok 
 T{ GT7 -> 345 }T
+ ok 
 
+ ok 
 \ Double literal in IF/THEN compiles correctly
+ ok 
 : TEST-DOUBLE-IF 1 IF 1. D- THEN ;
+ ok 
 T{ 1. TEST-DOUBLE-IF -> 0 0 }T
+ ok 
 T{ 3. TEST-DOUBLE-IF -> 2 0 }T
+ ok 
 
+ ok 
 \ Double literal in IF/ELSE/THEN
+ ok 
 : TEST-DOUBLE-IFELSE 1 IF 1. ELSE 2. THEN ;
+ ok 
 T{ TEST-DOUBLE-IFELSE -> 1 0 }T
+ ok 
 
+ ok 
 \ Double literal in DO/LOOP
+ ok 
 : TEST-DOUBLE-DO 0. 3 0 DO 1. D+ LOOP ;
+ ok 
 T{ TEST-DOUBLE-DO -> 3 0 }T
+ ok 
 
+ ok 
 DONE
+###DONE###
