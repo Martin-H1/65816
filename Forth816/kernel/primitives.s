@@ -4377,16 +4377,8 @@ QUIT_BODY:
 
         ; Main REPL loop
 QUIT_LOOP:
-        .word   SOURCE_CFA              ; Get TIB address and length
-        .word   DROP_CFA                ; Only the address iss required.
-        .word   LIT_CFA
-        .word   TIB_SIZE                ; Max input length
-        .word   ACCEPT_CFA              ; Read line → ( len )
-        .word   HASHTIB_CFA
-        .word   STORE_CFA               ; Store length in user area
-        .word   ZERO_CFA
-        .word   TOIN_CFA
-        .word   STORE_CFA               ; >IN = 0
+        .word   REFILL_CFA              ; Get a line of input ( true )
+        .word   DROP_CFA                ; true isn't needed.
         .word   INTERPRET_CFA           ; Interpret the input line
         .word   STATE_CFA
         .word   FETCH_CFA
@@ -4413,6 +4405,26 @@ QUIT_LOOP:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; REFILL ( -- flag ) read a new line from the input source into TIB
+; Always returns TRUE on a terminal-based system.
+; https://forth-standard.org/standard/core/REFILL
+;------------------------------------------------------------------------------
+        HEADER  "REFILL", REFILL_ENTRY, REFILL_CFA, 0, RSP_RESET_ENTRY
+        CODEPTR DOCOL
+        .word   SOURCE_CFA              ; Get TIB address and length
+        .word   DROP_CFA                ; Only ( tib-addr ) is required.
+        .word   LIT_CFA
+        .word   TIB_SIZE                ; Max input length
+        .word   ACCEPT_CFA              ; ( len )
+        .word   HASHTIB_CFA
+        .word   STORE_CFA               ; #TIB = len
+        .word   ZERO_CFA
+        .word   TOIN_CFA
+        .word   STORE_CFA               ; >IN = 0
+        .word   TRUE_CFA                ; ( TRUE ) always succeeds on terminal
+        .word   EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; ACCEPT ( addr maxlen -- actual )
 ;
 ; Read a line from the UART into the buffer at addr, up to maxlen characters.
@@ -4431,7 +4443,7 @@ QUIT_LOOP:
 ; Stack on exit:
 ;   0,X = actual (character count)
 ;------------------------------------------------------------------------------
-        HEADER  "ACCEPT", ACCEPT_ENTRY, ACCEPT_CFA, 0, RSP_RESET_ENTRY
+        HEADER  "ACCEPT", ACCEPT_ENTRY, ACCEPT_CFA, 0, REFILL_ENTRY
         CODEPTR ACCEPT_CODE
         PUBLIC  ACCEPT_CODE
         .a16

@@ -312,7 +312,13 @@ TODO items carried forward:
   cell. A future fix should give CREATE its own runtime word that pushes CFA+4.
 - Weird bug: ": foo if 1. d- then ;" gives "mismatched control structure".
 - Stretch Goal. Implement the remaining CORE-EXT words: :NONAME, REFILL
-- Add a warning when the user redefines a word.
+- Add a warning when the user redefines a word. GForth output:
+  : foo 1 ;
+  : foo 2 ;
+  *terminal*:2:9: warning: redefined foo
+- Add a warning when the user redefines a literal as a word. GForth output:
+  : 10 3 ;
+  *terminal*:3:8: warning: defined literal 10 as word ok
 - Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
   (opportunistic — do a function at a time):
 
