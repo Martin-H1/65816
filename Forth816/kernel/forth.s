@@ -113,6 +113,22 @@ TRACE_EN:       .res 2                  ; Trace enable flag
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; DOCREATE - runtime for CREATE words (no DOES>)
+; Pushes body address (CFA+4, skipping code pointer and DOES> placeholder)
+;------------------------------------------------------------------------------
+        PUBLIC  DOCREATE
+        .a16
+        .i16
+                LDA     W               ; CFA
+                CLC
+                ADC     #4              ; skip code pointer(2) + placeholder(2)
+                DEX
+                DEX
+                STA     0,X
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; DOVAR - Code pointer for VARIABLE definitions
 ;
 ; Pushes the address of the variable body (CFA+2) onto parameter stack.

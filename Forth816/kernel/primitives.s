@@ -5791,7 +5791,7 @@ CREATE_BODY:
         .word   WORD_CFA                ; ( addr ) parse name
         .word   DOCREATE_CFA            ; ( ) build header
         .word   LIT_CFA
-        .word   DOVAR                   ; code pointer
+        .word   DOCREATE                ; runtime for CREATE words
         .word   COMMA_CFA               ; write DOVAR at CFA
         .word   ZERO_CFA                ; placeholder for DOES> code address
         .word   COMMA_CFA               ; reserve CFA+2 cell

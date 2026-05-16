@@ -180,6 +180,7 @@ F_LENMASK       = $1F
 
 ; Inner interpreter entry points (defined in forth.s)
         .global DOCOL
+        .global DOCREATE
         .global DOVAR
         .global DOCON
         .global DOVAL
