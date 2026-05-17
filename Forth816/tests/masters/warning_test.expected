@@ -47,5 +47,88 @@ T{ 1234. -> }T
 double ok 
 
  ok 
+\ VARIABLE warnings
+ ok 
+VARIABLE WARNVAR
+ ok 
+VARIABLE WARNVAR         \ should warn: redefined WARNVAR
+warning: redefined WARNVAR
+ ok 
+VARIABLE 97              \ should warn: defined literal 97 as a word
+warning: defined literal 97 as a word
+ ok 
+
+ ok 
+\ CONSTANT warnings
+ ok 
+42 CONSTANT WARNCON
+forty-twoStack underflow
+42 CONSTANT WARNCON      \ should warn: redefined WARNCON
+forty-twoStack underflow
+55 CONSTANT 98           \ should warn: defined literal 98 as a word
+warning: defined literal 98 as a word
+ ok 
+
+ ok 
+\ VALUE warnings
+ ok 
+42 VALUE WARNVAL
+forty-twoStack underflow
+42 VALUE WARNVAL         \ should warn: redefined WARNVAL
+forty-twoStack underflow
+55 VALUE 96              \ should warn: defined literal 96 as a word
+warning: defined literal 96 as a word
+ ok 
+
+ ok 
+\ 2VARIABLE warnings
+ ok 
+2VARIABLE WARN2VAR
+ ok 
+2VARIABLE WARN2VAR       \ should warn: redefined WARN2VAR
+warning: redefined WARN2VAR
+ ok 
+2VARIABLE 95             \ should warn: defined literal 95 as a word
+warning: defined literal 95 as a word
+ ok 
+
+ ok 
+\ 2CONSTANT warnings
+ ok 
+1. 2CONSTANT WARN2CON
+ ok 
+1. 2CONSTANT WARN2CON    \ should warn: redefined WARN2CON
+warning: redefined WARN2CON
+ ok 
+1. 2CONSTANT 94          \ should warn: defined literal 94 as a word
+warning: defined literal 94 as a word
+ ok 
+
+ ok 
+\ 2VALUE warnings
+ ok 
+1. 2VALUE WARN2VAL
+ ok 
+1. 2VALUE WARN2VAL       \ should warn: redefined WARN2VAL
+warning: redefined WARN2VAL
+ ok 
+1. 2VALUE 93             \ should warn: defined literal 93 as a word
+warning: defined literal 93 as a word
+ ok 
+
+ ok 
+\ : warnings
+ ok 
+: REDEF-TEST 42 ;
+warning: redefined REDEF-TEST
+ ok 
+: REDEF-TEST 99 ;        \ should warn: redefined REDEF-TEST
+warning: redefined REDEF-TEST
+ ok 
+: 92 ." ninety-two" ;    \ should warn: defined literal 92 as a word
+warning: defined literal 92 as a word
+ ok 
+
+ ok 
 DONE
 ###DONE###
