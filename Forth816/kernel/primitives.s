@@ -5469,48 +5469,59 @@ WORDS_SKIP:
 COLON_BODY:
         .word   BL_CFA
         .word   WORD_CFA                ; ( addr )
+        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
+        .word   DOCREATE_CFA            ; ( ) build header
+        .word   LIT_CFA
+        .word   DOCOL
+        .word   COMMA_CFA               ; write DOCOL at CFA
+        .word   RBRACKET_CFA            ; STATE = 1 (compile mode)
+        .word   EXIT_CFA
 
+;------------------------------------------------------------------------------
+; ?REDEFINE ( addr -- addr ) check for redefinition and literal warnings
+; addr is a counted string at HERE from WORD.
+; Prints warnings but does not abort.
+;------------------------------------------------------------------------------
+        HEADER  "?REDEFINE", QREDEFINE_ENTRY, QREDEFINE_CFA, F_HIDDEN, COLON_ENTRY
+        CODEPTR DOCOL
         ; --- Check for redefinition ---
         .word   DUP_CFA                 ; ( addr addr )
-        .word   FIND_CFA                ; ( ... addr 0 | addr xt 1 | addr xt -1)
+        .word   FIND_CFA                ; ( addr addr 0 | addr xt 1 | addr xt -1 )
         .word   ZBRANCH_CFA
-        .word   COLON_NO_REDEF          ; not found
+        .word   QREDEF_NO_REDEF         ; not found
         .word   DROP_CFA                ; drop xt ( addr )
         .word   LIT_CFA
-        .word   redef_msg               ; ( addr msg_addr )
+        .word   redef_msg
         .word   CPUTS_CFA
         .word   DUP_CFA                 ; ( addr addr )
-        .word   COUNT_CFA               ; ( addr addr u )
+        .word   COUNT_CFA               ; ( addr c-addr u )
         .word   TYPE_CFA
         .word   LIT_CFA
-        .word   crlf_msg                ; ( addr msg_addr )
+        .word   crlf_msg
         .word   CPUTS_CFA
         .word   BRANCH_CFA
-        .word   COLON_CHECK_LIT
-COLON_NO_REDEF:
-        .word   DROP_CFA                ; drop extra addr ( addr )
-
+        .word   QREDEF_CHECK_LIT
+QREDEF_NO_REDEF:
+        .word   DROP_CFA                ; drop 0 ( addr )
         ; --- Check for literal redefined as word ---
-COLON_CHECK_LIT:
+QREDEF_CHECK_LIT:
         .word   DUP_CFA                 ; ( addr addr )
         .word   NUMBERQ_CFA             ; ( addr n 1 | addr d_lo d_hi 2 | addr addr 0 )
         .word   QDUP_CFA                ; ( ... [ flag flag | 0 ] )
         .word   ZBRANCH_CFA
-        .word   COLON_NO_LIT            ; 0 = not a number
-        ; It's a number — clean up and warn
-        ; flag is 1 or 2
+        .word   QREDEF_NO_LIT           ; 0 = not a number
         .word   ONE_CFA
         .word   EQUAL_CFA               ; ( addr n is-single? | addr d_lo d_hi is-single? )
         .word   ZBRANCH_CFA
-        .word   COLON_LIT_DOUBLE
+        .word   QREDEF_LIT_DOUBLE
         ; Single: stack is ( addr n )
         .word   DROP_CFA                ; drop n
         .word   BRANCH_CFA
-        .word   COLON_LIT_WARN
-COLON_LIT_DOUBLE:
+        .word   QREDEF_LIT_WARN
+QREDEF_LIT_DOUBLE:
         ; Double: stack is ( addr d_lo d_hi )
         .word   TWODROP_CFA             ; drop d_lo d_hi
-COLON_LIT_WARN:
+QREDEF_LIT_WARN:
         ; Stack: ( addr )
         .word   LIT_CFA
         .word   litredef_prefix
@@ -5522,17 +5533,11 @@ COLON_LIT_WARN:
         .word   litredef_suffix
         .word   CPUTS_CFA
         .word   BRANCH_CFA
-        .word   COLON_CREATE
-COLON_NO_LIT:
-        ; Stack: ( addr addr ) from the DUP before NUMBERQ — need one more DROP
+        .word   QREDEF_DONE
+QREDEF_NO_LIT:
         .word   DROP_CFA                ; drop extra addr
-COLON_CREATE:
-        .word   DOCREATE_CFA            ; ( ) build header, update LATEST and DP
-        .word   LIT_CFA
-        .word   DOCOL                   ; code pointer for colon definitions
-        .word   COMMA_CFA               ; write DOCOL at CFA
-        .word   RBRACKET_CFA            ; STATE = 1 (compile mode)
-        .word   EXIT_CFA
+QREDEF_DONE:
+        .word   EXIT_CFA                ; ( addr )
 
 redef_msg:
         .byte   "warning: redefined ", $00
@@ -5546,7 +5551,7 @@ crlf_msg:
 ;------------------------------------------------------------------------------
 ; :NONAME ( -- xt ) begin anonymous definition, return xt
 ;------------------------------------------------------------------------------
-        HEADER  ":NONAME", NONAME_ENTRY, NONAME_CFA, 0, COLON_ENTRY
+        HEADER  ":NONAME", NONAME_ENTRY, NONAME_CFA, 0, QREDEFINE_ENTRY
         CODEPTR DOCOL
         .word   CHECKPOINT_CFA          ; save DP and LATEST
         .word   LATEST_CFA
@@ -5588,6 +5593,7 @@ SEMICOLON_BODY:
 VARIABLE_BODY:
         .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name
+        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
         .word   DOCREATE_CFA            ; ( ) build header
         .word   LIT_CFA
         .word   DOVAR                   ; code pointer for variables
@@ -5606,6 +5612,7 @@ VARIABLE_BODY:
 CONSTANT_BODY:
         .word   BL_CFA
         .word   WORD_CFA                ; ( n addr ) parse name
+        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
         .word   DOCREATE_CFA            ; ( n ) build header
         .word   LIT_CFA
         .word   DOCON                   ; code pointer for constants
@@ -5622,6 +5629,7 @@ CONSTANT_BODY:
         CODEPTR DOCOL
         .word   BL_CFA
         .word   WORD_CFA                ; ( n addr ) parse name
+        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
         .word   DOCREATE_CFA            ; ( n ) build header
         .word   LIT_CFA
         .word   DOVAL                   ; code pointer for values
@@ -5734,6 +5742,7 @@ TO_ERROR:
         CODEPTR DOCOL
         .word   BL_CFA
         .word   WORD_CFA                ; ( d_lo d_hi addr )
+        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
         .word   DOCREATE_CFA            ; ( d_lo d_hi )
         .word   LIT_CFA
         .word   DO2VAL
@@ -5872,10 +5881,11 @@ postpone_notfound_msg:
 CREATE_BODY:
         .word   BL_CFA
         .word   WORD_CFA                ; ( addr ) parse name
+        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
         .word   DOCREATE_CFA            ; ( ) build header
         .word   LIT_CFA
         .word   DOCREATE                ; runtime for CREATE words
-        .word   COMMA_CFA               ; write DOVAR at CFA
+        .word   COMMA_CFA               ; write DOCREATE at CFA
         .word   ZERO_CFA                ; placeholder for DOES> code address
         .word   COMMA_CFA               ; reserve CFA+2 cell
         .word   REVEAL_CFA              ; clear F_HIDDEN
