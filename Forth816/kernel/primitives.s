@@ -3936,11 +3936,13 @@ HEX_BODY:
         .endproc
 
 ;------------------------------------------------------------------------------
-; NUMBER? ( c-addr -- n true | d_lo d_hi true | c-addr false )
+; NUMBER? ( c-addr -- n 1 | d_lo d_hi 2 | c-addr false )
 ; Handles prefixes: - (negative), $ (hex), # (decimal), % (binary)
-; Trailing '.' marks a double literal: returns ( d_lo d_hi true ).
-; Single number returns ( n true ).
-; Failure returns ( c-addr false ).
+; Trailing '.' marks a double literal
+; Returns:
+;   c-addr     0  parse failed; c-addr is the original address
+;   n          1  parse of a single cell number succeeded.
+;   d_lo d_hi  2  parse of a double cell number succeeded.
 ; Restores BASE after conversion.
 ;------------------------------------------------------------------------------
         HEADER  "NUMBER?", NUMBERQ_ENTRY, NUMBERQ_CFA, 0, TONUMBER_ENTRY
@@ -4138,10 +4140,11 @@ HEX_BODY:
                 ; Drop ud_hi, leave ud_lo as n
                 INX
                 INX
-                ; Fall through to load flag and return
+                LDA     #1              ; single
+                BRA     @return
 @return_double:
                 ; Stack: ( ud_lo ud_hi ) — leave as-is
-                LDA     #FORTH_TRUE
+                LDA     #2              ; double
                 BRA     @return
 
 @fail_overflow: ; Number too large for single cell but no '.' given -> fail.
@@ -4167,12 +4170,13 @@ HEX_BODY:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; NUMBER ( c-addr -- n )
+; NUMBER ( c-addr -- n 1 | d_lo d_hi 2 )
 ; Calls NUMBER? and throws on failure.
 ;------------------------------------------------------------------------------
         HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, NUMBERQ_ENTRY
         CODEPTR DOCOL
-        .word   NUMBERQ_CFA             ; ( n true | c-addr false )
+        .word   NUMBERQ_CFA             ; ( n 1 | d_lo d_hi 2 | c-addr false )
+        .word   QDUP_CFA
         .word   ZBRANCH_CFA
         .word   NUMBER_ERR
         .word   EXIT_CFA
@@ -4811,37 +4815,30 @@ INTERPRET_NOTEMPTY:
 
         ; Not found - drop the zero and try NUMBER
         .word   DROP_CFA                ; ( addr )
-        .word   DEPTH_CFA               ; ( addr depth-before )
-        .word   TOR_CFA                 ; ( addr ) RS: ( depth-before )
-        .word   NUMBER_CFA              ; ( n | d_lo d_hi | throws addr )
-        .word   DEPTH_CFA               ; ( [n | d_lo d_hi] depth-after )
-        .word   RFROM_CFA               ; ( ... depth-after depth-before )
-        .word   MINUS_CFA               ; ( ... d-d ) 0=single 1=double
-
+        .word   NUMBER_CFA              ; ( n 1 | d_lo d_hi 2 )
         ; It's a number - check STATE
-        .word   STATE_CFA               ; ( [n | d_lo d_hi] d-d addr-of-STATE )
-        .word   FETCH_CFA               ; ( [n | d_lo d_hi] d-d state )
-        .word   ZEROEQ_CFA              ; ( ... d-d flag ) true if interpreting
+        .word   STATE_CFA
+        .word   FETCH_CFA
+        .word   ZEROEQ_CFA
         .word   ZBRANCH_CFA
         .word   INTERPRET_COMPILE_LIT
-        ; Interpreting: number is already on stack, just loop
-        .word   DROP_CFA                ; ( [n | d_lo d_hi] ) drop d-d
+        ; Interpreting: drop flag, number already on stack, just loop
+        .word   DROP_CFA                ; drop 1 or 2 ( n | d_lo d_high )
         .word   BRANCH_CFA
         .word   INTERPRET_LOOP
-
-INTERPRET_COMPILE_LIT:                  ; ( ... d-d ) 0=single 1=double
+INTERPRET_COMPILE_LIT:
+        ; flag is 1 or 2
+        .word   ONE_CFA
+        .word   EQUAL_CFA              ; ( [d_lo] n is-single? )
         .word   ZBRANCH_CFA
-        .word   INTERPRET_COMPILE_SINGLE
-
-INTERPRET_COMPILE_DOUBLE:               ; ( d_lo d_hi )
-        ; Double: compile 2LIT d_lo d_hi
-        .word   TWOLITERAL_CFA          ; compile 2LIT d_lo d_hi
+        .word   INTERPRET_COMPILE_DOUBLE
+        ; Single: compile LIT n
+        .word   LITERAL_CFA
         .word   BRANCH_CFA
         .word   INTERPRET_LOOP
-
-INTERPRET_COMPILE_SINGLE:               ; ( n )
-         ; Compiling: emit LIT followed by the number
-        .word   LITERAL_CFA             ; Compile LIT followed by n
+INTERPRET_COMPILE_DOUBLE:
+        ; Double: compile 2LIT d_lo d_hi
+        .word   TWOLITERAL_CFA
         .word   BRANCH_CFA
         .word   INTERPRET_LOOP
 

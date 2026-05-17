@@ -48,29 +48,29 @@ T{ S" CELL" NUMTEST-STR NUMBER? NIP -> 0 }T
  ok 
 \ NUMBER? valid decimal
  ok 
-T{ S" 0"   NUMTEST-STR NUMBER? -> 0 -1 }T
+T{ S" 0"   NUMTEST-STR NUMBER? -> 0 1 }T
  ok 
-T{ S" -10" NUMTEST-STR NUMBER? -> -10 -1 }T
+T{ S" -10" NUMTEST-STR NUMBER? -> -10 1 }T
  ok 
-T{ S" 500" NUMTEST-STR NUMBER? -> 500 -1 }T
+T{ S" 500" NUMTEST-STR NUMBER? -> 500 1 }T
  ok 
 
  ok 
 \ NUMBER? valid hex
  ok 
-T{ S" $7FF"  NUMTEST-STR NUMBER? -> $7FF -1 }T
+T{ S" $7FF"  NUMTEST-STR NUMBER? -> $7FF 1 }T
  ok 
-T{ S" -$7FF" NUMTEST-STR NUMBER? -> -$7FF -1 }T
+T{ S" -$7FF" NUMTEST-STR NUMBER? -> -$7FF 1 }T
  ok 
-T{ S" $7FFF" NUMTEST-STR NUMBER? -> $7FFF -1 }T
+T{ S" $7FFF" NUMTEST-STR NUMBER? -> $7FFF 1 }T
  ok 
-T{ S" $8000" NUMTEST-STR NUMBER? -> $8000 -1 }T
+T{ S" $8000" NUMTEST-STR NUMBER? -> $8000 1 }T
  ok 
 
  ok 
 \ NUMBER? boundary - single cell
  ok 
-T{ S" 65535" NUMTEST-STR NUMBER? -> 65535 -1 }T
+T{ S" 65535" NUMTEST-STR NUMBER? -> 65535 1 }T
  ok 
 
  ok 
@@ -82,19 +82,19 @@ T{ S" 65536" NUMTEST-STR NUMBER? NIP -> 0 }T
  ok 
 \ NUMBER? double literals
  ok 
-T{ S" 1234."    NUMTEST-STR NUMBER? -> 1234 0 -1 }T
+T{ S" 1234."    NUMTEST-STR NUMBER? -> 1234 0 2 }T
  ok 
-T{ S" 0."       NUMTEST-STR NUMBER? -> 0 0 -1 }T
+T{ S" 0."       NUMTEST-STR NUMBER? -> 0 0 2 }T
  ok 
-T{ S" 100000."  NUMTEST-STR NUMBER? -> $86A0 1 -1 }T
+T{ S" 100000."  NUMTEST-STR NUMBER? -> $86A0 1 2 }T
  ok 
-T{ S" -1."      NUMTEST-STR NUMBER? -> -1 -1 -1 }T
+T{ S" -1."      NUMTEST-STR NUMBER? -> -1 -1 2 }T
  ok 
-T{ S" -100000." NUMTEST-STR NUMBER? -> $7960 -2 -1 }T
+T{ S" -100000." NUMTEST-STR NUMBER? -> $7960 -2 2 }T
  ok 
-T{ S" 65536."   NUMTEST-STR NUMBER? -> 0 1 -1 }T
+T{ S" 65536."   NUMTEST-STR NUMBER? -> 0 1 2 }T
  ok 
-T{ S" $10000."  NUMTEST-STR NUMBER? -> 0 1 -1 }T
+T{ S" $10000."  NUMTEST-STR NUMBER? -> 0 1 2 }T
  ok 
 
  ok 
