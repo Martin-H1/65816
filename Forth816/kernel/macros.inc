@@ -194,6 +194,15 @@ cfa_lbl:
 .endmacro
 
 ;------------------------------------------------------------------------------
+; CELL - Emit a single entry in a DOCOL definition.
+;
+; Usage: CELL cfa_label
+;------------------------------------------------------------------------------
+.macro  CELL item
+        .word item
+.endmacro
+
+;------------------------------------------------------------------------------
 ; PRIM - Full primitive word definition shorthand
 ;
 ; Creates header + code pointer, then you write the body inline.

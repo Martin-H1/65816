@@ -76,12 +76,12 @@ underflow_msg:
 ;------------------------------------------------------------------------------
         HEADER  "?DUP", QDUP_ENTRY, QDUP_CFA, 0, DUP_ENTRY
         CODEPTR DOCOL
-        .word   DUP_CFA
-        .word   ZBRANCH_CFA
-        .word   QDUP_DONE
-        .word   DUP_CFA
+        CELL    DUP_CFA
+        CELL    ZBRANCH_CFA
+        CELL    QDUP_DONE
+        CELL    DUP_CFA
 QDUP_DONE:
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DROP ( a -- )
@@ -264,13 +264,13 @@ QDUP_DONE:
 ;------------------------------------------------------------------------------
         HEADER  "2ROT", TWOROT_ENTRY, TWOROT_CFA, 0, TWOOVER_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   5
-        .word   ROLL_CFA               ; ( d1_hi d2_lo d2_hi d3_lo d3_hi d1_lo )
-        .word   LIT_CFA
-        .word   5
-        .word   ROLL_CFA               ; ( d2_lo d2_hi d3_lo d3_hi d1_lo d1_hi )
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    5
+        CELL    ROLL_CFA               ; ( d1_hi d2_lo d2_hi d3_lo d3_hi d1_lo )
+        CELL    LIT_CFA
+        CELL    5
+        CELL    ROLL_CFA               ; ( d2_lo d2_hi d3_lo d3_hi d1_lo d1_hi )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DEPTH ( -- n ) number of items on parameter stack
@@ -463,55 +463,55 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
         HEADER  "ZERO", ZERO_ENTRY, ZERO_CFA, 0, TWORFETCH_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   0                       ; push zero
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    0                       ; push zero
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ONE ( -- 1 ) pushes one, shortcut to LIT 1.
 ;------------------------------------------------------------------------------
         HEADER  "ONE", ONE_ENTRY, ONE_CFA, 0, ZERO_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   1                       ; push one
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    1                       ; push one
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MIN-INT ( -- n ) pushes lowest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MIN-INT", MININT_ENTRY, MININT_CFA, 0, ONE_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   INT_MIN                 ; Platform dependant constant
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    INT_MIN                 ; Platform dependant constant
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MAX-INT ( -- n ) pushes highest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MAX-INT", MAXINT_ENTRY, MAXINT_CFA, 0, MININT_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   INT_MAX                 ; Platform dependant constant
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    INT_MAX                 ; Platform dependant constant
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MIN-2INT ( -- d ) pushes lowest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MIN-2INT", MINTWOINT_ENTRY, MINTWOINT_CFA, 0, MAXINT_ENTRY
         CODEPTR DOCOL
-        .word   ZERO_CFA
-        .word   MININT_CFA              ; Sign bit only
-        .word   EXIT_CFA
+        CELL    ZERO_CFA
+        CELL    MININT_CFA              ; Sign bit only
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MAX-2INT ( -- d ) pushes highest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MAX-2INT", MAXTWOINT_ENTRY, MAXTWOINT_CFA, 0, MINTWOINT_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   UINT_MAX                ; UINT_MAX has all bits set.
-        .word   MAXINT_CFA              ; Sign bit clear, all other bits set.
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    UINT_MAX                ; UINT_MAX has all bits set.
+        CELL    MAXINT_CFA              ; Sign bit clear, all other bits set.
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; + ( a b -- a+b )
@@ -610,9 +610,9 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
         HEADER  "M+", MPLUS_ENTRY, MPLUS_CFA, 0, DMINUS_ENTRY
         CODEPTR DOCOL
-        .word   STOD_CFA                ; sign extend n to double
-        .word   DPLUS_CFA               ; add to d
-        .word   EXIT_CFA
+        CELL    STOD_CFA                ; sign extend n to double
+        CELL    DPLUS_CFA               ; add to d
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; * ( a b -- a*b ) 16x16 -> 16 (low word)
@@ -879,29 +879,29 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
         HEADER  "/MOD", SLASHMOD_ENTRY, SLASHMOD_CFA, 0, UMSLASHMOD_ENTRY
         CODEPTR DOCOL
-        .word   SWAP_CFA                ; ( n2 n1 )
-        .word   STOD_CFA                ; ( n2 n1 n1_hi )
-        .word   ROT_CFA                 ; ( n1 n1_hi n2 )
-        .word   FMMOD_CFA               ; ( rem quot )
-        .word   EXIT_CFA
+        CELL    SWAP_CFA                ; ( n2 n1 )
+        CELL    STOD_CFA                ; ( n2 n1 n1_hi )
+        CELL    ROT_CFA                 ; ( n1 n1_hi n2 )
+        CELL    FMMOD_CFA               ; ( rem quot )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; / ( n1 n2 -- quot ) signed division
 ;------------------------------------------------------------------------------
         HEADER  "/", SLASH_ENTRY, SLASH_CFA, 0, SLASHMOD_ENTRY
         CODEPTR DOCOL
-        .word   SLASHMOD_CFA            ; ( rem quot )
-        .word   NIP_CFA                 ; ( quot )
-        .word   EXIT_CFA
+        CELL    SLASHMOD_CFA            ; ( rem quot )
+        CELL    NIP_CFA                 ; ( quot )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MOD ( n1 n2 -- rem )
 ;------------------------------------------------------------------------------
         HEADER  "MOD", MOD_ENTRY, MOD_CFA, 0, SLASH_ENTRY
         CODEPTR DOCOL
-        .word   SLASHMOD_CFA            ; ( rem quot )
-        .word   DROP_CFA                ; ( rem )
-        .word   EXIT_CFA
+        CELL    SLASHMOD_CFA            ; ( rem quot )
+        CELL    DROP_CFA                ; ( rem )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; SM/REM ( d1 n1 -- n2 n3 ) Divide d1 by n1, giving the symmetric quotient n3
@@ -1051,13 +1051,13 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
         HEADER  "DABS", DABS_ENTRY, DABS_CFA, 0, ABS_ENTRY
         CODEPTR DOCOL
-        .word   DUP_CFA                 ; ( d_lo d_hi d_hi ) peek at sign
-        .word   ZEROLESS_CFA            ; ( d_lo d_hi flag )
-        .word   ZBRANCH_CFA
-        .word   DABS_DONE
-        .word   DNEGATE_CFA             ; ( ud_lo ud_hi ) negate if negative
+        CELL    DUP_CFA                 ; ( d_lo d_hi d_hi ) peek at sign
+        CELL    ZEROLESS_CFA            ; ( d_lo d_hi flag )
+        CELL    ZBRANCH_CFA
+        CELL    DABS_DONE
+        CELL    DNEGATE_CFA             ; ( ud_lo ud_hi ) negate if negative
 DABS_DONE:
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MAX ( a b -- max )
@@ -1151,9 +1151,9 @@ DABS_DONE:
 ;------------------------------------------------------------------------------
         HEADER  "D2*", DTWOSTAR_ENTRY, DTWOSTAR_CFA, 0, TWOSLASH_ENTRY
         CODEPTR DOCOL
-        .word   TWODUP_CFA
-        .word   DPLUS_CFA
-        .word   EXIT_CFA
+        CELL    TWODUP_CFA
+        CELL    DPLUS_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; D2/ ( d -- d/2 ) double arithmetic right shift.
@@ -1161,20 +1161,20 @@ DABS_DONE:
 ;------------------------------------------------------------------------------
         HEADER  "D2/", DTWOSLASH_ENTRY, DTWOSLASH_CFA, 0, DTWOSTAR_ENTRY
         CODEPTR DOCOL
-        .word   DUP_CFA
-        .word   ONE_CFA
-        .word   AND_CFA
-        .word   LIT_CFA
-        .word   15
-        .word   LSHIFT_CFA
-        .word   TOR_CFA
-        .word   TWOSLASH_CFA
-        .word   SWAP_CFA
-        .word   TWOSLASH_CFA
-        .word   RFROM_CFA
-        .word   OR_CFA
-        .word   SWAP_CFA
-        .word   EXIT_CFA
+        CELL    DUP_CFA
+        CELL    ONE_CFA
+        CELL    AND_CFA
+        CELL    LIT_CFA
+        CELL    15
+        CELL    LSHIFT_CFA
+        CELL    TOR_CFA
+        CELL    TWOSLASH_CFA
+        CELL    SWAP_CFA
+        CELL    TWOSLASH_CFA
+        CELL    RFROM_CFA
+        CELL    OR_CFA
+        CELL    SWAP_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; S>D ( n -- d ) Convert the number n to the double-cell number d with the
@@ -1203,8 +1203,8 @@ DABS_DONE:
 ;------------------------------------------------------------------------------
         HEADER  "D>S", DTOS_ENTRY, DTOS_CFA, 0, STOD_ENTRY
         CODEPTR DOCOL
-        .word   DROP_CFA
-        .word   EXIT_CFA
+        CELL    DROP_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DNEGATE ( d -- -d ) negate the double cell in ANS order on stack.
@@ -1233,20 +1233,20 @@ DABS_DONE:
 ;------------------------------------------------------------------------------
         HEADER  "M*", MSTAR_ENTRY, MSTAR_CFA, 0, DNEGATE_ENTRY
         CODEPTR DOCOL
-        .word   TWODUP_CFA             ; ( n1 n2 n1 n2 )
-        .word   XOR_CFA                ; ( n1 n2 xor ) sign of result
-        .word   TOR_CFA                ; R: ( sign )
-        .word   ABS_CFA                ; ( n1 |n2| )
-        .word   SWAP_CFA               ; ( |n2| n1 )
-        .word   ABS_CFA                ; ( |n2| |n1| )
-        .word   UMSTAR_CFA             ; ( ud ) unsigned 32-bit result
-        .word   RFROM_CFA              ; ( ud sign )
-        .word   ZEROLESS_CFA           ; ( ud flag ) true if result negative
-        .word   ZBRANCH_CFA
-        .word   MSTAR_DONE
-        .word   DNEGATE_CFA            ; negate if signs differed
+        CELL    TWODUP_CFA             ; ( n1 n2 n1 n2 )
+        CELL    XOR_CFA                ; ( n1 n2 xor ) sign of result
+        CELL    TOR_CFA                ; R: ( sign )
+        CELL    ABS_CFA                ; ( n1 |n2| )
+        CELL    SWAP_CFA               ; ( |n2| n1 )
+        CELL    ABS_CFA                ; ( |n2| |n1| )
+        CELL    UMSTAR_CFA             ; ( ud ) unsigned 32-bit result
+        CELL    RFROM_CFA              ; ( ud sign )
+        CELL    ZEROLESS_CFA           ; ( ud flag ) true if result negative
+        CELL    ZBRANCH_CFA
+        CELL    MSTAR_DONE
+        CELL    DNEGATE_CFA            ; negate if signs differed
 MSTAR_DONE:
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; M*/ ( d1 n1 +n2 -- d2 ) Multiply d1 by n1 producing the 3-cell intermediate
@@ -1257,52 +1257,52 @@ MSTAR_DONE:
 ;------------------------------------------------------------------------------
         HEADER  "M*/", MSTARS_ENTRY, MSTARSS_CFA, 0, MSTAR_ENTRY
         CODEPTR DOCOL
-        .word   TOR_CFA                ; ( d1 n1 ) R: ( +n2 )
-        .word   STOD_CFA               ; ( d1 n1_lo n1_hi ) R: ( +n2 )
-        .word   TOR_CFA                ; ( d1 n1_lo ) R: ( +n2 n1_hi )
-        .word   ABS_CFA                ; ( d1 n1_lo ) R: ( +n2 n1_hi )
-        .word   MROT_CFA               ; ( n1_lo d1 ) R: ( +n2 n1_hi )
-        .word   STOD_CFA               ; ( n1_lo d1 ) R: ( +n2 n1_hi )
-        .word   RFROM_CFA
-        .word   XOR_CFA
-        .word   RFROM_CFA
-        .word   SWAP_CFA
-        .word   TOR_CFA
-        .word   TOR_CFA
-        .word   DABS_CFA
-        .word   ROT_CFA
-        .word   TUCK_CFA
-        .word   UMSTAR_CFA
-        .word   TWOSWAP_CFA
-        .word   UMSTAR_CFA
-        .word   SWAP_CFA
-        .word   TOR_CFA
-        .word   ZERO_CFA
-        .word   DPLUS_CFA
-        .word   RFROM_CFA
-        .word   MROT_CFA
-        .word   RFETCH_CFA
-        .word   UMSLASHMOD_CFA
-        .word   MROT_CFA
-        .word   RFROM_CFA
-        .word   UMSLASHMOD_CFA
-        .word   MROT_CFA
-        .word   RFROM_CFA
-        .word   ZBRANCH_CFA
-        .word   MSTARS_ELSE
-        .word   ZBRANCH_CFA
-        .word   MSTARS_SKIP
-        .word   ONE_CFA
-        .word   ZERO_CFA
-        .word   DPLUS_CFA
+        CELL    TOR_CFA                ; ( d1 n1 ) R: ( +n2 )
+        CELL    STOD_CFA               ; ( d1 n1_lo n1_hi ) R: ( +n2 )
+        CELL    TOR_CFA                ; ( d1 n1_lo ) R: ( +n2 n1_hi )
+        CELL    ABS_CFA                ; ( d1 n1_lo ) R: ( +n2 n1_hi )
+        CELL    MROT_CFA               ; ( n1_lo d1 ) R: ( +n2 n1_hi )
+        CELL    STOD_CFA               ; ( n1_lo d1 ) R: ( +n2 n1_hi )
+        CELL    RFROM_CFA
+        CELL    XOR_CFA
+        CELL    RFROM_CFA
+        CELL    SWAP_CFA
+        CELL    TOR_CFA
+        CELL    TOR_CFA
+        CELL    DABS_CFA
+        CELL    ROT_CFA
+        CELL    TUCK_CFA
+        CELL    UMSTAR_CFA
+        CELL    TWOSWAP_CFA
+        CELL    UMSTAR_CFA
+        CELL    SWAP_CFA
+        CELL    TOR_CFA
+        CELL    ZERO_CFA
+        CELL    DPLUS_CFA
+        CELL    RFROM_CFA
+        CELL    MROT_CFA
+        CELL    RFETCH_CFA
+        CELL    UMSLASHMOD_CFA
+        CELL    MROT_CFA
+        CELL    RFROM_CFA
+        CELL    UMSLASHMOD_CFA
+        CELL    MROT_CFA
+        CELL    RFROM_CFA
+        CELL    ZBRANCH_CFA
+        CELL    MSTARS_ELSE
+        CELL    ZBRANCH_CFA
+        CELL    MSTARS_SKIP
+        CELL    ONE_CFA
+        CELL    ZERO_CFA
+        CELL    DPLUS_CFA
 MSTARS_SKIP:
-        .word   DNEGATE_CFA
-        .word   BRANCH_CFA
-        .word   MSTARS_THEN
+        CELL    DNEGATE_CFA
+        CELL    BRANCH_CFA
+        CELL    MSTARS_THEN
 MSTARS_ELSE:
-        .word   DROP_CFA
+        CELL    DROP_CFA
 MSTARS_THEN:
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; */MOD ( n1 n2 n3 -- n4 n5 ) Multiply n1 by n2 producing the intermediate
@@ -1316,11 +1316,11 @@ MSTARS_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "*/MOD", SSMOD_ENTRY, SSMOD_CFA, 0, MSTARS_ENTRY
         CODEPTR DOCOL
-        .word   TOR_CFA                ; ( n1 n2 ) R: ( n3 )
-        .word   MSTAR_CFA              ; ( d ) 32-bit result
-        .word   RFROM_CFA              ; ( d n3 )
-        .word   SMREM_CFA              ; ( rem quot )
-        .word   EXIT_CFA
+        CELL    TOR_CFA                ; ( n1 n2 ) R: ( n3 )
+        CELL    MSTAR_CFA              ; ( d ) 32-bit result
+        CELL    RFROM_CFA              ; ( d n3 )
+        CELL    SMREM_CFA              ; ( rem quot )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; */ ( n1 n2 n3 -- n4 ) Multiply n1 by n2 producing the intermediate
@@ -1331,9 +1331,9 @@ MSTARS_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "*/", SSSLASH_ENTRY, SSSLASH_CFA, 0, SSMOD_ENTRY
         CODEPTR DOCOL
-        .word   SSMOD_CFA              ; ( rem quot )
-        .word   NIP_CFA                ; ( quot )
-        .word   EXIT_CFA
+        CELL    SSMOD_CFA              ; ( rem quot )
+        CELL    NIP_CFA                ; ( quot )
+        CELL    EXIT_CFA
 
 ;==============================================================================
 ; SECTION 4: COMPARISON PRIMITIVES
@@ -1564,9 +1564,9 @@ MSTARS_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "D0=", DZEROEQ_ENTRY, DZEROEQ_CFA, 0, DEQ_ENTRY
         CODEPTR DOCOL
-        .word   OR_CFA
-        .word   ZEROEQ_CFA
-        .word   EXIT_CFA
+        CELL    OR_CFA
+        CELL    ZEROEQ_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; D0< ( ud_lo ud_hi -- flag ) true if double is negative
@@ -1574,9 +1574,9 @@ MSTARS_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "D0<", DZEROLESS_ENTRY, DZEROLESS_CFA, 0, DZEROEQ_ENTRY
         CODEPTR DOCOL
-        .word   NIP_CFA
-        .word   ZEROLESS_CFA
-        .word   EXIT_CFA
+        CELL    NIP_CFA
+        CELL    ZEROLESS_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DU< ( ud1_lo ud1_hi ud2_lo ud2_hi -- flag )
@@ -1654,15 +1654,15 @@ MSTARS_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "DMAX", DMAX_ENTRY, DMAX_CFA, 0, DLESS_ENTRY
         CODEPTR DOCOL
-        .word   TWOOVER_CFA
-        .word   TWOOVER_CFA
-        .word   DLESS_CFA
-        .word   ZBRANCH_CFA
-        .word   DMAX_SKIP
-        .word   TWOSWAP_CFA
+        CELL    TWOOVER_CFA
+        CELL    TWOOVER_CFA
+        CELL    DLESS_CFA
+        CELL    ZBRANCH_CFA
+        CELL    DMAX_SKIP
+        CELL    TWOSWAP_CFA
 DMAX_SKIP:
-        .word   TWODROP_CFA
-        .word   EXIT_CFA
+        CELL    TWODROP_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DMIN ( d1 d2 -- d ) smaller of two doubles
@@ -1670,32 +1670,32 @@ DMAX_SKIP:
 ;------------------------------------------------------------------------------
         HEADER  "DMIN", DMIN_ENTRY, DMIN_CFA, 0, DMAX_ENTRY
         CODEPTR DOCOL
-        .word   TWOOVER_CFA
-        .word   TWOOVER_CFA
-        .word   DLESS_CFA
-        .word   ZBRANCH_CFA
-        .word   DMIN_ELSE
-        .word   TWODROP_CFA
-        .word   BRANCH_CFA
-        .word   DMIN_THEN
+        CELL    TWOOVER_CFA
+        CELL    TWOOVER_CFA
+        CELL    DLESS_CFA
+        CELL    ZBRANCH_CFA
+        CELL    DMIN_ELSE
+        CELL    TWODROP_CFA
+        CELL    BRANCH_CFA
+        CELL    DMIN_THEN
 DMIN_ELSE:
-        .word   TWOSWAP_CFA
-        .word   TWODROP_CFA
+        CELL    TWOSWAP_CFA
+        CELL    TWODROP_CFA
 DMIN_THEN:
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; WITHIN ( n lo hi -- flag ) true if lo <= n < hi
 ;------------------------------------------------------------------------------
         HEADER  "WITHIN", WITHIN_ENTRY, WITHIN_CFA, 0, DMIN_ENTRY
         CODEPTR DOCOL
-        .word   OVER_CFA
-        .word   MINUS_CFA
-        .word   TOR_CFA
-        .word   MINUS_CFA
-        .word   RFROM_CFA
-        .word   ULESS_CFA
-        .word   EXIT_CFA
+        CELL    OVER_CFA
+        CELL    MINUS_CFA
+        CELL    TOR_CFA
+        CELL    MINUS_CFA
+        CELL    RFROM_CFA
+        CELL    ULESS_CFA
+        CELL    EXIT_CFA
 
 ;==============================================================================
 ; SECTION 5: LOGIC CONSTANTS AND PRIMITIVES
@@ -1706,18 +1706,18 @@ DMIN_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "TRUE", TRUE_ENTRY, TRUE_CFA, 0, WITHIN_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   FORTH_TRUE             ; ( TRUE )
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    FORTH_TRUE             ; ( TRUE )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; FALSE ( -- FALSE )
 ;------------------------------------------------------------------------------
         HEADER  "FALSE", FALSE_ENTRY, FALSE_CFA, 0, TRUE_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   FORTH_FALSE            ; ( TRUE )
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    FORTH_FALSE            ; ( TRUE )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; AND ( a b -- a&b )
@@ -1942,11 +1942,11 @@ DMIN_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "ALIGNED", ALIGNED_ENTRY, ALIGNED_CFA, 0, TWOSTORE_ENTRY
         CODEPTR DOCOL
-        .word   ONEPLUS_CFA
-        .word   LIT_CFA
-        .word   $FFFE
-        .word   AND_CFA
-        .word   EXIT_CFA
+        CELL    ONEPLUS_CFA
+        CELL    LIT_CFA
+        CELL    $FFFE
+        CELL    AND_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MOVE ( src dst u -- ) copy u bytes from src to dst
@@ -2019,9 +2019,9 @@ DMIN_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "ERASE", ERASE_ENTRY, ERASE_CFA, 0, FILL_ENTRY
         CODEPTR DOCOL
-        .word   ZERO_CFA
-        .word   FILL_CFA                ; compile LIT
-        .word   EXIT_CFA
+        CELL    ZERO_CFA
+        CELL    FILL_CFA                ; compile LIT
+        CELL    EXIT_CFA
 
 ;==============================================================================
 ; SECTION 7: UART I/O PRIMITIVES
@@ -2195,11 +2195,11 @@ DMIN_THEN:
 ; LITERAL ( n -- ) compile-time, compiles n as a literal into current definition;------------------------------------------------------------------------------
         HEADER  "LITERAL", LITERAL_ENTRY, LITERAL_CFA, F_IMMEDIATE, LIT_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   LIT_CFA
-        .word   COMMA_CFA              ; compile LIT
-        .word   COMMA_CFA              ; compile n
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    LIT_CFA
+        CELL    COMMA_CFA              ; compile LIT
+        CELL    COMMA_CFA              ; compile n
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; 2LIT ( -- d_lo d_hi ) runtime, pushes inline 32-bit double literal
@@ -2224,13 +2224,13 @@ DMIN_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "2LITERAL", TWOLITERAL_ENTRY, TWOLITERAL_CFA, F_IMMEDIATE, TWOLIT_ENTRY
         CODEPTR DOCOL
-        .word   SWAP_CFA               ; ( d_hi d_lo ) - store low cell first
-        .word   LIT_CFA
-        .word   TWOLIT_CFA
-        .word   COMMA_CFA              ; compile 2LIT
-        .word   COMMA_CFA              ; compile d_lo
-        .word   COMMA_CFA              ; compile d_hi
-        .word   EXIT_CFA
+        CELL    SWAP_CFA               ; ( d_hi d_lo ) - store low cell first
+        CELL    LIT_CFA
+        CELL    TWOLIT_CFA
+        CELL    COMMA_CFA              ; compile 2LIT
+        CELL    COMMA_CFA              ; compile d_lo
+        CELL    COMMA_CFA              ; compile d_hi
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; BRANCH ( -- ) unconditional branch (compiled word)
@@ -2477,9 +2477,9 @@ DMIN_THEN:
 ;------------------------------------------------------------------------------
         HEADER  "BUFFER:", BUFFERCOL_ENTRY, BUFFERCOL_CFA, 0, ALLOT_ENTRY
         CODEPTR DOCOL
-        .word   CREATE_CFA
-        .word   ALLOT_CFA
-        .word   EXIT_CFA
+        CELL    CREATE_CFA
+        CELL    ALLOT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; , ( val -- ) compile cell into dictionary
@@ -2863,50 +2863,50 @@ DMIN_THEN:
         CODEPTR DOCOL
 
         ; --- parse the string (both modes need it) ---
-        .word   LIT_CFA
-        .word   '"'
-        .word   PARSE_CFA               ; ( c-addr u )
+        CELL    LIT_CFA
+        CELL    '"'
+        CELL    PARSE_CFA               ; ( c-addr u )
         ; --- check STATE ---
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZBRANCH_CFA
-        .word   SQUOTE_INTERP
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZBRANCH_CFA
+        CELL    SQUOTE_INTERP
 
         ; --- compile mode ---
-        .word   LIT_CFA
-        .word   DOSQUOTE_CFA
-        .word   COMMA_CFA               ; compile (S")
-        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
-        .word   NIP_CFA                 ; ( c-addr u u )
-        .word   COMMA_CFA               ; compile u as length cell
+        CELL    LIT_CFA
+        CELL    DOSQUOTE_CFA
+        CELL    COMMA_CFA               ; compile (S")
+        CELL    TWODUP_CFA              ; ( c-addr u c-addr u )
+        CELL    NIP_CFA                 ; ( c-addr u u )
+        CELL    COMMA_CFA               ; compile u as length cell
                                         ; ( c-addr u )
-        .word   ZERO_CFA
-        .word   DODO_CFA                ; runtime DO  ( limit index -- )
-        .word   0                       ; unused leave target
+        CELL    ZERO_CFA
+        CELL    DODO_CFA                ; runtime DO  ( limit index -- )
+        CELL    0                       ; unused leave target
 SQUOTE_CLOOP:
-        .word   DUP_CFA
-        .word   I_CFA
-        .word   PLUS_CFA
-        .word   CFETCH_CFA
-        .word   CCOMMA_CFA
-        .word   DOLOOP_CFA
-        .word   SQUOTE_CLOOP
-        .word   DROP_CFA
-        .word   ALIGN_CFA
-        .word   EXIT_CFA
+        CELL    DUP_CFA
+        CELL    I_CFA
+        CELL    PLUS_CFA
+        CELL    CFETCH_CFA
+        CELL    CCOMMA_CFA
+        CELL    DOLOOP_CFA
+        CELL    SQUOTE_CLOOP
+        CELL    DROP_CFA
+        CELL    ALIGN_CFA
+        CELL    EXIT_CFA
 
         ; --- interpret mode ---
 SQUOTE_INTERP:                          ; ( c-addr u )
-        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
-        .word   PAD_CFA                 ; ( c-addr u c-addr u pad )
-        .word   ROT_CFA                 ; ( c-addr u u pad c-addr )
-        .word   SWAP_CFA                ; ( c-addr u u c-addr pad )
-        .word   ROT_CFA                 ; ( c-addr u c-addr pad u )
-        .word   MOVE_CFA                ; ( c-addr u )
-        .word   NIP_CFA                 ; ( u )
-        .word   PAD_CFA                 ; ( u pad )
-        .word   SWAP_CFA                ; ( pad u )
-        .word   EXIT_CFA
+        CELL    TWODUP_CFA              ; ( c-addr u c-addr u )
+        CELL    PAD_CFA                 ; ( c-addr u c-addr u pad )
+        CELL    ROT_CFA                 ; ( c-addr u u pad c-addr )
+        CELL    SWAP_CFA                ; ( c-addr u u c-addr pad )
+        CELL    ROT_CFA                 ; ( c-addr u c-addr pad u )
+        CELL    MOVE_CFA                ; ( c-addr u )
+        CELL    NIP_CFA                 ; ( u )
+        CELL    PAD_CFA                 ; ( u pad )
+        CELL    SWAP_CFA                ; ( pad u )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; PROCESS-ESCAPES ( c-addr u dest -- dest u' )
@@ -3043,47 +3043,47 @@ SQUOTE_INTERP:                          ; ( c-addr u )
 ;------------------------------------------------------------------------------
         HEADERQ "S\", "", SBACKSLASHQUOTE_ENTRY, SBACKSLASHQUOTE_CFA, F_IMMEDIATE, PROCESSESCAPES_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   $22                     ; '"' delimiter
-        .word   PARSE_CFA               ; ( c-addr u ) raw string
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZBRANCH_CFA
-        .word   SBACKSLASH_INTERP
+        CELL    LIT_CFA
+        CELL    $22                     ; '"' delimiter
+        CELL    PARSE_CFA               ; ( c-addr u ) raw string
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZBRANCH_CFA
+        CELL    SBACKSLASH_INTERP
         ;----------------------------------------------------------------------
         ; Compile mode
         ;----------------------------------------------------------------------
-        .word   LIT_CFA
-        .word   DOSQUOTE_CFA
-        .word   COMMA_CFA               ; compile (S")
-        .word   HERE_CFA                ; ( c-addr u len-addr )
-        .word   ZERO_CFA
-        .word   COMMA_CFA               ; compile placeholder length cell
-        .word   HERE_CFA                ; ( c-addr u len-addr dest )
-        .word   SWAP_CFA                ; ( c-addr u dest len-addr )
-        .word   TOR_CFA                 ; RS: ( len-addr )
-        .word   PROCESSESCAPES_CFA      ; ( dest u' )
-        .word   RFROM_CFA               ; ( dest u' len-addr )
-        .word   OVER_CFA                ; ( dest u' len-addr u' )
-        .word   SWAP_CFA                ; ( dest u' u' len-addr )
-        .word   STORE_CFA               ; patch length cell with u'
+        CELL    LIT_CFA
+        CELL    DOSQUOTE_CFA
+        CELL    COMMA_CFA               ; compile (S")
+        CELL    HERE_CFA                ; ( c-addr u len-addr )
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA               ; compile placeholder length cell
+        CELL    HERE_CFA                ; ( c-addr u len-addr dest )
+        CELL    SWAP_CFA                ; ( c-addr u dest len-addr )
+        CELL    TOR_CFA                 ; RS: ( len-addr )
+        CELL    PROCESSESCAPES_CFA      ; ( dest u' )
+        CELL    RFROM_CFA               ; ( dest u' len-addr )
+        CELL    OVER_CFA                ; ( dest u' len-addr u' )
+        CELL    SWAP_CFA                ; ( dest u' u' len-addr )
+        CELL    STORE_CFA               ; patch length cell with u'
         ; Advance DP by u'
-        .word   SWAP_CFA                ; ( u' dest )
-        .word   DROP_CFA                ; ( u' )
-        .word   DP_CFA
-        .word   FETCH_CFA               ; ( u' dp )
-        .word   PLUS_CFA                ; ( dp+u' )
-        .word   DP_CFA
-        .word   STORE_CFA               ; DP += u'
-        .word   ALIGN_CFA               ; align DP
-        .word   EXIT_CFA
+        CELL    SWAP_CFA                ; ( u' dest )
+        CELL    DROP_CFA                ; ( u' )
+        CELL    DP_CFA
+        CELL    FETCH_CFA               ; ( u' dp )
+        CELL    PLUS_CFA                ; ( dp+u' )
+        CELL    DP_CFA
+        CELL    STORE_CFA               ; DP += u'
+        CELL    ALIGN_CFA               ; align DP
+        CELL    EXIT_CFA
         ;----------------------------------------------------------------------
         ; Interpret mode
         ;----------------------------------------------------------------------
 SBACKSLASH_INTERP:
-        .word   PAD_CFA                 ; ( c-addr u pad )
-        .word   PROCESSESCAPES_CFA      ; ( pad u' )
-        .word   EXIT_CFA
+        CELL    PAD_CFA                 ; ( c-addr u pad )
+        CELL    PROCESSESCAPES_CFA      ; ( pad u' )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; (C") runtime for C" ( -- c-addr )
@@ -3122,44 +3122,44 @@ SBACKSLASH_INTERP:
 ;------------------------------------------------------------------------------
         HEADERQ "C", "", CQUOTE_ENTRY, CQUOTE_CFA, F_IMMEDIATE, DOCQUOTE_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   '"'
-        .word   PARSE_CFA               ; ( c-addr u )
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZBRANCH_CFA
-        .word   CQUOTE_INTERP
+        CELL    LIT_CFA
+        CELL    '"'
+        CELL    PARSE_CFA               ; ( c-addr u )
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZBRANCH_CFA
+        CELL    CQUOTE_INTERP
         ; --- compile mode ---
-        .word   LIT_CFA
-        .word   DOCQUOTE_CFA
-        .word   COMMA_CFA               ; compile (C")
-        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
-        .word   NIP_CFA                 ; ( c-addr u u )
-        .word   CCOMMA_CFA              ; compile u as byte length
+        CELL    LIT_CFA
+        CELL    DOCQUOTE_CFA
+        CELL    COMMA_CFA               ; compile (C")
+        CELL    TWODUP_CFA              ; ( c-addr u c-addr u )
+        CELL    NIP_CFA                 ; ( c-addr u u )
+        CELL    CCOMMA_CFA              ; compile u as byte length
                                         ; ( c-addr u )
-        .word   ZERO_CFA
-        .word   DODO_CFA
-        .word   0                       ; unused leave target
+        CELL    ZERO_CFA
+        CELL    DODO_CFA
+        CELL    0                       ; unused leave target
 CQUOTE_CLOOP:
-        .word   DUP_CFA
-        .word   I_CFA
-        .word   PLUS_CFA
-        .word   CFETCH_CFA
-        .word   CCOMMA_CFA
-        .word   DOLOOP_CFA
-        .word   CQUOTE_CLOOP
-        .word   DROP_CFA
-        .word   ALIGN_CFA
-        .word   EXIT_CFA
+        CELL    DUP_CFA
+        CELL    I_CFA
+        CELL    PLUS_CFA
+        CELL    CFETCH_CFA
+        CELL    CCOMMA_CFA
+        CELL    DOLOOP_CFA
+        CELL    CQUOTE_CLOOP
+        CELL    DROP_CFA
+        CELL    ALIGN_CFA
+        CELL    EXIT_CFA
         ; --- interpret mode ---
 CQUOTE_INTERP:                         ; ( c-addr u )
-        .word   PAD_CFA                ; ( c-addr u pad )
-        .word   OVER_CFA               ; ( c-addr u pad u )
-        .word   SWAP_CFA               ; ( c-addr u u pad )
-        .word   PLACE_CFA              ; ( c-addr ) builds counted string at PAD
-        .word   DROP_CFA               ; drop c-addr
-        .word   PAD_CFA                ; ( pad ) return counted string address
-        .word   EXIT_CFA
+        CELL    PAD_CFA                ; ( c-addr u pad )
+        CELL    OVER_CFA               ; ( c-addr u pad u )
+        CELL    SWAP_CFA               ; ( c-addr u u pad )
+        CELL    PLACE_CFA              ; ( c-addr ) builds counted string at PAD
+        CELL    DROP_CFA               ; drop c-addr
+        CELL    PAD_CFA                ; ( pad ) return counted string address
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; (.") ( -- )
@@ -3201,42 +3201,42 @@ CQUOTE_INTERP:                         ; ( c-addr u )
         CODEPTR DOCOL
 
         ; --- parse the string (both modes need it) ---
-        .word   LIT_CFA
-        .word   '"'
-        .word   PARSE_CFA               ; ( c-addr u )
+        CELL    LIT_CFA
+        CELL    '"'
+        CELL    PARSE_CFA               ; ( c-addr u )
 
         ; --- check STATE ---
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZBRANCH_CFA
-        .word   DOTQUOTE_INTERP
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZBRANCH_CFA
+        CELL    DOTQUOTE_INTERP
 
         ; --- compile mode ---
-        .word   LIT_CFA
-        .word   DODOTQUOTE_CFA          ; compile (.")
-        .word   COMMA_CFA
-        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
-        .word   NIP_CFA                 ; ( c-addr u u )
-        .word   COMMA_CFA               ; compile u
-        .word   ZERO_CFA
-        .word   DODO_CFA                ; loop u times
-        .word   0                       ; unused leave target
+        CELL    LIT_CFA
+        CELL    DODOTQUOTE_CFA          ; compile (.")
+        CELL    COMMA_CFA
+        CELL    TWODUP_CFA              ; ( c-addr u c-addr u )
+        CELL    NIP_CFA                 ; ( c-addr u u )
+        CELL    COMMA_CFA               ; compile u
+        CELL    ZERO_CFA
+        CELL    DODO_CFA                ; loop u times
+        CELL    0                       ; unused leave target
 DOTQUOTE_CLOOP:
-        .word   DUP_CFA
-        .word   I_CFA
-        .word   PLUS_CFA
-        .word   CFETCH_CFA
-        .word   CCOMMA_CFA
-        .word   DOLOOP_CFA
-        .word   DOTQUOTE_CLOOP
-        .word   DROP_CFA
-        .word   ALIGN_CFA
-        .word   EXIT_CFA
+        CELL    DUP_CFA
+        CELL    I_CFA
+        CELL    PLUS_CFA
+        CELL    CFETCH_CFA
+        CELL    CCOMMA_CFA
+        CELL    DOLOOP_CFA
+        CELL    DOTQUOTE_CLOOP
+        CELL    DROP_CFA
+        CELL    ALIGN_CFA
+        CELL    EXIT_CFA
 
         ; --- interpret mode ---
 DOTQUOTE_INTERP:                        ; ( c-addr u )
-        .word   TYPE_CFA                ; print string directly
-        .word   EXIT_CFA
+        CELL    TYPE_CFA                ; print string directly
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; (ABORT") ( i * x x1 -- | i * x ) ( R: j * x -- | j * x )
@@ -3302,36 +3302,36 @@ DOTQUOTE_INTERP:                        ; ( c-addr u )
 ;------------------------------------------------------------------------------
         HEADERQ "ABORT", "", ABORTQUOTE_ENTRY, ABORTQUOTE_CFA, F_IMMEDIATE, DOABORTQUOTE_ENTRY
         CODEPTR DOCOL
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZEROEQ_CFA              ; true if interpreting
-        .word   ZBRANCH_CFA
-        .word   ABORTQUOTE_COMPILE      ; skip error if compiling
-        .word   COMPILE_ONLY_ERROR_CFA  ; a specific error
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZEROEQ_CFA              ; true if interpreting
+        CELL    ZBRANCH_CFA
+        CELL    ABORTQUOTE_COMPILE      ; skip error if compiling
+        CELL    COMPILE_ONLY_ERROR_CFA  ; a specific error
 ABORTQUOTE_COMPILE:
-        .word   LIT_CFA
-        .word   '"'
-        .word   PARSE_CFA               ; ( c-addr u )
-        .word   LIT_CFA
-        .word   DOABORTQUOTE_CFA        ; compile (ABORT")
-        .word   COMMA_CFA
-        .word   TWODUP_CFA              ; ( c-addr u c-addr u )
-        .word   NIP_CFA                 ; ( c-addr u u )
-        .word   COMMA_CFA               ; compile u
-        .word   ZERO_CFA
-        .word   DODO_CFA                ; U 0 DO
-        .word   0                       ; unused leave target
+        CELL    LIT_CFA
+        CELL    '"'
+        CELL    PARSE_CFA               ; ( c-addr u )
+        CELL    LIT_CFA
+        CELL    DOABORTQUOTE_CFA        ; compile (ABORT")
+        CELL    COMMA_CFA
+        CELL    TWODUP_CFA              ; ( c-addr u c-addr u )
+        CELL    NIP_CFA                 ; ( c-addr u u )
+        CELL    COMMA_CFA               ; compile u
+        CELL    ZERO_CFA
+        CELL    DODO_CFA                ; U 0 DO
+        CELL    0                       ; unused leave target
 ABORTQUOTE_CLOOP:
-        .word   DUP_CFA
-        .word   I_CFA
-        .word   PLUS_CFA
-        .word   CFETCH_CFA              ; fetch the character a I
-        .word   CCOMMA_CFA              ; compile it into the definition
-        .word   DOLOOP_CFA
-        .word   ABORTQUOTE_CLOOP
-        .word   DROP_CFA
-        .word   ALIGN_CFA               ; word align the definition
-        .word   EXIT_CFA
+        CELL    DUP_CFA
+        CELL    I_CFA
+        CELL    PLUS_CFA
+        CELL    CFETCH_CFA              ; fetch the character a I
+        CELL    CCOMMA_CFA              ; compile it into the definition
+        CELL    DOLOOP_CFA
+        CELL    ABORTQUOTE_CLOOP
+        CELL    DROP_CFA
+        CELL    ALIGN_CFA               ; word align the definition
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; .( "text" ) Parse and display the text delimited by .( and )
@@ -3339,11 +3339,11 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
         HEADER  ".(", DOTPAREN_ENTRY, DOTPAREN_CFA, F_IMMEDIATE, ABORTQUOTE_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   ')'
-        .word   PARSE_CFA               ; ( c-addr u ) raw, no uppercasing
-        .word   TYPE_CFA                ; ( c-addr ) discard length
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    ')'
+        CELL    PARSE_CFA               ; ( c-addr u ) raw, no uppercasing
+        CELL    TYPE_CFA                ; ( c-addr ) discard length
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; CHAR ( "<spaces>name" -- char ) skip leading space delimiters. Parse name
@@ -3352,11 +3352,11 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
         HEADER  "CHAR", CHAR_ENTRY, CHAR_CFA, 0, DOTPAREN_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA
-        .word   PARSE_CFA               ; ( c-addr u ) raw, no uppercasing
-        .word   DROP_CFA                ; ( c-addr ) discard length
-        .word   CFETCH_CFA              ; ( char ) first character
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    PARSE_CFA               ; ( c-addr u ) raw, no uppercasing
+        CELL    DROP_CFA                ; ( c-addr ) discard length
+        CELL    CFETCH_CFA              ; ( char ) first character
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; CHARS ( n -- n ) NOP on byte addressed system.
@@ -3364,7 +3364,7 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
         HEADER  "CHARS", CHARS_ENTRY, CHARS_CFA, 0, CHAR_ENTRY
         CODEPTR DOCOL
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; CHAR+ ( c-addr -- c-addr+1 ) add the size in address units of a character
@@ -3373,8 +3373,8 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
         HEADER  "CHAR+", CHARPLUS_ENTRY, CHARPLUS_CFA, 0, CHARS_ENTRY
         CODEPTR DOCOL
-        .word   ONEPLUS_CFA
-        .word   EXIT_CFA
+        CELL    ONEPLUS_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; [CHAR] Compilation: ( "<spaces>name" -- )
@@ -3386,9 +3386,9 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
         HEADER  "[CHAR]", BRACKCHAR_ENTRY, BRACKCHAR_CFA, F_IMMEDIATE, CHARPLUS_ENTRY
         CODEPTR DOCOL
-        .word   CHAR_CFA                ; ( char )
-        .word   LITERAL_CFA
-        .word   EXIT_CFA
+        CELL    CHAR_CFA                ; ( char )
+        CELL    LITERAL_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; BL ( -- ' ' )
@@ -3396,28 +3396,28 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
         HEADER  "BL", BL_ENTRY, BL_CFA, 0, BRACKCHAR_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   ' '
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    ' '
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; CELL ( -- 2 )
 ;------------------------------------------------------------------------------
         HEADER  "CELL", CELL_ENTRY, CELL_CFA, 0, BL_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CELL_SIZE
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CELL_SIZE
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; CELLS ( n -- 2 * n )
 ;------------------------------------------------------------------------------
         HEADER  "CELLS", CELLS_ENTRY, CELLS_CFA, 0, CELL_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CELL_SIZE
-        .word   STAR_CFA
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CELL_SIZE
+        CELL    STAR_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; CELL+ ( a-addr1 -- a-addr2 ) Add the size in address units of a cell to
@@ -3425,10 +3425,10 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
         HEADER  "CELL+", CELLPLUS_ENTRY, CELLPLUS_CFA, 0, CELLS_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CELL_SIZE
-        .word   PLUS_CFA
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CELL_SIZE
+        CELL    PLUS_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; SKIP-CHAR ( char -- ) scans the TIB skipping instances of char and updates
@@ -3679,11 +3679,11 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
         HEADER  "PARSE-NAME", PARSENAME_ENTRY, PARSENAME_CFA, 0, PARSE_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA
-        .word   SKIPCHAR_CFA            ; skip leading spaces
-        .word   BL_CFA
-        .word   PARSE_CFA               ; parse space-delimited token
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    SKIPCHAR_CFA            ; skip leading spaces
+        CELL    BL_CFA
+        CELL    PARSE_CFA               ; parse space-delimited token
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; WORD ( char -- addr ) parse word delimited by char from input
@@ -3691,35 +3691,35 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
 	HEADER  "WORD", WORD_ENTRY, WORD_CFA, 0, PARSENAME_ENTRY
         CODEPTR DOCOL
-        .word   DUP_CFA                 ; ( char char )
-        .word   SKIPCHAR_CFA            ; skip leading delimiters
-        .word   PARSE_CFA               ; ( char -- c-addr u )
-        .word   HERE_CFA                ; ( c-addr u here )
-        .word   PLACE_CFA               ; ( ) copy to HERE as counted string
-        .word   HERE_CFA                ; ( here )
-        .word   EXIT_CFA
+        CELL    DUP_CFA                 ; ( char char )
+        CELL    SKIPCHAR_CFA            ; skip leading delimiters
+        CELL    PARSE_CFA               ; ( char -- c-addr u )
+        CELL    HERE_CFA                ; ( c-addr u here )
+        CELL    PLACE_CFA               ; ( ) copy to HERE as counted string
+        CELL    HERE_CFA                ; ( here )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; \ ( -- ) consumes all input to the end of line.
 ;------------------------------------------------------------------------------
         HEADER  "\", BACKSLASH_ENTRY, BACKSLASH_CFA, F_IMMEDIATE, WORD_ENTRY
         CODEPTR DOCOL
-        .word   SOURCE_CFA              ; ( c-addr u )
-        .word   NIP_CFA                 ; ( u )
-        .word   TOIN_CFA                ; ( u &>IN )
-        .word   STORE_CFA               ; >IN = u
-        .word   EXIT_CFA
+        CELL    SOURCE_CFA              ; ( c-addr u )
+        CELL    NIP_CFA                 ; ( u )
+        CELL    TOIN_CFA                ; ( u &>IN )
+        CELL    STORE_CFA               ; >IN = u
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; { ( -- ) consumes all input until )
 ;------------------------------------------------------------------------------
 	HEADER  "(", PAREN_ENTRY, PAREN_CFA, F_IMMEDIATE, BACKSLASH_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   ')'
-        .word   PARSE_CFA               ; ( c-addr u )
-        .word   TWODROP_CFA             ; discard
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    ')'
+        CELL    PARSE_CFA               ; ( c-addr u )
+        CELL    TWODROP_CFA             ; discard
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DECIMAL ( -- ) set numeric base to 10
@@ -3727,11 +3727,11 @@ ABORTQUOTE_CLOOP:
         HEADER  "DECIMAL", DECIMAL_ENTRY, DECIMAL_CFA, 0, PAREN_ENTRY
         CODEPTR DOCOL
 DECIMAL_BODY:
-        .word   LIT_CFA
-        .word   10
-        .word   BASE_CFA
-        .word   STORE_CFA
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    10
+        CELL    BASE_CFA
+        CELL    STORE_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; HEX ( -- ) set numeric base to 16
@@ -3739,11 +3739,11 @@ DECIMAL_BODY:
         HEADER  "HEX", HEX_ENTRY, HEX_CFA, 0, DECIMAL_ENTRY
         CODEPTR DOCOL
 HEX_BODY:
-        .word   LIT_CFA
-        .word   16
-        .word   BASE_CFA
-        .word   STORE_CFA
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    16
+        CELL    BASE_CFA
+        CELL    STORE_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; >NUMBER ( ud c-addr u -- ud c-addr u )
@@ -4175,13 +4175,13 @@ HEX_BODY:
 ;------------------------------------------------------------------------------
         HEADER  "NUMBER", NUMBER_ENTRY, NUMBER_CFA, 0, NUMBERQ_ENTRY
         CODEPTR DOCOL
-        .word   NUMBERQ_CFA             ; ( n 1 | d_lo d_hi 2 | c-addr false )
-        .word   QDUP_CFA
-        .word   ZBRANCH_CFA
-        .word   NUMBER_ERR
-        .word   EXIT_CFA
+        CELL    NUMBERQ_CFA             ; ( n 1 | d_lo d_hi 2 | c-addr false )
+        CELL    QDUP_CFA
+        CELL    ZBRANCH_CFA
+        CELL    NUMBER_ERR
+        CELL    EXIT_CFA
 NUMBER_ERR:
-        .word   UNDEFINED_WORD_CFA      ; or a more specific error
+        CELL    UNDEFINED_WORD_CFA      ; or a more specific error
 
 ;------------------------------------------------------------------------------
 ; COMPARE
@@ -4381,24 +4381,24 @@ QUIT_BODY:
         ; Reset return stack (set S to RSP_INIT)
         ; This is done by the machine-code entry in FORTH_INIT
         ; From inside Forth we compile a call to RSP-RESET primitive
-        .word   RSP_RESET_CFA           ; Reset return stack
-        .word   STATE_CFA               ; Push STATE addr
-        .word   ZERO_CFA                ; 0 = interpret
-        .word   STORE_CFA               ; STATE = 0
+        CELL    RSP_RESET_CFA           ; Reset return stack
+        CELL    STATE_CFA               ; Push STATE addr
+        CELL    ZERO_CFA                ; 0 = interpret
+        CELL    STORE_CFA               ; STATE = 0
 
         ; Main REPL loop
 QUIT_LOOP:
-        .word   REFILL_CFA              ; Get a line of input ( true )
-        .word   DROP_CFA                ; true isn't needed.
-        .word   INTERPRET_CFA           ; Interpret the input line
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZEROEQ_CFA              ; STATE = 0 (interpret mode)?
-        .word   ZBRANCH_CFA
-        .word   QUIT_LOOP               ; Loop back (compiling: no prompt)
-        .word   DOT_PROMPT_CFA          ; Print " ok"
-        .word   BRANCH_CFA
-        .word   QUIT_LOOP
+        CELL    REFILL_CFA              ; Get a line of input ( true )
+        CELL    DROP_CFA                ; true isn't needed.
+        CELL    INTERPRET_CFA           ; Interpret the input line
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZEROEQ_CFA              ; STATE = 0 (interpret mode)?
+        CELL    ZBRANCH_CFA
+        CELL    QUIT_LOOP               ; Loop back (compiling: no prompt)
+        CELL    DOT_PROMPT_CFA          ; Print " ok"
+        CELL    BRANCH_CFA
+        CELL    QUIT_LOOP
 
 ;------------------------------------------------------------------------------
 ; Helper primitives needed by QUIT
@@ -4422,18 +4422,18 @@ QUIT_LOOP:
 ;------------------------------------------------------------------------------
         HEADER  "REFILL", REFILL_ENTRY, REFILL_CFA, 0, RSP_RESET_ENTRY
         CODEPTR DOCOL
-        .word   SOURCE_CFA              ; Get TIB address and length
-        .word   DROP_CFA                ; Only ( tib-addr ) is required.
-        .word   LIT_CFA
-        .word   TIB_SIZE                ; Max input length
-        .word   ACCEPT_CFA              ; ( len )
-        .word   HASHTIB_CFA
-        .word   STORE_CFA               ; #TIB = len
-        .word   ZERO_CFA
-        .word   TOIN_CFA
-        .word   STORE_CFA               ; >IN = 0
-        .word   TRUE_CFA                ; ( TRUE ) always succeeds on terminal
-        .word   EXIT_CFA
+        CELL    SOURCE_CFA              ; Get TIB address and length
+        CELL    DROP_CFA                ; Only ( tib-addr ) is required.
+        CELL    LIT_CFA
+        CELL    TIB_SIZE                ; Max input length
+        CELL    ACCEPT_CFA              ; ( len )
+        CELL    HASHTIB_CFA
+        CELL    STORE_CFA               ; #TIB = len
+        CELL    ZERO_CFA
+        CELL    TOIN_CFA
+        CELL    STORE_CFA               ; >IN = 0
+        CELL    TRUE_CFA                ; ( TRUE ) always succeeds on terminal
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ACCEPT ( addr maxlen -- actual )
@@ -4753,11 +4753,11 @@ QUIT_LOOP:
 ;------------------------------------------------------------------------------
         HEADER  "COMPILE-ONLY-ERROR", COMPILE_ONLY_ERROR_ENTRY, COMPILE_ONLY_ERROR_CFA, F_HIDDEN, FIND_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   compile_only_msg
-        .word   CPUTS_CFA
-        .word   ABORT_CFA
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    compile_only_msg
+        CELL    CPUTS_CFA
+        CELL    ABORT_CFA
+        CELL    EXIT_CFA
 
 compile_only_msg:
         .byte "error: compile-only word",C_RETURN,L_FEED,0
@@ -4791,88 +4791,88 @@ compile_only_msg:
 INTERPRET_BODY:
 INTERPRET_LOOP:
         ; Parse next space-delimited word from input
-        .word   BL_CFA                  ; space delimiter
-        .word   WORD_CFA                ; ( addr ) counted string at HERE
+        CELL    BL_CFA                  ; space delimiter
+        CELL    WORD_CFA                ; ( addr ) counted string at HERE
 
         ; Check for empty word - if length 0, input exhausted
-        .word   DUP_CFA                 ; ( addr addr )
-        .word   CFETCH_CFA              ; ( addr len )
-        .word   ZEROEQ_CFA              ; ( addr flag )
-        .word   ZBRANCH_CFA
-        .word   INTERPRET_NOTEMPTY
-        .word   DROP_CFA                ; ( ) discard addr
-        .word   EXIT_CFA                ; done
+        CELL    DUP_CFA                 ; ( addr addr )
+        CELL    CFETCH_CFA              ; ( addr len )
+        CELL    ZEROEQ_CFA              ; ( addr flag )
+        CELL    ZBRANCH_CFA
+        CELL    INTERPRET_NOTEMPTY
+        CELL    DROP_CFA                ; ( ) discard addr
+        CELL    EXIT_CFA                ; done
 
 INTERPRET_NOTEMPTY:
         ; Try to find the word in the dictionary
-        .word   FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
+        CELL    FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
 
         ; Was it found?
-        .word   DUP_CFA                 ; ( addr 0 0 | xt 1 1 | xt -1 -1 )
-        .word   ZEROEQ_CFA              ; ( addr 0 true | xt 1 false | xt -1 false )
-        .word   ZBRANCH_CFA
-        .word   INTERPRET_FOUND
+        CELL    DUP_CFA                 ; ( addr 0 0 | xt 1 1 | xt -1 -1 )
+        CELL    ZEROEQ_CFA              ; ( addr 0 true | xt 1 false | xt -1 false )
+        CELL    ZBRANCH_CFA
+        CELL    INTERPRET_FOUND
 
         ; Not found - drop the zero and try NUMBER
-        .word   DROP_CFA                ; ( addr )
-        .word   NUMBER_CFA              ; ( n 1 | d_lo d_hi 2 )
+        CELL    DROP_CFA                ; ( addr )
+        CELL    NUMBER_CFA              ; ( n 1 | d_lo d_hi 2 )
         ; It's a number - check STATE
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZEROEQ_CFA
-        .word   ZBRANCH_CFA
-        .word   INTERPRET_COMPILE_LIT
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZEROEQ_CFA
+        CELL    ZBRANCH_CFA
+        CELL    INTERPRET_COMPILE_LIT
         ; Interpreting: drop flag, number already on stack, just loop
-        .word   DROP_CFA                ; drop 1 or 2 ( n | d_lo d_high )
-        .word   BRANCH_CFA
-        .word   INTERPRET_LOOP
+        CELL    DROP_CFA                ; drop 1 or 2 ( n | d_lo d_high )
+        CELL    BRANCH_CFA
+        CELL    INTERPRET_LOOP
 INTERPRET_COMPILE_LIT:
         ; flag is 1 or 2
-        .word   ONE_CFA
-        .word   EQUAL_CFA              ; ( [d_lo] n is-single? )
-        .word   ZBRANCH_CFA
-        .word   INTERPRET_COMPILE_DOUBLE
+        CELL    ONE_CFA
+        CELL    EQUAL_CFA              ; ( [d_lo] n is-single? )
+        CELL    ZBRANCH_CFA
+        CELL    INTERPRET_COMPILE_DOUBLE
         ; Single: compile LIT n
-        .word   LITERAL_CFA
-        .word   BRANCH_CFA
-        .word   INTERPRET_LOOP
+        CELL    LITERAL_CFA
+        CELL    BRANCH_CFA
+        CELL    INTERPRET_LOOP
 INTERPRET_COMPILE_DOUBLE:
         ; Double: compile 2LIT d_lo d_hi
-        .word   TWOLITERAL_CFA
-        .word   BRANCH_CFA
-        .word   INTERPRET_LOOP
+        CELL    TWOLITERAL_CFA
+        CELL    BRANCH_CFA
+        CELL    INTERPRET_LOOP
 
 INTERPRET_FOUND:
         ; ( xt 1 | xt -1 ) - check STATE
-        .word   STATE_CFA               ; ( xt flag addr-of-STATE )
-        .word   FETCH_CFA               ; ( xt flag state )
-        .word   ZEROEQ_CFA              ; ( xt flag true-if-interpreting )
-        .word   ZBRANCH_CFA
-        .word   INTERPRET_COMPILE_WORD
+        CELL    STATE_CFA               ; ( xt flag addr-of-STATE )
+        CELL    FETCH_CFA               ; ( xt flag state )
+        CELL    ZEROEQ_CFA              ; ( xt flag true-if-interpreting )
+        CELL    ZBRANCH_CFA
+        CELL    INTERPRET_COMPILE_WORD
 
         ; Interpreting: execute regardless of immediate flag
-        .word   DROP_CFA                ; ( xt ) discard flag
-        .word   EXECUTE_CFA
-        .word   BRANCH_CFA
-        .word   INTERPRET_LOOP
+        CELL    DROP_CFA                ; ( xt ) discard flag
+        CELL    EXECUTE_CFA
+        CELL    BRANCH_CFA
+        CELL    INTERPRET_LOOP
 
 INTERPRET_COMPILE_WORD:
         ; Compiling: execute if immediate (-1), compile if normal (1)
-        .word   LIT_CFA
-        .word   MINUS_ONE               ; -1 = immediate
-        .word   EQUAL_CFA               ; ( xt flag ) true if immediate
-        .word   ZBRANCH_CFA
-        .word   INTERPRET_COMPILE_NORMAL
+        CELL    LIT_CFA
+        CELL    MINUS_ONE               ; -1 = immediate
+        CELL    EQUAL_CFA               ; ( xt flag ) true if immediate
+        CELL    ZBRANCH_CFA
+        CELL    INTERPRET_COMPILE_NORMAL
         ; Immediate: execute it
-        .word   EXECUTE_CFA
-        .word   BRANCH_CFA
-        .word   INTERPRET_LOOP
+        CELL    EXECUTE_CFA
+        CELL    BRANCH_CFA
+        CELL    INTERPRET_LOOP
 
 INTERPRET_COMPILE_NORMAL:
         ; Normal word in compile mode: compile its xt
-        .word   COMPILECOMMA_CFA
-        .word   BRANCH_CFA
-        .word   INTERPRET_LOOP
+        CELL    COMPILECOMMA_CFA
+        CELL    BRANCH_CFA
+        CELL    INTERPRET_LOOP
 
 ;------------------------------------------------------------------------------
 ; SOURCE-ID ( -- 0 | -1 ) Identifies the input source as follows:
@@ -4882,9 +4882,9 @@ INTERPRET_COMPILE_NORMAL:
 ;------------------------------------------------------------------------------
         HEADER  "SOURCE-ID", SOURCEID_ENTRY, SOURCEID_CFA, 0, INTERPRET_ENTRY
         CODEPTR DOCOL
-        .word   HASHSOURCEID_CFA
-        .word   FETCH_CFA
-        .word   EXIT_CFA
+        CELL    HASHSOURCEID_CFA
+        CELL    FETCH_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; SAVE-INPUT ( -- xn ... x1 n ) x1 through xn describe the current state of
@@ -4893,14 +4893,14 @@ INTERPRET_COMPILE_NORMAL:
 ;------------------------------------------------------------------------------
         HEADER  "SAVE-INPUT", SAVEINPUT_ENTRY, SAVEINPUT_CFA, 0, SOURCEID_ENTRY
         CODEPTR DOCOL
-        .word   HASHSOURCEID_CFA
-        .word   FETCH_CFA              ; ( src-id )
-        .word   TOIN_CFA
-        .word   FETCH_CFA              ; ( src-id toin )
-        .word   SOURCE_CFA             ; ( src-id toin tib sourcelen )
-        .word   LIT_CFA
-        .word   4                      ; ( src-id toin tib sourcelen 4 )
-        .word   EXIT_CFA
+        CELL    HASHSOURCEID_CFA
+        CELL    FETCH_CFA              ; ( src-id )
+        CELL    TOIN_CFA
+        CELL    FETCH_CFA              ; ( src-id toin )
+        CELL    SOURCE_CFA             ; ( src-id toin tib sourcelen )
+        CELL    LIT_CFA
+        CELL    4                      ; ( src-id toin tib sourcelen 4 )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; RESTORE-INPUT ( xn ... x1 n -- flag ) Attempt to restore the input source
@@ -4913,17 +4913,17 @@ INTERPRET_COMPILE_NORMAL:
         HEADER  "RESTORE-INPUT", RESTOREINPUT_ENTRY, RESTOREINPUT_CFA, 0, SAVEINPUT_ENTRY
         CODEPTR DOCOL
         ; Restore source state
-        .word   DROP_CFA               ; number of parameters isn't needed.
-        .word   HASHTIB_CFA            ; ( src-id toin tib srclen srclen-addr )
-        .word   STORE_CFA              ; restore #TIB
-        .word   TICKTIB_CFA            ; ( toin tib tib-addr )
-        .word   STORE_CFA              ; restore 'TIB
-        .word   TOIN_CFA               ; ( toin toin-addr )
-        .word   STORE_CFA              ; restore >IN
-        .word   HASHSOURCEID_CFA
-        .word   STORE_CFA              ; restore SOURCE-ID
-        .word   FALSE_CFA              ; False as it was restored.
-        .word   EXIT_CFA
+        CELL    DROP_CFA               ; number of parameters isn't needed.
+        CELL    HASHTIB_CFA            ; ( src-id toin tib srclen srclen-addr )
+        CELL    STORE_CFA              ; restore #TIB
+        CELL    TICKTIB_CFA            ; ( toin tib tib-addr )
+        CELL    STORE_CFA              ; restore 'TIB
+        CELL    TOIN_CFA               ; ( toin toin-addr )
+        CELL    STORE_CFA              ; restore >IN
+        CELL    HASHSOURCEID_CFA
+        CELL    STORE_CFA              ; restore SOURCE-ID
+        CELL    FALSE_CFA              ; False as it was restored.
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; EVALUATE ( ix c-addr u -- jx ) takes a string and interprets it as if it
@@ -4934,32 +4934,32 @@ INTERPRET_COMPILE_NORMAL:
         HEADER  "EVALUATE", EVALUATE_ENTRY, EVALUATE_CFA, 0, RESTOREINPUT_ENTRY
         CODEPTR DOCOL
         ; Save current source state onto return stack
-        .word   SAVEINPUT_CFA          ; ( src-id c-addr u toin tib srclen 4 )
-        .word   TOR_CFA
-        .word   TOR_CFA
-        .word   TOR_CFA
-        .word   TOR_CFA
-        .word   TOR_CFA                ; ( c-adddr u ) R: unchanged
+        CELL    SAVEINPUT_CFA          ; ( src-id c-addr u toin tib srclen 4 )
+        CELL    TOR_CFA
+        CELL    TOR_CFA
+        CELL    TOR_CFA
+        CELL    TOR_CFA
+        CELL    TOR_CFA                ; ( c-adddr u ) R: unchanged
         ; Set up new source
-        .word   TRUE_CFA               ; ( c-addr u -1 ) R: unchanged
-        .word   MROT_CFA               ; ( -1 c-addr u ) R: unchanged
-        .word   ZERO_CFA               ; ( -1 c-addr u 0 ) R: unchanged
-        .word   MROT_CFA               ; ( -1 0 c-addr u ) R: unchanged
-        .word   LIT_CFA
-        .word   4                      ; ( -1 0 c-addr u 4 ) R: unchanged
-        .word   RESTOREINPUT_CFA       ; ( flag )  R: unchanged
-        .word   DROP_CFA               ; ( ) R: unchanged
+        CELL    TRUE_CFA               ; ( c-addr u -1 ) R: unchanged
+        CELL    MROT_CFA               ; ( -1 c-addr u ) R: unchanged
+        CELL    ZERO_CFA               ; ( -1 c-addr u 0 ) R: unchanged
+        CELL    MROT_CFA               ; ( -1 0 c-addr u ) R: unchanged
+        CELL    LIT_CFA
+        CELL    4                      ; ( -1 0 c-addr u 4 ) R: unchanged
+        CELL    RESTOREINPUT_CFA       ; ( flag )  R: unchanged
+        CELL    DROP_CFA               ; ( ) R: unchanged
         ; Interpret the string
-        .word   INTERPRET_CFA          ; ( results ) R: unchanged
+        CELL    INTERPRET_CFA          ; ( results ) R: unchanged
         ; Restore source state
-        .word   RFROM_CFA
-        .word   RFROM_CFA
-        .word   RFROM_CFA
-        .word   RFROM_CFA
-        .word   RFROM_CFA              ; ( toin tib srclen 3 )
-        .word   RESTOREINPUT_CFA
-        .word   DROP_CFA
-        .word   EXIT_CFA
+        CELL    RFROM_CFA
+        CELL    RFROM_CFA
+        CELL    RFROM_CFA
+        CELL    RFROM_CFA
+        CELL    RFROM_CFA              ; ( toin tib srclen 3 )
+        CELL    RESTOREINPUT_CFA
+        CELL    DROP_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; . (DOT) ( n -- ) print signed number
@@ -5071,16 +5071,16 @@ print_udec:
 ;------------------------------------------------------------------------------
         HEADER  "D.", DDOT_ENTRY, DDOT_CFA, 0, UDOT_ENTRY
         CODEPTR DOCOL
-        .word   TUCK_CFA                ; ( d_hi d_lo d_hi ) save sign
-        .word   DABS_CFA                ; ( d_hi ud_lo ud_hi ) absolute value
-        .word   LESSHASH_CFA            ; <# begin pictured output
-        .word   HASHS_CFA               ; #S convert all digits
-        .word   ROT_CFA                 ; ( ud_str d_hi ) bring sign to TOS
-        .word   SIGN_CFA                ; add '-' if negative
-        .word   HASHGT_CFA              ; #> ( c-addr u )
-        .word   TYPE_CFA                ; print
-        .word   SPACE_CFA               ; trailing space
-        .word   EXIT_CFA
+        CELL    TUCK_CFA                ; ( d_hi d_lo d_hi ) save sign
+        CELL    DABS_CFA                ; ( d_hi ud_lo ud_hi ) absolute value
+        CELL    LESSHASH_CFA            ; <# begin pictured output
+        CELL    HASHS_CFA               ; #S convert all digits
+        CELL    ROT_CFA                 ; ( ud_str d_hi ) bring sign to TOS
+        CELL    SIGN_CFA                ; add '-' if negative
+        CELL    HASHGT_CFA              ; #> ( c-addr u )
+        CELL    TYPE_CFA                ; print
+        CELL    SPACE_CFA               ; trailing space
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; .HEX ( n -- ) print hexadecimal number
@@ -5171,32 +5171,32 @@ print_udec:
 ;------------------------------------------------------------------------------
         HEADER  "HEADER>CFA", HEADERCFA_ENTRY, HEADERCFA_CFA, 0, DOT_PROMPT_ENTRY
         CODEPTR DOCOL
-        .word   CELLPLUS_CFA            ; ( entry+CELL_SIZE )
-        .word   DUP_CFA                 ; ( entry+CELL_SIZE entry+CELL_SIZE )
-        .word   CFETCH_CFA              ; ( entry+CELL_SIZE flags/len )
-        .word   LIT_CFA
-        .word   F_LENMASK
-        .word   AND_CFA                 ; ( entry+CELL_SIZE namelen )
-        .word   ONEPLUS_CFA             ; Skip over length byte
-        .word   PLUS_CFA                ; ( entry+CELL_SIZE+namelen+1 )
-        .word   ALIGNED_CFA             ; ( cfa aligned )
-        .word   EXIT_CFA
+        CELL    CELLPLUS_CFA            ; ( entry+CELL_SIZE )
+        CELL    DUP_CFA                 ; ( entry+CELL_SIZE entry+CELL_SIZE )
+        CELL    CFETCH_CFA              ; ( entry+CELL_SIZE flags/len )
+        CELL    LIT_CFA
+        CELL    F_LENMASK
+        CELL    AND_CFA                 ; ( entry+CELL_SIZE namelen )
+        CELL    ONEPLUS_CFA             ; Skip over flags/length byte
+        CELL    PLUS_CFA                ; ( entry+CELL_SIZE+namelen+1 )
+        CELL    ALIGNED_CFA             ; ( cfa aligned )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; HEADER>NAME ( entry -- c-addr u ) extracts the name field from a header.
 ;------------------------------------------------------------------------------
         HEADER  "HEADER>NAME", HEADERNAME_ENTRY, HEADERNAME_CFA, 0, HEADERCFA_ENTRY
         CODEPTR DOCOL
-        .word   CELLPLUS_CFA            ; ( entry+CELL_SIZE )
-        .word   DUP_CFA                 ; ( entry+CELL_SIZE entry+CELL_SIZE )
-        .word   CFETCH_CFA              ; ( entry+CELL_SIZE flags/len )
-        .word   LIT_CFA
-        .word   F_LENMASK
-        .word   AND_CFA                 ; ( entry+CELL_SIZE namelen )
-        .word   SWAP_CFA                ; ( u entry+CELL_SIZE )
-	.word   ONEPLUS_CFA             ; ( u entry+CELL_SIZE ) = c-addr
-        .word   SWAP_CFA                ; ( c-addr u )
-        .word   EXIT_CFA
+        CELL    CELLPLUS_CFA            ; ( entry+CELL_SIZE )
+        CELL    DUP_CFA                 ; ( entry+CELL_SIZE entry+CELL_SIZE )
+        CELL    CFETCH_CFA              ; ( entry+CELL_SIZE flags/len )
+        CELL    LIT_CFA
+        CELL    F_LENMASK
+        CELL    AND_CFA                 ; ( entry+CELL_SIZE namelen )
+        CELL    SWAP_CFA                ; ( u entry+CELL_SIZE )
+	CELL    ONEPLUS_CFA             ; ( u entry+CELL_SIZE ) = c-addr
+        CELL    SWAP_CFA                ; ( c-addr u )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; CFA>NAME ( cfa -- c-addr u flag ) walks the dictionary, finds a CFA, and
@@ -5204,48 +5204,48 @@ print_udec:
 ;------------------------------------------------------------------------------
         HEADER  "CFA>NAME", CFANAME_ENTRY, CFANAME_CFA, 0, HEADERNAME_ENTRY
         CODEPTR DOCOL
-        .word   LATEST_CFA
-        .word   FETCH_CFA              ; ( cfa entry )
+        CELL    LATEST_CFA
+        CELL    FETCH_CFA              ; ( cfa entry )
 
 CFANAME_LOOP:
-        .word   DUP_CFA                ; ( cfa entry entry )
-        .word   ZBRANCH_CFA
-        .word   CFANAME_NOTFOUND
+        CELL    DUP_CFA                ; ( cfa entry entry )
+        CELL    ZBRANCH_CFA
+        CELL    CFANAME_NOTFOUND
 
-        .word   TOR_CFA                ; ( cfa ) R: ( entry )
-        .word   DUP_CFA                ; ( cfa cfa ) R: ( entry )
-        .word   RFETCH_CFA             ; ( cfa cfa entry ) R: ( entry )
-        .word   HEADERCFA_CFA          ; ( cfa cfa entry-cfa ) R: ( entry )
-        .word   EQUAL_CFA              ; ( cfa flag ) R: ( entry )
-        .word   RFROM_CFA              ; ( cfa flag entry ) R: ( )
-        .word   SWAP_CFA               ; ( cfa entry flag )
-        .word   ZBRANCH_CFA
-        .word   CFANAME_NEXT
+        CELL    TOR_CFA                ; ( cfa ) R: ( entry )
+        CELL    DUP_CFA                ; ( cfa cfa ) R: ( entry )
+        CELL    RFETCH_CFA             ; ( cfa cfa entry ) R: ( entry )
+        CELL    HEADERCFA_CFA          ; ( cfa cfa entry-cfa ) R: ( entry )
+        CELL    EQUAL_CFA              ; ( cfa flag ) R: ( entry )
+        CELL    RFROM_CFA              ; ( cfa flag entry ) R: ( )
+        CELL    SWAP_CFA               ; ( cfa entry flag )
+        CELL    ZBRANCH_CFA
+        CELL    CFANAME_NEXT
 
         ; Match found
-        .word   NIP_CFA                ; ( entry )
-        .word   HEADERNAME_CFA         ; ( c-addr u )
-        .word   TRUE_CFA
-        .word   EXIT_CFA
+        CELL    NIP_CFA                ; ( entry )
+        CELL    HEADERNAME_CFA         ; ( c-addr u )
+        CELL    TRUE_CFA
+        CELL    EXIT_CFA
 
 CFANAME_NEXT:
         ; No match - follow link
-        .word   FETCH_CFA              ; ( cfa link )
-        .word   BRANCH_CFA
-        .word   CFANAME_LOOP
+        CELL    FETCH_CFA              ; ( cfa link )
+        CELL    BRANCH_CFA
+        CELL    CFANAME_LOOP
 
 CFANAME_NOTFOUND:
-        .word   TWODROP_CFA            ; ( )
-        .word   FALSE_CFA
-        .word   EXIT_CFA
+        CELL    TWODROP_CFA            ; ( )
+        CELL    FALSE_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; >BODY ( xt -- a-addr ) CFA to body, skips past the code pointer cell
 ;------------------------------------------------------------------------------
         HEADER  ">BODY", TOBODY_ENTRY, TOBODY_CFA, 0, CFANAME_ENTRY
         CODEPTR DOCOL
-        .word   CELLPLUS_CFA
-        .word   EXIT_CFA
+        CELL    CELLPLUS_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; WORDS ( -- ) list all non-hidden words in the dictionary
@@ -5254,31 +5254,31 @@ CFANAME_NOTFOUND:
         CODEPTR DOCOL
 
 WORDS_BODY:
-        .word   LATEST_CFA              ; ( addr-of-LATEST-var )
-        .word   FETCH_CFA               ; ( entry )
+        CELL    LATEST_CFA              ; ( addr-of-LATEST-var )
+        CELL    FETCH_CFA               ; ( entry )
 WORDS_LOOP:
-        .word   DUP_CFA                 ; ( entry entry )
-        .word   CELLPLUS_CFA            ; ( entry entry+2 )
-        .word   CFETCH_CFA              ; ( entry flags+len )
-        .word   LIT_CFA
-        .word   F_HIDDEN
-        .word   AND_CFA                 ; ( entry flags+len & F_HIDDEN )
-        .word   ZEROEQ_CFA              ; ( entry flag ) true if not hidden
-        .word   ZBRANCH_CFA
-        .word   WORDS_SKIP
-        .word   DUP_CFA                 ; ( entry entry )
-        .word   HEADERNAME_CFA          ; ( entry c-addr u )
-        .word   TYPE_CFA                ; ( entry )
-        .word   SPACE_CFA
+        CELL    DUP_CFA                 ; ( entry entry )
+        CELL    CELLPLUS_CFA            ; ( entry entry+2 )
+        CELL    CFETCH_CFA              ; ( entry flags+len )
+        CELL    LIT_CFA
+        CELL    F_HIDDEN
+        CELL    AND_CFA                 ; ( entry flags+len & F_HIDDEN )
+        CELL    ZEROEQ_CFA              ; ( entry flag ) true if not hidden
+        CELL    ZBRANCH_CFA
+        CELL    WORDS_SKIP
+        CELL    DUP_CFA                 ; ( entry entry )
+        CELL    HEADERNAME_CFA          ; ( entry c-addr u )
+        CELL    TYPE_CFA                ; ( entry )
+        CELL    SPACE_CFA
 WORDS_SKIP:
-        .word   FETCH_CFA               ; ( prev-entry ) follow link
-        .word   DUP_CFA
-        .word   ZEROEQ_CFA
-        .word   ZBRANCH_CFA
-        .word   WORDS_LOOP
-        .word   DROP_CFA
-        .word   CR_CFA
-        .word   EXIT_CFA
+        CELL    FETCH_CFA               ; ( prev-entry ) follow link
+        CELL    DUP_CFA
+        CELL    ZEROEQ_CFA
+        CELL    ZBRANCH_CFA
+        CELL    WORDS_LOOP
+        CELL    DROP_CFA
+        CELL    CR_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; (CREATE) ( addr -- ) build dictionary header from counted string at addr.
@@ -5436,18 +5436,18 @@ WORDS_SKIP:
 ;------------------------------------------------------------------------------
         HEADER  "REVEAL", REVEAL_ENTRY, REVEAL_CFA, 0, DOCREATE_ENTRY
         CODEPTR DOCOL
-        .word   LATEST_CFA
-        .word   FETCH_CFA              ; ( entry )
-        .word   CELLPLUS_CFA           ; ( entry+2 ) skip link field
-        .word   DUP_CFA                ; ( entry+2 entry+2 )
-        .word   CFETCH_CFA             ; ( entry+2 flags )
-        .word   LIT_CFA
-        .word   $00BF                  ; $FF ^ F_HIDDEN = $BF
-        .word   AND_CFA                ; ( entry+2 flags&~F_HIDDEN )
-        .word   SWAP_CFA               ; ( flags entry+2 )
-        .word   CSTORE_CFA             ; store cleared flags back
-        .word   COMMIT_CFA             ; clear checkpoint
-        .word   EXIT_CFA
+        CELL    LATEST_CFA
+        CELL    FETCH_CFA              ; ( entry )
+        CELL    CELLPLUS_CFA           ; ( entry+2 ) skip link field
+        CELL    DUP_CFA                ; ( entry+2 entry+2 )
+        CELL    CFETCH_CFA             ; ( entry+2 flags )
+        CELL    LIT_CFA
+        CELL    $00BF                  ; $FF ^ F_HIDDEN = $BF
+        CELL    AND_CFA                ; ( entry+2 flags&~F_HIDDEN )
+        CELL    SWAP_CFA               ; ( flags entry+2 )
+        CELL    CSTORE_CFA             ; store cleared flags back
+        CELL    COMMIT_CFA             ; clear checkpoint
+        CELL    EXIT_CFA
 
 ;==============================================================================
 ; SECTION 13: Compiler words to create words
@@ -5459,15 +5459,15 @@ WORDS_SKIP:
         HEADER  ":", COLON_ENTRY, COLON_CFA, 0, REVEAL_ENTRY
         CODEPTR DOCOL
 COLON_BODY:
-        .word   BL_CFA
-        .word   WORD_CFA                ; ( addr )
-        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
-        .word   DOCREATE_CFA            ; ( ) build header
-        .word   LIT_CFA
-        .word   DOCOL
-        .word   COMMA_CFA               ; write DOCOL at CFA
-        .word   RBRACKET_CFA            ; STATE = 1 (compile mode)
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    WORD_CFA                ; ( addr )
+        CELL    QREDEFINE_CFA           ; ( addr ) print warnings if needed
+        CELL    DOCREATE_CFA            ; ( ) build header
+        CELL    LIT_CFA
+        CELL    DOCOL
+        CELL    COMMA_CFA               ; write DOCOL at CFA
+        CELL    RBRACKET_CFA            ; STATE = 1 (compile mode)
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ?REDEFINE ( addr -- addr ) check for redefinition and literal warnings
@@ -5477,59 +5477,59 @@ COLON_BODY:
         HEADER  "?REDEFINE", QREDEFINE_ENTRY, QREDEFINE_CFA, F_HIDDEN, COLON_ENTRY
         CODEPTR DOCOL
         ; --- Check for redefinition ---
-        .word   DUP_CFA                 ; ( addr addr )
-        .word   FIND_CFA                ; ( addr addr 0 | addr xt 1 | addr xt -1 )
-        .word   ZBRANCH_CFA
-        .word   QREDEF_NO_REDEF         ; not found
-        .word   DROP_CFA                ; drop xt ( addr )
-        .word   LIT_CFA
-        .word   redef_msg
-        .word   CPUTS_CFA
-        .word   DUP_CFA                 ; ( addr addr )
-        .word   COUNT_CFA               ; ( addr c-addr u )
-        .word   TYPE_CFA
-        .word   LIT_CFA
-        .word   crlf_msg
-        .word   CPUTS_CFA
-        .word   BRANCH_CFA
-        .word   QREDEF_CHECK_LIT
+        CELL    DUP_CFA                 ; ( addr addr )
+        CELL    FIND_CFA                ; ( addr addr 0 | addr xt 1 | addr xt -1 )
+        CELL    ZBRANCH_CFA
+        CELL    QREDEF_NO_REDEF         ; not found
+        CELL    DROP_CFA                ; drop xt ( addr )
+        CELL    LIT_CFA
+        CELL    redef_msg
+        CELL    CPUTS_CFA
+        CELL    DUP_CFA                 ; ( addr addr )
+        CELL    COUNT_CFA               ; ( addr c-addr u )
+        CELL    TYPE_CFA
+        CELL    LIT_CFA
+        CELL    crlf_msg
+        CELL    CPUTS_CFA
+        CELL    BRANCH_CFA
+        CELL    QREDEF_CHECK_LIT
 QREDEF_NO_REDEF:
-        .word   DROP_CFA                ; drop 0 ( addr )
+        CELL    DROP_CFA                ; drop 0 ( addr )
         ; --- Check for literal redefined as word ---
 QREDEF_CHECK_LIT:
-        .word   DUP_CFA                 ; ( addr addr )
-        .word   NUMBERQ_CFA             ; ( addr n 1 | addr d_lo d_hi 2 | addr addr 0 )
-        .word   QDUP_CFA                ; ( ... [ flag flag | 0 ] )
-        .word   ZBRANCH_CFA
-        .word   QREDEF_NO_LIT           ; 0 = not a number
-        .word   ONE_CFA
-        .word   EQUAL_CFA               ; ( addr n is-single? | addr d_lo d_hi is-single? )
-        .word   ZBRANCH_CFA
-        .word   QREDEF_LIT_DOUBLE
+        CELL    DUP_CFA                 ; ( addr addr )
+        CELL    NUMBERQ_CFA             ; ( addr n 1 | addr d_lo d_hi 2 | addr addr 0 )
+        CELL    QDUP_CFA                ; ( ... [ flag flag | 0 ] )
+        CELL    ZBRANCH_CFA
+        CELL    QREDEF_NO_LIT           ; 0 = not a number
+        CELL    ONE_CFA
+        CELL    EQUAL_CFA               ; ( addr n is-single? | addr d_lo d_hi is-single? )
+        CELL    ZBRANCH_CFA
+        CELL    QREDEF_LIT_DOUBLE
         ; Single: stack is ( addr n )
-        .word   DROP_CFA                ; drop n
-        .word   BRANCH_CFA
-        .word   QREDEF_LIT_WARN
+        CELL    DROP_CFA                ; drop n
+        CELL    BRANCH_CFA
+        CELL    QREDEF_LIT_WARN
 QREDEF_LIT_DOUBLE:
         ; Double: stack is ( addr d_lo d_hi )
-        .word   TWODROP_CFA             ; drop d_lo d_hi
+        CELL    TWODROP_CFA             ; drop d_lo d_hi
 QREDEF_LIT_WARN:
         ; Stack: ( addr )
-        .word   LIT_CFA
-        .word   litredef_prefix
-        .word   CPUTS_CFA
-        .word   DUP_CFA
-        .word   COUNT_CFA
-        .word   TYPE_CFA
-        .word   LIT_CFA
-        .word   litredef_suffix
-        .word   CPUTS_CFA
-        .word   BRANCH_CFA
-        .word   QREDEF_DONE
+        CELL    LIT_CFA
+        CELL    litredef_prefix
+        CELL    CPUTS_CFA
+        CELL    DUP_CFA
+        CELL    COUNT_CFA
+        CELL    TYPE_CFA
+        CELL    LIT_CFA
+        CELL    litredef_suffix
+        CELL    CPUTS_CFA
+        CELL    BRANCH_CFA
+        CELL    QREDEF_DONE
 QREDEF_NO_LIT:
-        .word   DROP_CFA                ; drop extra addr
+        CELL    DROP_CFA                ; drop extra addr
 QREDEF_DONE:
-        .word   EXIT_CFA                ; ( addr )
+        CELL    EXIT_CFA                ; ( addr )
 
 redef_msg:
         .byte   "warning: redefined ", $00
@@ -5545,21 +5545,21 @@ crlf_msg:
 ;------------------------------------------------------------------------------
         HEADER  ":NONAME", NONAME_ENTRY, NONAME_CFA, 0, QREDEFINE_ENTRY
         CODEPTR DOCOL
-        .word   CHECKPOINT_CFA          ; save DP and LATEST
-        .word   LATEST_CFA
-        .word   FETCH_CFA              ; ( latest ) save current LATEST
-        .word   HERE_CFA               ; ( latest xt )
-        .word   LIT_CFA
-        .word   DOCOL
-        .word   COMMA_CFA              ; compile DOCOL at HERE
-        .word   RBRACKET_CFA           ; enter compile mode
+        CELL    CHECKPOINT_CFA          ; save DP and LATEST
+        CELL    LATEST_CFA
+        CELL    FETCH_CFA              ; ( latest ) save current LATEST
+        CELL    HERE_CFA               ; ( latest xt )
+        CELL    LIT_CFA
+        CELL    DOCOL
+        CELL    COMMA_CFA              ; compile DOCOL at HERE
+        CELL    RBRACKET_CFA           ; enter compile mode
         ; Stack: ( latest xt ) xt stays for caller
         ; We need LATEST restored before ; calls REVEAL
         ; Store saved LATEST back so REVEAL sees the right entry
-        .word   SWAP_CFA               ; ( xt latest )
-        .word   LATEST_CFA
-        .word   STORE_CFA              ; restore LATEST ( xt )
-        .word   EXIT_CFA
+        CELL    SWAP_CFA               ; ( xt latest )
+        CELL    LATEST_CFA
+        CELL    STORE_CFA              ; restore LATEST ( xt )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ; ( -- ) close colon definition: compile EXIT, reveal, interpret mode
@@ -5569,12 +5569,12 @@ crlf_msg:
         HEADER  ";", SEMICOLON_ENTRY, SEMICOLON_CFA, F_IMMEDIATE, NONAME_ENTRY
         CODEPTR DOCOL
 SEMICOLON_BODY:
-        .word   LIT_CFA
-        .word   EXIT_CFA                ; compile EXIT into definition
-        .word   COMMA_CFA
-        .word   REVEAL_CFA              ; clear F_HIDDEN
-        .word   LBRACKET_CFA            ; STATE = 0 (interpret mode)
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    EXIT_CFA                ; compile EXIT into definition
+        CELL    COMMA_CFA
+        CELL    REVEAL_CFA              ; clear F_HIDDEN
+        CELL    LBRACKET_CFA            ; STATE = 0 (interpret mode)
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; VARIABLE ( "name" -- ) parse name, create variable definition
@@ -5583,17 +5583,17 @@ SEMICOLON_BODY:
         HEADER  "VARIABLE", VARIABLE_ENTRY, VARIABLE_CFA, 0, SEMICOLON_ENTRY
         CODEPTR DOCOL
 VARIABLE_BODY:
-        .word   BL_CFA
-        .word   WORD_CFA                ; ( addr ) parse name
-        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
-        .word   DOCREATE_CFA            ; ( ) build header
-        .word   LIT_CFA
-        .word   DOVAR                   ; code pointer for variables
-        .word   COMMA_CFA               ; write DOVAR at CFA
-        .word   ZERO_CFA
-        .word   COMMA_CFA               ; allot and initialize one cell
-        .word   REVEAL_CFA              ; clear F_HIDDEN
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    WORD_CFA                ; ( addr ) parse name
+        CELL    QREDEFINE_CFA           ; ( addr ) print warnings if needed
+        CELL    DOCREATE_CFA            ; ( ) build header
+        CELL    LIT_CFA
+        CELL    DOVAR                   ; code pointer for variables
+        CELL    COMMA_CFA               ; write DOVAR at CFA
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA               ; allot and initialize one cell
+        CELL    REVEAL_CFA              ; clear F_HIDDEN
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; CONSTANT ( n "name" -- ) parse name, create constant definition
@@ -5602,16 +5602,16 @@ VARIABLE_BODY:
         HEADER  "CONSTANT", CONSTANT_ENTRY, CONSTANT_CFA, 0, VARIABLE_ENTRY
         CODEPTR DOCOL
 CONSTANT_BODY:
-        .word   BL_CFA
-        .word   WORD_CFA                ; ( n addr ) parse name
-        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
-        .word   DOCREATE_CFA            ; ( n ) build header
-        .word   LIT_CFA
-        .word   DOCON                   ; code pointer for constants
-        .word   COMMA_CFA               ; write DOCON at CFA
-        .word   COMMA_CFA               ; store constant value in body
-        .word   REVEAL_CFA              ; clear F_HIDDEN
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    WORD_CFA                ; ( n addr ) parse name
+        CELL    QREDEFINE_CFA           ; ( addr ) print warnings if needed
+        CELL    DOCREATE_CFA            ; ( n ) build header
+        CELL    LIT_CFA
+        CELL    DOCON                   ; code pointer for constants
+        CELL    COMMA_CFA               ; write DOCON at CFA
+        CELL    COMMA_CFA               ; store constant value in body
+        CELL    REVEAL_CFA              ; clear F_HIDDEN
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; VALUE ( n "name" -- ) create a named value initialized to n
@@ -5619,16 +5619,16 @@ CONSTANT_BODY:
 ;------------------------------------------------------------------------------
         HEADER  "VALUE", VALUE_ENTRY, VALUE_CFA, 0, CONSTANT_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA
-        .word   WORD_CFA                ; ( n addr ) parse name
-        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
-        .word   DOCREATE_CFA            ; ( n ) build header
-        .word   LIT_CFA
-        .word   DOVAL                   ; code pointer for values
-        .word   COMMA_CFA               ; write DOVAL at CFA
-        .word   COMMA_CFA               ; store initial value in body
-        .word   REVEAL_CFA              ; clear F_HIDDEN
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    WORD_CFA                ; ( n addr ) parse name
+        CELL    QREDEFINE_CFA           ; ( addr ) print warnings if needed
+        CELL    DOCREATE_CFA            ; ( n ) build header
+        CELL    LIT_CFA
+        CELL    DOVAL                   ; code pointer for values
+        CELL    COMMA_CFA               ; write DOVAL at CFA
+        CELL    COMMA_CFA               ; store initial value in body
+        CELL    REVEAL_CFA              ; clear F_HIDDEN
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; TO ( n "name" -- ) store n into VALUE or 2VALUE
@@ -5636,66 +5636,66 @@ CONSTANT_BODY:
 ;------------------------------------------------------------------------------
         HEADER  "TO", TO_ENTRY, TO_CFA, F_IMMEDIATE, VALUE_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA
-        .word   WORD_CFA                ; ( n addr )
-        .word   FIND_CFA                ; ( n xt flag )
-        .word   DROP_CFA                ; ( n xt )
-        .word   DUP_CFA                 ; ( n xt xt )
-        .word   FETCH_CFA               ; ( n xt codeptr )
-        .word   DUP_CFA                 ; ( n xt codeptr codeptr )
-        .word   LIT_CFA
-        .word   DOVAL
-        .word   EQUAL_CFA               ; ( n xt codeptr is-val? )
-        .word   OVER_CFA                ; ( n xt codeptr is-val? codeptr )
-        .word   LIT_CFA
-        .word   DO2VAL
-        .word   EQUAL_CFA               ; ( n xt codeptr is-val? is-2val? )
-        .word   OR_CFA                  ; ( n xt codeptr is-val-or-2val? )
-        .word   ZBRANCH_CFA
-        .word   TO_ERROR
+        CELL    BL_CFA
+        CELL    WORD_CFA                ; ( n addr )
+        CELL    FIND_CFA                ; ( n xt flag )
+        CELL    DROP_CFA                ; ( n xt )
+        CELL    DUP_CFA                 ; ( n xt xt )
+        CELL    FETCH_CFA               ; ( n xt codeptr )
+        CELL    DUP_CFA                 ; ( n xt codeptr codeptr )
+        CELL    LIT_CFA
+        CELL    DOVAL
+        CELL    EQUAL_CFA               ; ( n xt codeptr is-val? )
+        CELL    OVER_CFA                ; ( n xt codeptr is-val? codeptr )
+        CELL    LIT_CFA
+        CELL    DO2VAL
+        CELL    EQUAL_CFA               ; ( n xt codeptr is-val? is-2val? )
+        CELL    OR_CFA                  ; ( n xt codeptr is-val-or-2val? )
+        CELL    ZBRANCH_CFA
+        CELL    TO_ERROR
         ; Valid VALUE or 2VALUE — check which one
-        .word   LIT_CFA
-        .word   DOVAL
-        .word   EQUAL_CFA               ; ( n xt is-val? )
-        .word   ZBRANCH_CFA
-        .word   TO_DOUBLE
+        CELL    LIT_CFA
+        CELL    DOVAL
+        CELL    EQUAL_CFA               ; ( n xt is-val? )
+        CELL    ZBRANCH_CFA
+        CELL    TO_DOUBLE
         ; Single VALUE path
-        .word   CELLPLUS_CFA            ; ( n body )
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZBRANCH_CFA
-        .word   TO_INTERPRET_SINGLE
+        CELL    CELLPLUS_CFA            ; ( n body )
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZBRANCH_CFA
+        CELL    TO_INTERPRET_SINGLE
         ; Compile single store
-        .word   LITERAL_CFA             ; compile LIT body
-        .word   LIT_CFA
-        .word   STORE_CFA
-        .word   COMMA_CFA               ; compile !
-        .word   EXIT_CFA
+        CELL    LITERAL_CFA             ; compile LIT body
+        CELL    LIT_CFA
+        CELL    STORE_CFA
+        CELL    COMMA_CFA               ; compile !
+        CELL    EXIT_CFA
 TO_INTERPRET_SINGLE:
-        .word   STORE_CFA               ; store n at body
-        .word   EXIT_CFA
+        CELL    STORE_CFA               ; store n at body
+        CELL    EXIT_CFA
 TO_DOUBLE:
         ; 2VALUE path
-        .word   CELLPLUS_CFA            ; ( d_lo d_hi body )
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZBRANCH_CFA
-        .word   TO_INTERPRET_DOUBLE
+        CELL    CELLPLUS_CFA            ; ( d_lo d_hi body )
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZBRANCH_CFA
+        CELL    TO_INTERPRET_DOUBLE
         ; Compile double store
-        .word   LITERAL_CFA             ; compile LIT body
-        .word   LIT_CFA
-        .word   TWOSTORE_CFA
-        .word   COMMA_CFA               ; compile 2!
-        .word   EXIT_CFA
+        CELL    LITERAL_CFA             ; compile LIT body
+        CELL    LIT_CFA
+        CELL    TWOSTORE_CFA
+        CELL    COMMA_CFA               ; compile 2!
+        CELL    EXIT_CFA
 TO_INTERPRET_DOUBLE:
-        .word   TWOSTORE_CFA            ; store d at body
-        .word   EXIT_CFA
+        CELL    TWOSTORE_CFA            ; store d at body
+        CELL    EXIT_CFA
 TO_ERROR:
-        .word   LIT_CFA
-        .word   FORTH_TRUE
-        .word   DOABORTQUOTE_CFA
+        CELL    LIT_CFA
+        CELL    FORTH_TRUE
+        CELL    DOABORTQUOTE_CFA
         PWString "not a VALUE"
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; 2VARIABLE ( d "name" -- ) parse name, create variable double definition
@@ -5703,12 +5703,12 @@ TO_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "2VARIABLE", TWOVARIABLE_ENTRY, TWOVARIABLE_CFA, 0, TO_ENTRY
         CODEPTR DOCOL
-        .word   CREATE_CFA            ; ( n ) build header
-        .word   ZERO_CFA
-        .word   COMMA_CFA               ; write DOVAR at CFA
-        .word   ZERO_CFA
-        .word   COMMA_CFA               ; allot and initialize one cell
-        .word   EXIT_CFA
+        CELL    CREATE_CFA            ; ( n ) build header
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA               ; write DOVAR at CFA
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA               ; allot and initialize one cell
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; 2CONSTANT ( d "name" -- ) parse name, create constant double definition
@@ -5717,12 +5717,12 @@ TO_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "2CONSTANT", TWOCONSTANT_ENTRY, TWOCONSTANT_CFA, 0, TWOVARIABLE_ENTRY
         CODEPTR DOCOL
-        .word   CREATE_CFA              ; ( n ) build header
-        .word   COMMA_CFA               ; store constant low value in body
-        .word   COMMA_CFA               ; store constant high value in body
-        .word   DODOES_CFA
-        .word   TWOFETCH_CFA
-        .word   EXIT_CFA
+        CELL    CREATE_CFA              ; ( n ) build header
+        CELL    COMMA_CFA               ; store constant low value in body
+        CELL    COMMA_CFA               ; store constant high value in body
+        CELL    DODOES_CFA
+        CELL    TWOFETCH_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; 2VALUE ( x1 x2 "<spaces>name" -- ) Skip leading space delimiters. Parse name
@@ -5732,17 +5732,17 @@ TO_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "2VALUE", TWOVALUE_ENTRY, TWOVALUE_CFA, 0, TWOCONSTANT_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA
-        .word   WORD_CFA                ; ( d_lo d_hi addr )
-        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
-        .word   DOCREATE_CFA            ; ( d_lo d_hi )
-        .word   LIT_CFA
-        .word   DO2VAL
-        .word   COMMA_CFA              ; write DO2VAL at CFA
-        .word   COMMA_CFA              ; store d_lo at CFA+2
-        .word   COMMA_CFA              ; store d_hi at CFA+4
-        .word   REVEAL_CFA
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    WORD_CFA                ; ( d_lo d_hi addr )
+        CELL    QREDEFINE_CFA           ; ( addr ) print warnings if needed
+        CELL    DOCREATE_CFA            ; ( d_lo d_hi )
+        CELL    LIT_CFA
+        CELL    DO2VAL
+        CELL    COMMA_CFA              ; write DO2VAL at CFA
+        CELL    COMMA_CFA              ; store d_lo at CFA+2
+        CELL    COMMA_CFA              ; store d_hi at CFA+4
+        CELL    REVEAL_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; [ ( -- ) enter interpretation state (immediate)
@@ -5797,35 +5797,35 @@ TO_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "POSTPONE", POSTPONE_ENTRY, POSTPONE_CFA, F_IMMEDIATE, COMPILECOMMA_ENTRY
         CODEPTR DOCOL
-        .word   PARSENAME_CFA          ; ( c-addr u )
-        .word   HERE_CFA
-        .word   PLACE_CFA              ; uppercase copy at HERE
-        .word   HERE_CFA
-        .word   FIND_CFA               ; ( xt 1|-1 | here 0 )
-        .word   DUP_CFA                ; ( xt flag flag | here 0 0 )
-        .word   ZBRANCH_CFA
-        .word   POSTPONE_NOTFOUND
-        .word   ONE_CFA
-        .word   EQUAL_CFA              ; ( xt flag ) true if non-immediate
-        .word   ZBRANCH_CFA
-        .word   POSTPONE_IMMEDIATE
+        CELL    PARSENAME_CFA          ; ( c-addr u )
+        CELL    HERE_CFA
+        CELL    PLACE_CFA              ; uppercase copy at HERE
+        CELL    HERE_CFA
+        CELL    FIND_CFA               ; ( xt 1|-1 | here 0 )
+        CELL    DUP_CFA                ; ( xt flag flag | here 0 0 )
+        CELL    ZBRANCH_CFA
+        CELL    POSTPONE_NOTFOUND
+        CELL    ONE_CFA
+        CELL    EQUAL_CFA              ; ( xt flag ) true if non-immediate
+        CELL    ZBRANCH_CFA
+        CELL    POSTPONE_IMMEDIATE
         ; Non-immediate: compile LIT xt COMPILE,
-        .word   LITERAL_CFA            ; compile LIT xt
-        .word   LIT_CFA
-        .word   COMPILECOMMA_CFA
-        .word   COMMA_CFA              ; compile COMPILE,
-        .word   EXIT_CFA
+        CELL    LITERAL_CFA            ; compile LIT xt
+        CELL    LIT_CFA
+        CELL    COMPILECOMMA_CFA
+        CELL    COMMA_CFA              ; compile COMPILE,
+        CELL    EXIT_CFA
 POSTPONE_IMMEDIATE:
         ; Immediate: just compile the xt directly
-        .word   COMPILECOMMA_CFA
-        .word   EXIT_CFA
+        CELL    COMPILECOMMA_CFA
+        CELL    EXIT_CFA
 POSTPONE_NOTFOUND:
-        .word   TWODROP_CFA
-        .word   LIT_CFA
-        .word   postpone_notfound_msg
-        .word   CPUTS_CFA
-        .word   ABORT_CFA
-        .word   EXIT_CFA
+        CELL    TWODROP_CFA
+        CELL    LIT_CFA
+        CELL    postpone_notfound_msg
+        CELL    CPUTS_CFA
+        CELL    ABORT_CFA
+        CELL    EXIT_CFA
 
 postpone_notfound_msg:
         .byte   "POSTPONE: word not found", $0D, $0A, $00
@@ -5837,12 +5837,12 @@ postpone_notfound_msg:
 ;------------------------------------------------------------------------------
         HEADER  "[COMPILE]", BRCOMPILE_ENTRY, BRCOMPILE_CFA, F_IMMEDIATE, POSTPONE_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA
-        .word   WORD_CFA
-        .word   FIND_CFA
-        .word   DROP_CFA
-        .word   COMPILECOMMA_CFA
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    WORD_CFA
+        CELL    FIND_CFA
+        CELL    DROP_CFA
+        CELL    COMPILECOMMA_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; IMMEDIATE ( -- ) Make the most recent definition an immediate word. An
@@ -5852,17 +5852,17 @@ postpone_notfound_msg:
 ;------------------------------------------------------------------------------
         HEADER  "IMMEDIATE", IMMEDIATE_ENTRY, IMMEDIATE_CFA, 0, BRCOMPILE_ENTRY
         CODEPTR DOCOL
-        .word   LATEST_CFA
-        .word   FETCH_CFA              ; ( header-addr )
-        .word   CELLPLUS_CFA           ; ( flags-addr )
-        .word   DUP_CFA                ; ( flags-addr flags-addr )
-        .word   CFETCH_CFA             ; ( flags-addr flags )
-        .word   LIT_CFA
-        .word   F_IMMEDIATE
-        .word   OR_CFA                 ; ( flags-addr flags|F_IMMEDIATE )
-        .word   SWAP_CFA               ; ( flags|F_IMMEDIATE flags-addr )
-        .word   CSTORE_CFA             ; store updated flags
-        .word   EXIT_CFA
+        CELL    LATEST_CFA
+        CELL    FETCH_CFA              ; ( header-addr )
+        CELL    CELLPLUS_CFA           ; ( flags-addr )
+        CELL    DUP_CFA                ; ( flags-addr flags-addr )
+        CELL    CFETCH_CFA             ; ( flags-addr flags )
+        CELL    LIT_CFA
+        CELL    F_IMMEDIATE
+        CELL    OR_CFA                 ; ( flags-addr flags|F_IMMEDIATE )
+        CELL    SWAP_CFA               ; ( flags|F_IMMEDIATE flags-addr )
+        CELL    CSTORE_CFA             ; store updated flags
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; CREATE ( -- ) parse name, create dictionary entry with DOVAR behavior
@@ -5871,17 +5871,17 @@ postpone_notfound_msg:
         HEADER  "CREATE", CREATE_ENTRY, CREATE_CFA, 0, IMMEDIATE_ENTRY
         CODEPTR DOCOL
 CREATE_BODY:
-        .word   BL_CFA
-        .word   WORD_CFA                ; ( addr ) parse name
-        .word   QREDEFINE_CFA           ; ( addr ) print warnings if needed
-        .word   DOCREATE_CFA            ; ( ) build header
-        .word   LIT_CFA
-        .word   DOCREATE                ; runtime for CREATE words
-        .word   COMMA_CFA               ; write DOCREATE at CFA
-        .word   ZERO_CFA                ; placeholder for DOES> code address
-        .word   COMMA_CFA               ; reserve CFA+2 cell
-        .word   REVEAL_CFA              ; clear F_HIDDEN
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    WORD_CFA                ; ( addr ) parse name
+        CELL    QREDEFINE_CFA           ; ( addr ) print warnings if needed
+        CELL    DOCREATE_CFA            ; ( ) build header
+        CELL    LIT_CFA
+        CELL    DOCREATE                ; runtime for CREATE words
+        CELL    COMMA_CFA               ; write DOCREATE at CFA
+        CELL    ZERO_CFA                ; placeholder for DOES> code address
+        CELL    COMMA_CFA               ; reserve CFA+2 cell
+        CELL    REVEAL_CFA              ; clear F_HIDDEN
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; (DOES>) ( -- ) runtime helper compiled by DOES>
@@ -5939,10 +5939,10 @@ CREATE_BODY:
         HEADER  "DOES>", DOES_ENTRY, DOES_CFA, F_IMMEDIATE, DODOES_ENTRY
         CODEPTR DOCOL
 DOES_BODY:
-        .word   LIT_CFA
-        .word   DODOES_CFA
-        .word   COMPILECOMMA_CFA        ; compile (DOES>) into definition
-        .word   EXIT_CFA                ; return from DOES> itself
+        CELL    LIT_CFA
+        CELL    DODOES_CFA
+        CELL    COMPILECOMMA_CFA        ; compile (DOES>) into definition
+        CELL    EXIT_CFA                ; return from DOES> itself
 
 ;------------------------------------------------------------------------------
 ; ' ( -- xt ) implicit input from TIB. Skips leading space delimiters. Parse
@@ -5952,14 +5952,14 @@ DOES_BODY:
 ;------------------------------------------------------------------------------
         HEADER  "'", TICK_ENTRY, TICK_CFA, 0, DOES_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA                  ; Space delimeter
-        .word   WORD_CFA                ; ( addr )
-        .word   FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
-        .word   ZBRANCH_CFA
-        .word   TICK_ERR                ; branch to error if not found
-        .word   EXIT_CFA                ; ( xt )
+        CELL    BL_CFA                  ; Space delimeter
+        CELL    WORD_CFA                ; ( addr )
+        CELL    FIND_CFA                ; ( addr 0 | xt 1 | xt -1 )
+        CELL    ZBRANCH_CFA
+        CELL    TICK_ERR                ; branch to error if not found
+        CELL    EXIT_CFA                ; ( xt )
 TICK_ERR:
-        .word   UNDEFINED_WORD_CFA      ; Issue error and reset stack.
+        CELL    UNDEFINED_WORD_CFA      ; Issue error and reset stack.
 
 ;------------------------------------------------------------------------------
 ; ['] Interpretation: Undefined. Compilation: ( "<spaces>name" -- )
@@ -5972,19 +5972,19 @@ TICK_ERR:
 ;------------------------------------------------------------------------------
         HEADER  "[']", BRACKETTICK_ENTRY, BRACKETTICK_CFA, F_IMMEDIATE, TICK_ENTRY
         CODEPTR DOCOL
-        .word   TICK_CFA                ; execute ' -> xt on stack
-        .word   LITERAL_CFA
-        .word   EXIT_CFA
+        CELL    TICK_CFA                ; execute ' -> xt on stack
+        CELL    LITERAL_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DEFER-UNINITIALIZED ( -- ) called when uninitialized DEFER is executed
 ;------------------------------------------------------------------------------
         HEADER  "DEFER-UNINITIALIZED", DEFERUNINITIALIZED_ENTRY, DEFERUNINITIALIZED_CFA, F_HIDDEN, BRACKETTICK_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   defer_uninit_msg
-        .word   CPUTS_CFA
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    defer_uninit_msg
+        CELL    CPUTS_CFA
+        CELL    EXIT_CFA
 defer_uninit_msg:
         .byte   "deferred word is uninitialized", C_RETURN, L_FEED, $00
 
@@ -5993,35 +5993,35 @@ defer_uninit_msg:
 ;------------------------------------------------------------------------------
         HEADER  "DEFER", DEFER_ENTRY, DEFER_CFA, 0, DEFERUNINITIALIZED_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA
-        .word   WORD_CFA
-        .word   DOCREATE_CFA
-        .word   LIT_CFA
-        .word   DODEFER
-        .word   COMMA_CFA              ; write DODEFER at CFA
-        .word   LIT_CFA
-        .word   DEFERUNINITIALIZED_CFA ; initialize body to warning word
-        .word   COMMA_CFA
-        .word   REVEAL_CFA
-        .word   EXIT_CFA
+        CELL    BL_CFA
+        CELL    WORD_CFA
+        CELL    DOCREATE_CFA
+        CELL    LIT_CFA
+        CELL    DODEFER
+        CELL    COMMA_CFA              ; write DODEFER at CFA
+        CELL    LIT_CFA
+        CELL    DEFERUNINITIALIZED_CFA ; initialize body to warning word
+        CELL    COMMA_CFA
+        CELL    REVEAL_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DEFER! ( xt defer-xt -- ) store xt into defer word's body
 ;------------------------------------------------------------------------------
         HEADER  "DEFER!", DEFERSTORE_ENTRY, DEFERSTORE_CFA, 0, DEFER_ENTRY
         CODEPTR DOCOL
-        .word   CELLPLUS_CFA           ; ( xt body-addr )
-        .word   STORE_CFA              ; store xt into body
-        .word   EXIT_CFA
+        CELL    CELLPLUS_CFA           ; ( xt body-addr )
+        CELL    STORE_CFA              ; store xt into body
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DEFER@ ( defer-xt -- xt ) fetch xt from defer word's body
 ;------------------------------------------------------------------------------
         HEADER  "DEFER@", DEFERFETCH_ENTRY, DEFERFETCH_CFA, 0, DEFERSTORE_ENTRY
         CODEPTR DOCOL
-        .word   CELLPLUS_CFA           ; ( body-addr )
-        .word   FETCH_CFA              ; fetch xt from body
-        .word   EXIT_CFA
+        CELL    CELLPLUS_CFA           ; ( body-addr )
+        CELL    FETCH_CFA              ; fetch xt from body
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; IS ( xt "name" -- ) store xt into named defer word
@@ -6030,39 +6030,39 @@ defer_uninit_msg:
 ;------------------------------------------------------------------------------
         HEADER  "IS", IS_ENTRY, IS_CFA, F_IMMEDIATE, DEFERFETCH_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA
-        .word   WORD_CFA
-        .word   FIND_CFA
-        .word   DROP_CFA               ; ( [xt] word-xt )
-        .word   DUP_CFA
-        .word   FETCH_CFA              ; ( [xt] word-xt codeptr )
-        .word   LIT_CFA
-        .word   DODEFER
-        .word   EQUAL_CFA              ; ( [xt] word-xt is-defer? )
-        .word   ZBRANCH_CFA
-        .word   IS_ERROR
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZBRANCH_CFA
-        .word   IS_INTERPRET
+        CELL    BL_CFA
+        CELL    WORD_CFA
+        CELL    FIND_CFA
+        CELL    DROP_CFA               ; ( [xt] word-xt )
+        CELL    DUP_CFA
+        CELL    FETCH_CFA              ; ( [xt] word-xt codeptr )
+        CELL    LIT_CFA
+        CELL    DODEFER
+        CELL    EQUAL_CFA              ; ( [xt] word-xt is-defer? )
+        CELL    ZBRANCH_CFA
+        CELL    IS_ERROR
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZBRANCH_CFA
+        CELL    IS_INTERPRET
         ; Compile mode: xt NOT on stack, word-xt is TOS
-        .word   CELLPLUS_CFA           ; ( body-addr )
-        .word   LITERAL_CFA            ; compile body-addr
-        .word   LIT_CFA
-        .word   STORE_CFA
-        .word   COMMA_CFA              ; compile !
-        .word   EXIT_CFA
+        CELL    CELLPLUS_CFA           ; ( body-addr )
+        CELL    LITERAL_CFA            ; compile body-addr
+        CELL    LIT_CFA
+        CELL    STORE_CFA
+        CELL    COMMA_CFA              ; compile !
+        CELL    EXIT_CFA
 IS_INTERPRET:
         ; Interpret mode: ( xt word-xt )
-        .word   CELLPLUS_CFA           ; ( xt body-addr )
-        .word   STORE_CFA              ; store xt
-        .word   EXIT_CFA
+        CELL    CELLPLUS_CFA           ; ( xt body-addr )
+        CELL    STORE_CFA              ; store xt
+        CELL    EXIT_CFA
 IS_ERROR:
-        .word   LIT_CFA
-        .word   FORTH_TRUE
-        .word   DOABORTQUOTE_CFA
+        CELL    LIT_CFA
+        CELL    FORTH_TRUE
+        CELL    DOABORTQUOTE_CFA
         PWString "not a DEFER"
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ACTION-OF ( "name" -- xt ) fetch xt from named defer word
@@ -6071,55 +6071,55 @@ IS_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "ACTION-OF", ACTIONOF_ENTRY, ACTIONOF_CFA, F_IMMEDIATE, IS_ENTRY
         CODEPTR DOCOL
-        .word   BL_CFA
-        .word   WORD_CFA
-        .word   FIND_CFA
-        .word   DROP_CFA               ; ( word-xt )
-        .word   DUP_CFA
-        .word   FETCH_CFA              ; ( word-xt codeptr )
-        .word   LIT_CFA
-        .word   DODEFER
-        .word   EQUAL_CFA              ; ( word-xt is-defer? )
-        .word   ZBRANCH_CFA
-        .word   ACTIONOF_ERROR
+        CELL    BL_CFA
+        CELL    WORD_CFA
+        CELL    FIND_CFA
+        CELL    DROP_CFA               ; ( word-xt )
+        CELL    DUP_CFA
+        CELL    FETCH_CFA              ; ( word-xt codeptr )
+        CELL    LIT_CFA
+        CELL    DODEFER
+        CELL    EQUAL_CFA              ; ( word-xt is-defer? )
+        CELL    ZBRANCH_CFA
+        CELL    ACTIONOF_ERROR
         ; Valid DEFER
-        .word   STATE_CFA
-        .word   FETCH_CFA
-        .word   ZBRANCH_CFA
-        .word   ACTIONOF_INTERPRET
+        CELL    STATE_CFA
+        CELL    FETCH_CFA
+        CELL    ZBRANCH_CFA
+        CELL    ACTIONOF_INTERPRET
         ; Compile mode: compile LIT body-addr FETCH
-        .word   CELLPLUS_CFA           ; ( body-addr )
-        .word   LITERAL_CFA            ; compile body-addr
-        .word   LIT_CFA
-        .word   FETCH_CFA
-        .word   COMMA_CFA              ; compile @
-        .word   EXIT_CFA
+        CELL    CELLPLUS_CFA           ; ( body-addr )
+        CELL    LITERAL_CFA            ; compile body-addr
+        CELL    LIT_CFA
+        CELL    FETCH_CFA
+        CELL    COMMA_CFA              ; compile @
+        CELL    EXIT_CFA
 ACTIONOF_INTERPRET:
-        .word   CELLPLUS_CFA           ; ( body-addr )
-        .word   FETCH_CFA              ; fetch xt
-        .word   EXIT_CFA
+        CELL    CELLPLUS_CFA           ; ( body-addr )
+        CELL    FETCH_CFA              ; fetch xt
+        CELL    EXIT_CFA
 ACTIONOF_ERROR:
-        .word   LIT_CFA
-        .word   FORTH_TRUE
-        .word   DOABORTQUOTE_CFA
+        CELL    LIT_CFA
+        CELL    FORTH_TRUE
+        CELL    DOABORTQUOTE_CFA
         PWString "not a DEFER"
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ?PAIRS ( n1 n2 -- ) abort if n1 <> n2 or stack underflow
 ;------------------------------------------------------------------------------
         HEADER  "?PAIRS", QPAIRS_ENTRY, QPAIRS_CFA, F_IMMEDIATE, ACTIONOF_ENTRY
         CODEPTR DOCOL
-        .word   DEPTH_CFA
-        .word   LIT_CFA
-        .word   2
-        .word   LESS_CFA               ; DEPTH < 2 ?
-        .word   DOABORTQUOTE_CFA
+        CELL    DEPTH_CFA
+        CELL    LIT_CFA
+        CELL    2
+        CELL    LESS_CFA               ; DEPTH < 2 ?
+        CELL    DOABORTQUOTE_CFA
         PWStringCRLF "mismatched control structure"
-        .word   NOTEQUAL_CFA           ; n1 <> n2 ?
-        .word   DOABORTQUOTE_CFA
+        CELL    NOTEQUAL_CFA           ; n1 <> n2 ?
+        CELL    DOABORTQUOTE_CFA
         PWStringCRLF "mismatched control structure"
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; IF Interpretation: Undefined. Compilation: ( C: -- orig CS_IF_ELSE_THEN )
@@ -6128,15 +6128,15 @@ ACTIONOF_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "IF", IF_ENTRY, IF_CFA, F_IMMEDIATE, QPAIRS_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   ZBRANCH_CFA
-        .word   COMMA_CFA              ; compile ZBRANCH
-        .word   HERE_CFA               ; ( orig ) placeholder address
-        .word   ZERO_CFA
-        .word   COMMA_CFA              ; compile placeholder
-        .word   LIT_CFA
-        .word   CS_IF_ELSE_THEN        ; push security number
-        .word   EXIT_CFA               ; stack: ( orig CS_IF_ELSE_THEN )
+        CELL    LIT_CFA
+        CELL    ZBRANCH_CFA
+        CELL    COMMA_CFA              ; compile ZBRANCH
+        CELL    HERE_CFA               ; ( orig ) placeholder address
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA              ; compile placeholder
+        CELL    LIT_CFA
+        CELL    CS_IF_ELSE_THEN        ; push security number
+        CELL    EXIT_CFA               ; stack: ( orig CS_IF_ELSE_THEN )
 
 ;------------------------------------------------------------------------------
 ; THEN Interpretation: Undefined. Compilation: ( C: orig CS_IF_ELSE_THEN -- )
@@ -6145,13 +6145,13 @@ ACTIONOF_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "THEN", THEN_ENTRY, THEN_CFA, F_IMMEDIATE, IF_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CS_IF_ELSE_THEN
-        .word   QPAIRS_CFA             ; verify security number
-        .word   HERE_CFA               ; ( orig here )
-        .word   SWAP_CFA               ; ( here orig )
-        .word   STORE_CFA              ; backpatch placeholder
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CS_IF_ELSE_THEN
+        CELL    QPAIRS_CFA             ; verify security number
+        CELL    HERE_CFA               ; ( orig here )
+        CELL    SWAP_CFA               ; ( here orig )
+        CELL    STORE_CFA              ; backpatch placeholder
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ELSE Interpretation: Undefined. Compilation: ( C: orig1 CS_IF_ELSE_THEN
@@ -6161,22 +6161,22 @@ ACTIONOF_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "ELSE", ELSE_ENTRY, ELSE_CFA, F_IMMEDIATE, THEN_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CS_IF_ELSE_THEN
-        .word   QPAIRS_CFA             ; verify security number
-        .word   LIT_CFA
-        .word   BRANCH_CFA
-        .word   COMMA_CFA              ; compile BRANCH
-        .word   HERE_CFA               ; ( orig2 ) new placeholder address
-        .word   ZERO_CFA
-        .word   COMMA_CFA              ; compile placeholder
-        .word   SWAP_CFA               ; ( orig2 orig1 )
-        .word   HERE_CFA               ; ( orig2 orig1 here )
-        .word   SWAP_CFA               ; ( orig2 here orig1 )
-        .word   STORE_CFA              ; backpatch IF's placeholder
-        .word   LIT_CFA
-        .word   CS_IF_ELSE_THEN        ; push security number for THEN
-        .word   EXIT_CFA               ; stack: ( orig2 CS_IF_ELSE_THEN )
+        CELL    LIT_CFA
+        CELL    CS_IF_ELSE_THEN
+        CELL    QPAIRS_CFA             ; verify security number
+        CELL    LIT_CFA
+        CELL    BRANCH_CFA
+        CELL    COMMA_CFA              ; compile BRANCH
+        CELL    HERE_CFA               ; ( orig2 ) new placeholder address
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA              ; compile placeholder
+        CELL    SWAP_CFA               ; ( orig2 orig1 )
+        CELL    HERE_CFA               ; ( orig2 orig1 here )
+        CELL    SWAP_CFA               ; ( orig2 here orig1 )
+        CELL    STORE_CFA              ; backpatch IF's placeholder
+        CELL    LIT_CFA
+        CELL    CS_IF_ELSE_THEN        ; push security number for THEN
+        CELL    EXIT_CFA               ; stack: ( orig2 CS_IF_ELSE_THEN )
 
 ;------------------------------------------------------------------------------
 ; (OF) ( n val -- n | ) runtime OF comparison
@@ -6211,29 +6211,29 @@ ACTIONOF_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "CASE", CASE_ENTRY, CASE_CFA, F_IMMEDIATE, DOOF_ENTRY
         CODEPTR DOCOL
-        .word   ZERO_CFA               ; Initialize the OF ENDOF count
-        .word   LIT_CFA                ; Push the compiler security number
-        .word   CS_CASE_ENDCASE
-        .word   EXIT_CFA
+        CELL    ZERO_CFA               ; Initialize the OF ENDOF count
+        CELL    LIT_CFA                ; Push the compiler security number
+        CELL    CS_CASE_ENDCASE
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; OF Compile time: ( N CS_CASE_ENDCASE -- N+1 CS_OF_ENDOF OA )
 ;------------------------------------------------------------------------------
         HEADER  "OF", OF_ENTRY, OF_CFA, F_IMMEDIATE, CASE_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CS_CASE_ENDCASE
-        .word   QPAIRS_CFA             ; Test compiler security number
-        .word   ONEPLUS_CFA            ; Increment branch resolution count
-        .word   LIT_CFA
-        .word   CS_OF_ENDOF            ; Push new compiler security number
-        .word   LIT_CFA
-        .word   DOOF_CFA
-        .word   COMMA_CFA              ; compile (OF)
-        .word   HERE_CFA               ; OA = address of (OF)'s placeholder
-        .word   ZERO_CFA
-        .word   COMMA_CFA              ; compile unresolved branch target
-        .word   EXIT_CFA               ; stack: ( CS+1 N+1 OA )
+        CELL    LIT_CFA
+        CELL    CS_CASE_ENDCASE
+        CELL    QPAIRS_CFA             ; Test compiler security number
+        CELL    ONEPLUS_CFA            ; Increment branch resolution count
+        CELL    LIT_CFA
+        CELL    CS_OF_ENDOF            ; Push new compiler security number
+        CELL    LIT_CFA
+        CELL    DOOF_CFA
+        CELL    COMMA_CFA              ; compile (OF)
+        CELL    HERE_CFA               ; OA = address of (OF)'s placeholder
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA              ; compile unresolved branch target
+        CELL    EXIT_CFA               ; stack: ( CS+1 N+1 OA )
 
 ;------------------------------------------------------------------------------
 ; ENDOF ( N+1 CS_OF_ENDOF OA -- BA N+1 CS_CASE_ENDCASE )
@@ -6241,24 +6241,24 @@ ACTIONOF_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "ENDOF", ENDOF_ENTRY, ENDOF_CFA, F_IMMEDIATE, OF_ENTRY
         CODEPTR DOCOL
-        .word   TOR_CFA                ; ( N+1 CS_OF_ENDOF ) RS: ( OA )
-        .word   LIT_CFA
-        .word   CS_OF_ENDOF
-        .word   QPAIRS_CFA             ; CS number sanity check
-        .word   TOR_CFA                ; ( ) RS: ( OA N+1 )
-        .word   LIT_CFA
-        .word   BRANCH_CFA
-        .word   COMMA_CFA              ; compile BRANCH
-        .word   HERE_CFA               ; ( BA ) RS: ( OA N+1 )
-        .word   ZERO_CFA               ; Branch placeholder
-        .word   COMMA_CFA              ; compile BA as branch target
-        .word   RFROM_CFA              ; ( BA N+1 ) RS: ( OA N+1 )
-        .word   HERE_CFA               ; ( BA N+1 HERE ) RS: ( OA )
-        .word   RFROM_CFA              ; ( BA N+1 HERE OA )
-        .word   STORE_CFA              ; resolve OA to HERE ( BA N+1 )
-        .word   LIT_CFA
-        .word   CS_CASE_ENDCASE        ; ( BA N+1 CS_CASE_END_CASE )
-        .word   EXIT_CFA
+        CELL    TOR_CFA                ; ( N+1 CS_OF_ENDOF ) RS: ( OA )
+        CELL    LIT_CFA
+        CELL    CS_OF_ENDOF
+        CELL    QPAIRS_CFA             ; CS number sanity check
+        CELL    TOR_CFA                ; ( ) RS: ( OA N+1 )
+        CELL    LIT_CFA
+        CELL    BRANCH_CFA
+        CELL    COMMA_CFA              ; compile BRANCH
+        CELL    HERE_CFA               ; ( BA ) RS: ( OA N+1 )
+        CELL    ZERO_CFA               ; Branch placeholder
+        CELL    COMMA_CFA              ; compile BA as branch target
+        CELL    RFROM_CFA              ; ( BA N+1 ) RS: ( OA N+1 )
+        CELL    HERE_CFA               ; ( BA N+1 HERE ) RS: ( OA )
+        CELL    RFROM_CFA              ; ( BA N+1 HERE OA )
+        CELL    STORE_CFA              ; resolve OA to HERE ( BA N+1 )
+        CELL    LIT_CFA
+        CELL    CS_CASE_ENDCASE        ; ( BA N+1 CS_CASE_END_CASE )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ENDCASE ( BAn ... BA N CS_NUM -- )
@@ -6266,23 +6266,23 @@ ACTIONOF_ERROR:
 ;------------------------------------------------------------------------------
         HEADER  "ENDCASE", ENDCASE_ENTRY, ENDCASE_CFA, F_IMMEDIATE, ENDOF_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   DROP_CFA
-        .word   COMMA_CFA              ; compile DROP to discard n at runtime
-        .word   LIT_CFA
-        .word   CS_CASE_ENDCASE
-        .word   QPAIRS_CFA             ; Test compiler security number.
-        .word   ZERO_CFA               ; ( BAn ... BA N 0 )
-        .word   DODO_CFA
-        .word   ENDCASE_LEAVE
+        CELL    LIT_CFA
+        CELL    DROP_CFA
+        CELL    COMMA_CFA              ; compile DROP to discard n at runtime
+        CELL    LIT_CFA
+        CELL    CS_CASE_ENDCASE
+        CELL    QPAIRS_CFA             ; Test compiler security number.
+        CELL    ZERO_CFA               ; ( BAn ... BA N 0 )
+        CELL    DODO_CFA
+        CELL    ENDCASE_LEAVE
 ENDCASE_CLOOP:
-        .word   HERE_CFA               ; ( BAn HERE )
-        .word   SWAP_CFA               ; ( HERE BAn )
-        .word   STORE_CFA              ; resolve BAn) to HERE
-        .word   DOLOOP_CFA
-        .word   ENDCASE_CLOOP
+        CELL    HERE_CFA               ; ( BAn HERE )
+        CELL    SWAP_CFA               ; ( HERE BAn )
+        CELL    STORE_CFA              ; resolve BAn) to HERE
+        CELL    DOLOOP_CFA
+        CELL    ENDCASE_CLOOP
 ENDCASE_LEAVE:
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; BEGIN Interpretation: Undefined. Compilation: ( C: -- dest CS_BEGIN_AGAIN )
@@ -6290,10 +6290,10 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "BEGIN", BEGIN_ENTRY, BEGIN_CFA, F_IMMEDIATE, ENDCASE_ENTRY
         CODEPTR DOCOL
-        .word   HERE_CFA               ; push current DP as loop top
-        .word   LIT_CFA
-        .word   CS_BEGIN_AGAIN         ; push security number
-        .word   EXIT_CFA               ; stack: ( dest CS_BEGIN_AGAIN )
+        CELL    HERE_CFA               ; push current DP as loop top
+        CELL    LIT_CFA
+        CELL    CS_BEGIN_AGAIN         ; push security number
+        CELL    EXIT_CFA               ; stack: ( dest CS_BEGIN_AGAIN )
 
 ;------------------------------------------------------------------------------
 ; UNTIL Interpretation: Undefined. Compilation: ( C: dest CS_BEGIN_AGAIN -- )
@@ -6301,28 +6301,28 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "UNTIL", UNTIL_ENTRY, UNTIL_CFA, F_IMMEDIATE, BEGIN_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CS_BEGIN_AGAIN
-        .word   QPAIRS_CFA             ; verify security number
-        .word   LIT_CFA
-        .word   ZBRANCH_CFA
-        .word   COMMA_CFA              ; compile ZBRANCH
-        .word   COMMA_CFA              ; compile loop top address
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CS_BEGIN_AGAIN
+        CELL    QPAIRS_CFA             ; verify security number
+        CELL    LIT_CFA
+        CELL    ZBRANCH_CFA
+        CELL    COMMA_CFA              ; compile ZBRANCH
+        CELL    COMMA_CFA              ; compile loop top address
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; AGAIN Interpretation: Undefined. Compilation: ( C: dest CS_BEGIN_AGAIN -- )
 ;------------------------------------------------------------------------------
         HEADER  "AGAIN", AGAIN_ENTRY, AGAIN_CFA, F_IMMEDIATE, UNTIL_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CS_BEGIN_AGAIN
-        .word   QPAIRS_CFA             ; verify security number
-        .word   LIT_CFA
-        .word   BRANCH_CFA
-        .word   COMMA_CFA              ; compile BRANCH
-        .word   COMMA_CFA              ; compile BEGIN address as target
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CS_BEGIN_AGAIN
+        CELL    QPAIRS_CFA             ; verify security number
+        CELL    LIT_CFA
+        CELL    BRANCH_CFA
+        CELL    COMMA_CFA              ; compile BRANCH
+        CELL    COMMA_CFA              ; compile BEGIN address as target
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; WHILE ( C: dest CS_BEGIN_AGAIN -- orig CS_WHILE_REPEAT dest CS_BEGIN_AGAIN )
@@ -6331,21 +6331,21 @@ ENDCASE_LEAVE:
         HEADER  "WHILE", WHILE_ENTRY, WHILE_CFA, F_IMMEDIATE, AGAIN_ENTRY
         CODEPTR DOCOL
         ; Stack: ( dest CS_BEGIN_AGAIN )
-        .word   LIT_CFA
-        .word   CS_BEGIN_AGAIN
-        .word   QPAIRS_CFA             ; verify CS_BEGIN_AGAIN, stack: ( dest )
-        .word   LIT_CFA
-        .word   ZBRANCH_CFA
-        .word   COMMA_CFA              ; compile ZBRANCH
-        .word   HERE_CFA               ; ( dest orig )
-        .word   ZERO_CFA
-        .word   COMMA_CFA              ; ( dest orig ) placeholder compiled
-        .word   LIT_CFA
-        .word   CS_WHILE_REPEAT        ; ( dest orig CS_WHILE_REPEAT )
-        .word   ROT_CFA                ; ( orig CS_WHILE_REPEAT dest )
-        .word   LIT_CFA
-        .word   CS_BEGIN_AGAIN         ; ( orig CS_WHILE_REPEAT dest CS_BEGIN_AGAIN )
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CS_BEGIN_AGAIN
+        CELL    QPAIRS_CFA             ; verify CS_BEGIN_AGAIN, stack: ( dest )
+        CELL    LIT_CFA
+        CELL    ZBRANCH_CFA
+        CELL    COMMA_CFA              ; compile ZBRANCH
+        CELL    HERE_CFA               ; ( dest orig )
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA              ; ( dest orig ) placeholder compiled
+        CELL    LIT_CFA
+        CELL    CS_WHILE_REPEAT        ; ( dest orig CS_WHILE_REPEAT )
+        CELL    ROT_CFA                ; ( orig CS_WHILE_REPEAT dest )
+        CELL    LIT_CFA
+        CELL    CS_BEGIN_AGAIN         ; ( orig CS_WHILE_REPEAT dest CS_BEGIN_AGAIN )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; REPEAT ( C: orig CS_WHILE_REPEAT dest CS_BEGIN_AGAIN -- )
@@ -6354,20 +6354,20 @@ ENDCASE_LEAVE:
         HEADER  "REPEAT", REPEAT_ENTRY, REPEAT_CFA, F_IMMEDIATE, WHILE_ENTRY
         CODEPTR DOCOL
         ; Stack: ( orig CS_WHILE_REPEAT dest CS_BEGIN_AGAIN )
-        .word   LIT_CFA
-        .word   CS_BEGIN_AGAIN
-        .word   QPAIRS_CFA             ; verify CS_BEGIN_AGAIN, stack: ( orig CS_WHILE_REPEAT dest )
-        .word   LIT_CFA
-        .word   BRANCH_CFA
-        .word   COMMA_CFA              ; compile BRANCH
-        .word   COMMA_CFA              ; compile dest as branch target, stack: ( orig CS_WHILE_REPEAT )
-        .word   LIT_CFA
-        .word   CS_WHILE_REPEAT
-        .word   QPAIRS_CFA             ; verify CS_WHILE_REPEAT, stack: ( orig )
-        .word   HERE_CFA               ; ( orig here )
-        .word   SWAP_CFA               ; ( here orig )
-        .word   STORE_CFA              ; backpatch WHILE placeholder
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CS_BEGIN_AGAIN
+        CELL    QPAIRS_CFA             ; verify CS_BEGIN_AGAIN, stack: ( orig CS_WHILE_REPEAT dest )
+        CELL    LIT_CFA
+        CELL    BRANCH_CFA
+        CELL    COMMA_CFA              ; compile BRANCH
+        CELL    COMMA_CFA              ; compile dest as branch target, stack: ( orig CS_WHILE_REPEAT )
+        CELL    LIT_CFA
+        CELL    CS_WHILE_REPEAT
+        CELL    QPAIRS_CFA             ; verify CS_WHILE_REPEAT, stack: ( orig )
+        CELL    HERE_CFA               ; ( orig here )
+        CELL    SWAP_CFA               ; ( here orig )
+        CELL    STORE_CFA              ; backpatch WHILE placeholder
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DO Compilation: ( C: -- leave-addr loop-addr CS_DO_LOOP )
@@ -6378,16 +6378,16 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "DO", DO_ENTRY, DO_CFA, F_IMMEDIATE, REPEAT_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   DODO_CFA
-        .word   COMMA_CFA              ; compile (DO)
-        .word   HERE_CFA               ; push leave-addr placeholder address
-        .word   ZERO_CFA
-        .word   COMMA_CFA              ; compile placeholder leave target
-        .word   HERE_CFA               ; push loop-addr
-        .word   LIT_CFA
-        .word   CS_DO_LOOP             ; push security number
-        .word   EXIT_CFA               ; stack: ( leave-addr loop-addr CS_DO_LOOP )
+        CELL    LIT_CFA
+        CELL    DODO_CFA
+        CELL    COMMA_CFA              ; compile (DO)
+        CELL    HERE_CFA               ; push leave-addr placeholder address
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA              ; compile placeholder leave target
+        CELL    HERE_CFA               ; push loop-addr
+        CELL    LIT_CFA
+        CELL    CS_DO_LOOP             ; push security number
+        CELL    EXIT_CFA               ; stack: ( leave-addr loop-addr CS_DO_LOOP )
 
 ;------------------------------------------------------------------------------
 ; (?DO) ( limit index -- ) (R: -- limit index) runtime for ?DO
@@ -6426,16 +6426,16 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "?DO", QDO_ENTRY, QDO_CFA, F_IMMEDIATE, DOQDO_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   DOQDO_CFA
-        .word   COMMA_CFA              ; compile (?DO)
-        .word   HERE_CFA               ; push leave-addr placeholder address
-        .word   ZERO_CFA
-        .word   COMMA_CFA              ; compile placeholder leave target
-        .word   HERE_CFA               ; push loop-addr
-        .word   LIT_CFA
-        .word   CS_DO_LOOP             ; push security number
-        .word   EXIT_CFA               ; stack: ( leave-addr loop-addr CS_DO_LOOP )
+        CELL    LIT_CFA
+        CELL    DOQDO_CFA
+        CELL    COMMA_CFA              ; compile (?DO)
+        CELL    HERE_CFA               ; push leave-addr placeholder address
+        CELL    ZERO_CFA
+        CELL    COMMA_CFA              ; compile placeholder leave target
+        CELL    HERE_CFA               ; push loop-addr
+        CELL    LIT_CFA
+        CELL    CS_DO_LOOP             ; push security number
+        CELL    EXIT_CFA               ; stack: ( leave-addr loop-addr CS_DO_LOOP )
 
 ;------------------------------------------------------------------------------
 ; LOOP Compilation: ( C: leave-addr loop-addr CS_DO_LOOP -- )
@@ -6445,17 +6445,17 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "LOOP", LOOP_ENTRY, LOOP_CFA, F_IMMEDIATE, QDO_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CS_DO_LOOP
-        .word   QPAIRS_CFA             ; verify security number
-        .word   LIT_CFA
-        .word   DOLOOP_CFA
-        .word   COMMA_CFA              ; compile (LOOP)
-        .word   COMMA_CFA              ; compile loop-addr as branch target
-        .word   HERE_CFA               ; ( leave-addr here )
-        .word   SWAP_CFA               ; ( here leave-addr )
-        .word   STORE_CFA              ; backpatch LEAVE placeholder
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CS_DO_LOOP
+        CELL    QPAIRS_CFA             ; verify security number
+        CELL    LIT_CFA
+        CELL    DOLOOP_CFA
+        CELL    COMMA_CFA              ; compile (LOOP)
+        CELL    COMMA_CFA              ; compile loop-addr as branch target
+        CELL    HERE_CFA               ; ( leave-addr here )
+        CELL    SWAP_CFA               ; ( here leave-addr )
+        CELL    STORE_CFA              ; backpatch LEAVE placeholder
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; +LOOP Compilation: ( C: leave-addr loop-addr CS_DO_LOOP -- )
@@ -6463,17 +6463,17 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "+LOOP", PLUSLOOP_ENTRY, PLUSLOOP_CFA, F_IMMEDIATE, LOOP_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   CS_DO_LOOP
-        .word   QPAIRS_CFA             ; verify security number
-        .word   LIT_CFA
-        .word   DOPLUSLOOP_CFA
-        .word   COMMA_CFA              ; compile (+LOOP)
-        .word   COMMA_CFA              ; compile loop-addr as branch target
-        .word   HERE_CFA               ; ( leave-addr here )
-        .word   SWAP_CFA               ; ( here leave-addr )
-        .word   STORE_CFA              ; backpatch LEAVE placeholder
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    CS_DO_LOOP
+        CELL    QPAIRS_CFA             ; verify security number
+        CELL    LIT_CFA
+        CELL    DOPLUSLOOP_CFA
+        CELL    COMMA_CFA              ; compile (+LOOP)
+        CELL    COMMA_CFA              ; compile loop-addr as branch target
+        CELL    HERE_CFA               ; ( leave-addr here )
+        CELL    SWAP_CFA               ; ( here leave-addr )
+        CELL    STORE_CFA              ; backpatch LEAVE placeholder
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; https://forth-standard.org/standard/core/LEAVE
@@ -6495,10 +6495,10 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "RECURSE", RECURSE_ENTRY, RECURSE_CFA, F_IMMEDIATE, LEAVE_ENTRY
         CODEPTR DOCOL
-        .word   CURDEF_CFA
-        .word   FETCH_CFA              ; ( cfa )
-        .word   COMMA_CFA              ; compile into definition
-        .word   EXIT_CFA
+        CELL    CURDEF_CFA
+        CELL    FETCH_CFA              ; ( cfa )
+        CELL    COMMA_CFA              ; compile into definition
+        CELL    EXIT_CFA
 
 ;==============================================================================
 ; SECTION 14: Pictured numeric output conversion words.
@@ -6511,17 +6511,17 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "UD/MOD", UDIVMOD_ENTRY, UDIVMOD_CFA, 0, RECURSE_ENTRY
         CODEPTR DOCOL
-        .word   TOR_CFA                ; ( d-low d-high ) R: ( u )
-        .word   ZERO_CFA               ; ( d-low d-high 0 )
-        .word   RFETCH_CFA             ; ( d-low d-high 0 u ) R: ( u )
-        .word   UMSLASHMOD_CFA         ; ( d-low rem quot-high ) R: ( u )
+        CELL    TOR_CFA                ; ( d-low d-high ) R: ( u )
+        CELL    ZERO_CFA               ; ( d-low d-high 0 )
+        CELL    RFETCH_CFA             ; ( d-low d-high 0 u ) R: ( u )
+        CELL    UMSLASHMOD_CFA         ; ( d-low rem quot-high ) R: ( u )
         ; rem is remainder from high division, used as high cell for low div
-        .word   RFROM_CFA              ; ( d-low rem quot-high u )
-        .word   SWAP_CFA               ; ( d-low rem u quot-high )
-        .word   TOR_CFA                ; ( d-low rem u ) R: ( quot-high )
-        .word   UMSLASHMOD_CFA         ; ( rem quot-low ) R: ( quot-high )
-        .word   RFROM_CFA              ; ( rem quot-low quot-high )
-        .word   EXIT_CFA
+        CELL    RFROM_CFA              ; ( d-low rem quot-high u )
+        CELL    SWAP_CFA               ; ( d-low rem u quot-high )
+        CELL    TOR_CFA                ; ( d-low rem u ) R: ( quot-high )
+        CELL    UMSLASHMOD_CFA         ; ( rem quot-low ) R: ( quot-high )
+        CELL    RFROM_CFA              ; ( rem quot-low quot-high )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; <# ( -- ) Initialize the pictured numeric output conversion process.
@@ -6529,11 +6529,11 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "<#", LESSHASH_ENTRY, LESSHASH_CFA, 0, UDIVMOD_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   PAD_END                ; End of the PAD buffer
-        .word   HLD_CFA                ; ( end-addr HLD-addr )
-        .word   STORE_CFA
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    PAD_END                ; End of the PAD buffer
+        CELL    HLD_CFA                ; ( end-addr HLD-addr )
+        CELL    STORE_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; HOLD ( char -- ) insert char into pictured numeric output string
@@ -6541,14 +6541,14 @@ ENDCASE_LEAVE:
 ;------------------------------------------------------------------------------
         HEADER  "HOLD", HOLD_ENTRY, HOLD_CFA, 0, LESSHASH_ENTRY
         CODEPTR DOCOL
-        .word   HLD_CFA                ; ( char hld-addr )
-        .word   FETCH_CFA              ; ( char hld )
-        .word   ONEMINUS_CFA           ; ( char hld-1 )
-        .word   DUP_CFA                ; ( char hld-1 hld-1 )
-        .word   HLD_CFA                ; ( char hld-1 hld-1 hld-addr )
-        .word   STORE_CFA              ; HLD = HLD -1
-        .word   CSTORE_CFA             ; store char at new HLD
-        .word   EXIT_CFA
+        CELL    HLD_CFA                ; ( char hld-addr )
+        CELL    FETCH_CFA              ; ( char hld )
+        CELL    ONEMINUS_CFA           ; ( char hld-1 )
+        CELL    DUP_CFA                ; ( char hld-1 hld-1 )
+        CELL    HLD_CFA                ; ( char hld-1 hld-1 hld-addr )
+        CELL    STORE_CFA              ; HLD = HLD -1
+        CELL    CSTORE_CFA             ; store char at new HLD
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; HOLDS ( c-addr u -- )
@@ -6557,44 +6557,44 @@ ENDCASE_LEAVE:
         HEADER  "HOLDS", HOLDS_ENTRY, HOLDS_CFA, 0, HOLD_ENTRY
         CODEPTR DOCOL
 HOLDS_LOOP:
-        .word   DUP_CFA
-        .word   ZBRANCH_CFA
-        .word   HOLDS_DONE
-        .word   ONEMINUS_CFA
-        .word   TWODUP_CFA
-        .word   PLUS_CFA
-        .word   CFETCH_CFA
-        .word   HOLD_CFA
-        .word   BRANCH_CFA
-        .word   HOLDS_LOOP
+        CELL    DUP_CFA
+        CELL    ZBRANCH_CFA
+        CELL    HOLDS_DONE
+        CELL    ONEMINUS_CFA
+        CELL    TWODUP_CFA
+        CELL    PLUS_CFA
+        CELL    CFETCH_CFA
+        CELL    HOLD_CFA
+        CELL    BRANCH_CFA
+        CELL    HOLDS_LOOP
 HOLDS_DONE:
-        .word   TWODROP_CFA
-        .word   EXIT_CFA
+        CELL    TWODROP_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; # ( ud -- ud ) format one digit
 ;------------------------------------------------------------------------------
         HEADER  "#", HASH_ENTRY, HASH_CFA, 0, HOLDS_ENTRY
         CODEPTR DOCOL
-        .word   BASE_CFA
-        .word   FETCH_CFA              ; ( ud base )
-        .word   UDIVMOD_CFA            ; ( rem quot-low quot-high )
-        .word   ROT_CFA                ; ( quot-low quot-high rem )
-        .word   DUP_CFA                ; ( quot-low quot-high rem rem )
-        .word   LIT_CFA
-        .word   9
-        .word   GREATER_CFA            ; ( quot-low quot-high rem flag )
-        .word   ZBRANCH_CFA
-        .word   HASH_DIGIT
-        .word   LIT_CFA
-        .word   7
-        .word   PLUS_CFA
+        CELL    BASE_CFA
+        CELL    FETCH_CFA              ; ( ud base )
+        CELL    UDIVMOD_CFA            ; ( rem quot-low quot-high )
+        CELL    ROT_CFA                ; ( quot-low quot-high rem )
+        CELL    DUP_CFA                ; ( quot-low quot-high rem rem )
+        CELL    LIT_CFA
+        CELL    9
+        CELL    GREATER_CFA            ; ( quot-low quot-high rem flag )
+        CELL    ZBRANCH_CFA
+        CELL    HASH_DIGIT
+        CELL    LIT_CFA
+        CELL    7
+        CELL    PLUS_CFA
 HASH_DIGIT:
-        .word   LIT_CFA
-        .word   '0'
-        .word   PLUS_CFA               ; ( quot-low quot-high char )
-        .word   HOLD_CFA               ; ( quot-low quot-high )
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    '0'
+        CELL    PLUS_CFA               ; ( quot-low quot-high char )
+        CELL    HOLD_CFA               ; ( quot-low quot-high )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; #S ( ud -- 0 0 ) format all digits
@@ -6602,41 +6602,41 @@ HASH_DIGIT:
         HEADER  "#S", HASHS_ENTRY, HASHS_CFA, 0, HASH_ENTRY
         CODEPTR DOCOL
 HASHS_LOOP:
-        .word   HASH_CFA               ; ( ud )
-        .word   TWODUP_CFA             ; ( ud ud )
-        .word   OR_CFA                 ; ( ud flag )
-        .word   ZEROEQ_CFA             ; ( ud flag ) true if both zero
-        .word   ZBRANCH_CFA            ; branch back if not done
-        .word   HASHS_LOOP
-        .word   EXIT_CFA
+        CELL    HASH_CFA               ; ( ud )
+        CELL    TWODUP_CFA             ; ( ud ud )
+        CELL    OR_CFA                 ; ( ud flag )
+        CELL    ZEROEQ_CFA             ; ( ud flag ) true if both zero
+        CELL    ZBRANCH_CFA            ; branch back if not done
+        CELL    HASHS_LOOP
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; SIGN ( n -- ) if n negative prepend minus sign
 ;------------------------------------------------------------------------------
         HEADER  "SIGN", SIGN_ENTRY, SIGN_CFA, 0, HASHS_ENTRY
         CODEPTR DOCOL
-        .word   ZEROLESS_CFA           ; ( flag )
-        .word   ZBRANCH_CFA
-        .word   SIGN_DONE
-        .word   LIT_CFA
-        .word   '-'
-        .word   HOLD_CFA
+        CELL    ZEROLESS_CFA           ; ( flag )
+        CELL    ZBRANCH_CFA
+        CELL    SIGN_DONE
+        CELL    LIT_CFA
+        CELL    '-'
+        CELL    HOLD_CFA
 SIGN_DONE:
-        .word   EXIT_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; #> ( ud -- c-addr u ) finalize pictured numeric output
 ;------------------------------------------------------------------------------
         HEADER  "#>", HASHGT_ENTRY, HASHGT_CFA, 0, SIGN_ENTRY
         CODEPTR DOCOL
-        .word   TWODROP_CFA            ; ( ) discard ud
-        .word   HLD_CFA
-        .word   FETCH_CFA              ; ( c-addr )
-        .word   LIT_CFA
-        .word   PAD_END                ; ( c-addr PAD_END )
-        .word   OVER_CFA               ; ( c-addr PAD_END c-addr )
-        .word   MINUS_CFA              ; ( c-addr u )
-        .word   EXIT_CFA
+        CELL    TWODROP_CFA            ; ( ) discard ud
+        CELL    HLD_CFA
+        CELL    FETCH_CFA              ; ( c-addr )
+        CELL    LIT_CFA
+        CELL    PAD_END                ; ( c-addr PAD_END )
+        CELL    OVER_CFA               ; ( c-addr PAD_END c-addr )
+        CELL    MINUS_CFA              ; ( c-addr u )
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; .R ( n1 n2 -- ) Display n1 right aligned in a field n2 characters wide. If
@@ -6646,22 +6646,22 @@ SIGN_DONE:
 ;------------------------------------------------------------------------------
         HEADER  ".R", DOTR_ENTRY, DOTR_CFA, 0, HASHGT_ENTRY
         CODEPTR DOCOL
-        .word   SWAP_CFA               ; ( n2 n1 )
-        .word   DUP_CFA                ; ( n2 n1 n1 )
-        .word   TOR_CFA                ; ( n2 n1 ) R: ( n1 )
-        .word   ABS_CFA                ; ( n2 n1 ) R: ( n1 )
-        .word   ZERO_CFA               ; ( n2 n1 0 ) R: ( n1 )
-        .word   LESSHASH_CFA           ; <# begin pictured output
-        .word   HASHS_CFA              ; #S convert all digits
-        .word   RFROM_CFA              ; ( n2 n1 )
-        .word   SIGN_CFA               ; add '-' if negative
-        .word   HASHGT_CFA             ; #> ( n2 c-addr u )
-        .word   ROT_CFA                ; #> ( c-addr u n2 )
-        .word   OVER_CFA               ; #> ( c-addr u n2 u )
-        .word   MINUS_CFA              ; #> ( c-addr u n )
-        .word   SPACES_CFA             ; #> ( c-addr u )
-        .word   TYPE_CFA
-        .word   EXIT_CFA
+        CELL    SWAP_CFA               ; ( n2 n1 )
+        CELL    DUP_CFA                ; ( n2 n1 n1 )
+        CELL    TOR_CFA                ; ( n2 n1 ) R: ( n1 )
+        CELL    ABS_CFA                ; ( n2 n1 ) R: ( n1 )
+        CELL    ZERO_CFA               ; ( n2 n1 0 ) R: ( n1 )
+        CELL    LESSHASH_CFA           ; <# begin pictured output
+        CELL    HASHS_CFA              ; #S convert all digits
+        CELL    RFROM_CFA              ; ( n2 n1 )
+        CELL    SIGN_CFA               ; add '-' if negative
+        CELL    HASHGT_CFA             ; #> ( n2 c-addr u )
+        CELL    ROT_CFA                ; #> ( c-addr u n2 )
+        CELL    OVER_CFA               ; #> ( c-addr u n2 u )
+        CELL    MINUS_CFA              ; #> ( c-addr u n )
+        CELL    SPACES_CFA             ; #> ( c-addr u )
+        CELL    TYPE_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; U.R ( u n -- ) Display u right aligned in a field n characters wide. If the
@@ -6671,17 +6671,17 @@ SIGN_DONE:
 ;------------------------------------------------------------------------------
         HEADER  "U.R", UDOTR_ENTRY, UDOTR_CFA, 0, DOTR_ENTRY
         CODEPTR DOCOL
-        .word   TOR_CFA                ; ( u ) R: ( n )
-        .word   ZERO_CFA               ; ( u 0 ) R: ( n )
-        .word   LESSHASH_CFA           ; <# begin pictured output
-        .word   HASHS_CFA              ; #S convert all digits
-        .word   HASHGT_CFA             ; #> ( c-addr u )
-        .word   RFROM_CFA              ; ( c-addr u n )
-        .word   OVER_CFA               ; #> ( c-addr u n u )
-        .word   MINUS_CFA              ; #> ( c-addr u n-u )
-        .word   SPACES_CFA             ; #> ( c-addr u )
-        .word   TYPE_CFA
-        .word   EXIT_CFA
+        CELL    TOR_CFA                ; ( u ) R: ( n )
+        CELL    ZERO_CFA               ; ( u 0 ) R: ( n )
+        CELL    LESSHASH_CFA           ; <# begin pictured output
+        CELL    HASHS_CFA              ; #S convert all digits
+        CELL    HASHGT_CFA             ; #> ( c-addr u )
+        CELL    RFROM_CFA              ; ( c-addr u n )
+        CELL    OVER_CFA               ; #> ( c-addr u n u )
+        CELL    MINUS_CFA              ; #> ( c-addr u n-u )
+        CELL    SPACES_CFA             ; #> ( c-addr u )
+        CELL    TYPE_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; D.R ( d n -- ) Display d right aligned in a field n characters wide. If the
@@ -6691,20 +6691,20 @@ SIGN_DONE:
 ;------------------------------------------------------------------------------
         HEADER  "D.R", DDOTR_ENTRY, DDOTR_CFA, 0, UDOTR_ENTRY
         CODEPTR DOCOL
-        .word   TOR_CFA                ; ( d_lo d_hi ) R: ( n )
-        .word   TUCK_CFA               ; ( d_hi d_lo d_hi ) R: ( n )
-        .word   DABS_CFA               ; ( d_hi ud_lo ud_hi ) R: ( n )
-        .word   LESSHASH_CFA           ; <# begin pictured output
-        .word   HASHS_CFA              ; #S convert all digits
-        .word   ROT_CFA                ; ( ud_lo ud_hi d_hi )
-        .word   SIGN_CFA               ; add '-' if negative
-        .word   HASHGT_CFA             ; #> ( c-addr u )
-        .word   RFROM_CFA              ; #> ( c-addr u n )
-        .word   OVER_CFA               ; #> ( c-addr u n u )
-        .word   MINUS_CFA              ; #> ( c-addr u n-u )
-        .word   SPACES_CFA             ; #> ( c-addr u )
-        .word   TYPE_CFA
-        .word   EXIT_CFA
+        CELL    TOR_CFA                ; ( d_lo d_hi ) R: ( n )
+        CELL    TUCK_CFA               ; ( d_hi d_lo d_hi ) R: ( n )
+        CELL    DABS_CFA               ; ( d_hi ud_lo ud_hi ) R: ( n )
+        CELL    LESSHASH_CFA           ; <# begin pictured output
+        CELL    HASHS_CFA              ; #S convert all digits
+        CELL    ROT_CFA                ; ( ud_lo ud_hi d_hi )
+        CELL    SIGN_CFA               ; add '-' if negative
+        CELL    HASHGT_CFA             ; #> ( c-addr u )
+        CELL    RFROM_CFA              ; #> ( c-addr u n )
+        CELL    OVER_CFA               ; #> ( c-addr u n u )
+        CELL    MINUS_CFA              ; #> ( c-addr u n-u )
+        CELL    SPACES_CFA             ; #> ( c-addr u )
+        CELL    TYPE_CFA
+        CELL    EXIT_CFA
 
 ;==============================================================================
 ; SECTION 15: The Programming-Tools word set
@@ -6719,9 +6719,9 @@ SIGN_DONE:
 ;------------------------------------------------------------------------------
         HEADER  "ENVIRONMENT?", ENVIRONMENTQ_ENTRY, ENVIRONMENTQ_CFA, 0, DDOTR_ENTRY
         CODEPTR DOCOL
-        .word   TWODROP_CFA            ; discard c-addr u
-        .word   FALSE_CFA              ; false - not supported
-        .word   EXIT_CFA
+        CELL    TWODROP_CFA            ; discard c-addr u
+        CELL    FALSE_CFA              ; false - not supported
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; FORGET ( "<spaces>name" -- ) skips leading space delimiters. Parse name
@@ -6731,60 +6731,60 @@ SIGN_DONE:
 ;------------------------------------------------------------------------------
 	HEADER  "FORGET", FORGET_ENTRY, FORGET_CFA, 0, ENVIRONMENTQ_ENTRY
         CODEPTR DOCOL
-        .word   PARSENAME_CFA          ; ( c-addr u )
-        .word   TWODUP_CFA             ; ( c-addr u c-addr u )
-        .word   HERE_CFA               ; ( c-addr u c-addr u here )
-        .word   PLACE_CFA              ; ( c-addr u ) uppercased copy at HERE
-        .word   TWODROP_CFA            ; ( )
-        .word   HERE_CFA               ; ( here )
-        .word   COUNT_CFA              ; ( c-addr' u ) uppercased string
-        .word   LATEST_CFA
-        .word   FETCH_CFA              ; ( c-addr' u entry )
+        CELL    PARSENAME_CFA          ; ( c-addr u )
+        CELL    TWODUP_CFA             ; ( c-addr u c-addr u )
+        CELL    HERE_CFA               ; ( c-addr u c-addr u here )
+        CELL    PLACE_CFA              ; ( c-addr u ) uppercased copy at HERE
+        CELL    TWODROP_CFA            ; ( )
+        CELL    HERE_CFA               ; ( here )
+        CELL    COUNT_CFA              ; ( c-addr' u ) uppercased string
+        CELL    LATEST_CFA
+        CELL    FETCH_CFA              ; ( c-addr' u entry )
 FORGET_LOOP:
         ; Check for end of dictionary
-        .word   DUP_CFA                ; ( c-addr u entry entry )
-        .word   ZBRANCH_CFA            ; branch if entry = 0 (not found)
-        .word   FORGET_NOTFOUND
+        CELL    DUP_CFA                ; ( c-addr u entry entry )
+        CELL    ZBRANCH_CFA            ; branch if entry = 0 (not found)
+        CELL    FORGET_NOTFOUND
 
         ; Stash entry, duplicate c-addr u, get name, compare
-        .word   TOR_CFA                ; ( c-addr u ) R: ( entry )
-        .word   TWODUP_CFA             ; ( c-addr u c-addr u ) R: ( entry )
-        .word   RFETCH_CFA             ; ( c-addr u c-addr u entry ) R: ( entry )
-        .word   HEADERNAME_CFA         ; ( c-addr u c-addr u c-addr2 u2 ) R: ( entry )
-        .word   COMPARE_CFA            ; ( c-addr u flag ) R: ( entry )
-        .word   ZEROEQ_CFA             ; ( c-addr u match ) R: ( entry )
-        .word   RFROM_CFA              ; ( c-addr u match entry ) R: ( )
-        .word   SWAP_CFA               ; ( c-addr u entry match )
-        .word   ZBRANCH_CFA
-        .word   FORGET_NEXT
+        CELL    TOR_CFA                ; ( c-addr u ) R: ( entry )
+        CELL    TWODUP_CFA             ; ( c-addr u c-addr u ) R: ( entry )
+        CELL    RFETCH_CFA             ; ( c-addr u c-addr u entry ) R: ( entry )
+        CELL    HEADERNAME_CFA         ; ( c-addr u c-addr u c-addr2 u2 ) R: ( entry )
+        CELL    COMPARE_CFA            ; ( c-addr u flag ) R: ( entry )
+        CELL    ZEROEQ_CFA             ; ( c-addr u match ) R: ( entry )
+        CELL    RFROM_CFA              ; ( c-addr u match entry ) R: ( )
+        CELL    SWAP_CFA               ; ( c-addr u entry match )
+        CELL    ZBRANCH_CFA
+        CELL    FORGET_NEXT
 
         ; Match found - clean up c-addr u then update LATEST and DP
-        .word   TWOSWAP_CFA            ; ( entry c-addr u )
-        .word   TWODROP_CFA            ; ( entry )
-        .word   DUP_CFA                ; ( entry entry )
-        .word   FETCH_CFA              ; ( entry link )
-        .word   LATEST_CFA
-        .word   STORE_CFA              ; LATEST = link
-        .word   DP_CFA
-        .word   STORE_CFA              ; DP = entry
-        .word   EXIT_CFA
+        CELL    TWOSWAP_CFA            ; ( entry c-addr u )
+        CELL    TWODROP_CFA            ; ( entry )
+        CELL    DUP_CFA                ; ( entry entry )
+        CELL    FETCH_CFA              ; ( entry link )
+        CELL    LATEST_CFA
+        CELL    STORE_CFA              ; LATEST = link
+        CELL    DP_CFA
+        CELL    STORE_CFA              ; DP = entry
+        CELL    EXIT_CFA
 
 FORGET_NEXT:
         ; No match - follow link to next entry
         ; Stack: ( c-addr u entry )
-        .word   FETCH_CFA              ; ( c-addr u link )
-        .word   BRANCH_CFA
-        .word   FORGET_LOOP
+        CELL    FETCH_CFA              ; ( c-addr u link )
+        CELL    BRANCH_CFA
+        CELL    FORGET_LOOP
 
 FORGET_NOTFOUND:
         ; Stack: ( c-addr u entry ) entry=0
-        .word   DROP_CFA               ; ( c-addr u )
-        .word   TWODROP_CFA            ; ( )
-        .word   LIT_CFA
-        .word   notfound_msg
-        .word   CPUTS_CFA
-        .word   ABORT_CFA
-        .word   EXIT_CFA
+        CELL    DROP_CFA               ; ( c-addr u )
+        CELL    TWODROP_CFA            ; ( )
+        CELL    LIT_CFA
+        CELL    notfound_msg
+        CELL    CPUTS_CFA
+        CELL    ABORT_CFA
+        CELL    EXIT_CFA
 
 notfound_msg:
         .byte   "Word not found", $0D, $0A, $00
@@ -6798,35 +6798,35 @@ notfound_msg:
         CODEPTR DOCOL
         ; Capture dictionary state BEFORE creating the new word.
         ; saved LATEST and DP are the restore point — marker erases itself.
-        .word   LATEST_CFA
-        .word   FETCH_CFA              ; ( latest )
-        .word   DP_CFA
-        .word   FETCH_CFA              ; ( latest dp )
+        CELL    LATEST_CFA
+        CELL    FETCH_CFA              ; ( latest )
+        CELL    DP_CFA
+        CELL    FETCH_CFA              ; ( latest dp )
         ; Parse name and build header. WORD leaves counted string at HERE,
         ; then DOCREATE consumes its address.
-        .word   LIT_CFA
-        .word   SPACE                  ; space delimiter
-        .word   WORD_CFA               ; ( latest dp addr )
-        .word   DOCREATE_CFA           ; ( latest dp ) header built, DP at CFA
+        CELL    LIT_CFA
+        CELL    SPACE                  ; space delimiter
+        CELL    WORD_CFA               ; ( latest dp addr )
+        CELL    DOCREATE_CFA           ; ( latest dp ) header built, DP at CFA
         ; Patch CFA of new word to DOMARKER
-        .word   DP_CFA
-        .word   FETCH_CFA              ; ( latest dp cfa )
-        .word   LIT_CFA
-        .word   DOMARKER_CODE
-        .word   SWAP_CFA
-        .word   STORE_CFA              ; CFA = DOMARKER ( latest dp )
+        CELL    DP_CFA
+        CELL    FETCH_CFA              ; ( latest dp cfa )
+        CELL    LIT_CFA
+        CELL    DOMARKER_CODE
+        CELL    SWAP_CFA
+        CELL    STORE_CFA              ; CFA = DOMARKER ( latest dp )
         ; Advance DP past CFA cell
-        .word   DP_CFA
-        .word   FETCH_CFA              ; ( latest dp dp )
-        .word   CELLPLUS_CFA           ; ( latest dp dp+2 )
-        .word   DP_CFA
-        .word   STORE_CFA              ; DP += 2 ( latest dp )
-        .word   REVEAL_CFA             ; make word visible
+        CELL    DP_CFA
+        CELL    FETCH_CFA              ; ( latest dp dp )
+        CELL    CELLPLUS_CFA           ; ( latest dp dp+2 )
+        CELL    DP_CFA
+        CELL    STORE_CFA              ; DP += 2 ( latest dp )
+        CELL    REVEAL_CFA             ; make word visible
         ; Compile saved state into body
-        .word   SWAP_CFA               ; ( dp latest )
-        .word   COMMA_CFA              ; body[0] = saved LATEST
-        .word   COMMA_CFA              ; body[1] = saved DP
-        .word   EXIT_CFA
+        CELL    SWAP_CFA               ; ( dp latest )
+        CELL    COMMA_CFA              ; body[0] = saved LATEST
+        CELL    COMMA_CFA              ; body[1] = saved DP
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; DOMARKER - runtime action of a MARKER-created word.
@@ -6861,171 +6861,171 @@ DOMARKER_CODE:
         HEADER  "SEE", SEE_ENTRY, SEE_CFA, 0, MARKER_ENTRY
         CODEPTR DOCOL
         ; Parse name, uppercase into HERE
-        .word   PARSENAME_CFA          ; ( c-addr u )
-        .word   TWODUP_CFA             ; ( c-addr u c-addr u )
-        .word   HERE_CFA
-        .word   PLACE_CFA              ; uppercase copy at HERE
-        .word   TWODROP_CFA            ; ( )
-        .word   HERE_CFA
+        CELL    PARSENAME_CFA          ; ( c-addr u )
+        CELL    TWODUP_CFA             ; ( c-addr u c-addr u )
+        CELL    HERE_CFA
+        CELL    PLACE_CFA              ; uppercase copy at HERE
+        CELL    TWODROP_CFA            ; ( )
+        CELL    HERE_CFA
 
         ; Find the word
-        .word   FIND_CFA               ; ( xt 1|-1 | addr 0 )
-        .word   DUP_CFA                ; ( xt 1|-1 1|-1 | addr 0 0 )
-        .word   ZBRANCH_CFA
-        .word   SEE_NOTFOUND
-        .word   DROP_CFA               ; ( xt ) drop flag
+        CELL    FIND_CFA               ; ( xt 1|-1 | addr 0 )
+        CELL    DUP_CFA                ; ( xt 1|-1 1|-1 | addr 0 0 )
+        CELL    ZBRANCH_CFA
+        CELL    SEE_NOTFOUND
+        CELL    DROP_CFA               ; ( xt ) drop flag
 
         ; Print ": NAME "
-        .word   LIT_CFA
-        .word   colon_msg
-        .word   CPUTS_CFA              ; print ": "
-        .word   DUP_CFA                ; ( xt xt )
-        .word   CFANAME_CFA            ; ( xt c-addr u true | xt false )
-        .word   ZBRANCH_CFA
-        .word   SEE_NONAME
-        .word   TYPE_CFA               ; ( xt )
-        .word   SPACE_CFA
-        .word   BRANCH_CFA
-        .word   SEE_CHECKTYPE
+        CELL    LIT_CFA
+        CELL    colon_msg
+        CELL    CPUTS_CFA              ; print ": "
+        CELL    DUP_CFA                ; ( xt xt )
+        CELL    CFANAME_CFA            ; ( xt c-addr u true | xt false )
+        CELL    ZBRANCH_CFA
+        CELL    SEE_NONAME
+        CELL    TYPE_CFA               ; ( xt )
+        CELL    SPACE_CFA
+        CELL    BRANCH_CFA
+        CELL    SEE_CHECKTYPE
 
 SEE_NONAME:
-        .word   LIT_CFA
-        .word   unknown_msg
-        .word   CPUTS_CFA               ; ( xt )
+        CELL    LIT_CFA
+        CELL    unknown_msg
+        CELL    CPUTS_CFA               ; ( xt )
 
 SEE_CHECKTYPE:
         ; Check if DOCOL or primitive
-        .word   DUP_CFA                ; ( xt xt )
-        .word   FETCH_CFA              ; ( xt code-ptr )
-        .word   LIT_CFA
-        .word   DOCOL
-        .word   EQUAL_CFA              ; ( xt flag )
-        .word   ZBRANCH_CFA
-        .word   SEE_PRIMITIVE
+        CELL    DUP_CFA                ; ( xt xt )
+        CELL    FETCH_CFA              ; ( xt code-ptr )
+        CELL    LIT_CFA
+        CELL    DOCOL
+        CELL    EQUAL_CFA              ; ( xt flag )
+        CELL    ZBRANCH_CFA
+        CELL    SEE_PRIMITIVE
 
         ; DOCOL word - walk cells from xt+2
-        .word   CELLPLUS_CFA           ; ( scan-ptr = xt+2 )
+        CELL    CELLPLUS_CFA           ; ( scan-ptr = xt+2 )
 
 SEE_LOOP:
-        .word   DUP_CFA                ; ( scan-ptr scan-ptr )
-        .word   FETCH_CFA              ; ( scan-ptr cell )
+        CELL    DUP_CFA                ; ( scan-ptr scan-ptr )
+        CELL    FETCH_CFA              ; ( scan-ptr cell )
 
         ; Check EXIT
-        .word   DUP_CFA                ; ( scan-ptr cell cell )
-        .word   LIT_CFA
-        .word   EXIT_CFA
-        .word   EQUAL_CFA              ; ( scan-ptr cell flag )
-        .word   ZBRANCH_CFA
-        .word   SEE_NOT_EXIT
-        .word   TWODROP_CFA            ; ( )
-        .word   LIT_CFA
-        .word   exit_msg
-        .word   CPUTS_CFA
-        .word   CR_CFA
-        .word   EXIT_CFA
+        CELL    DUP_CFA                ; ( scan-ptr cell cell )
+        CELL    LIT_CFA
+        CELL    EXIT_CFA
+        CELL    EQUAL_CFA              ; ( scan-ptr cell flag )
+        CELL    ZBRANCH_CFA
+        CELL    SEE_NOT_EXIT
+        CELL    TWODROP_CFA            ; ( )
+        CELL    LIT_CFA
+        CELL    exit_msg
+        CELL    CPUTS_CFA
+        CELL    CR_CFA
+        CELL    EXIT_CFA
 
 SEE_NOT_EXIT:
         ; Check LIT
-        .word   DUP_CFA                ; ( scan-ptr cell cell )
-        .word   LIT_CFA
-        .word   LIT_CFA
-        .word   EQUAL_CFA              ; ( scan-ptr cell flag )
-        .word   ZBRANCH_CFA
-        .word   SEE_NOT_LIT
-        .word   DROP_CFA               ; ( scan-ptr )
-        .word   CELLPLUS_CFA           ; ( scan-ptr+2 )
-        .word   DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
-        .word   FETCH_CFA              ; ( scan-ptr+2 value )
-        .word   LIT_CFA
-        .word   lit_msg
-        .word   CPUTS_CFA
-        .word   DOT_CFA                ; print value
-        .word   SPACE_CFA
-        .word   CELLPLUS_CFA           ; advance past value
-        .word   BRANCH_CFA
-        .word   SEE_LOOP
+        CELL    DUP_CFA                ; ( scan-ptr cell cell )
+        CELL    LIT_CFA
+        CELL    LIT_CFA
+        CELL    EQUAL_CFA              ; ( scan-ptr cell flag )
+        CELL    ZBRANCH_CFA
+        CELL    SEE_NOT_LIT
+        CELL    DROP_CFA               ; ( scan-ptr )
+        CELL    CELLPLUS_CFA           ; ( scan-ptr+2 )
+        CELL    DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
+        CELL    FETCH_CFA              ; ( scan-ptr+2 value )
+        CELL    LIT_CFA
+        CELL    lit_msg
+        CELL    CPUTS_CFA
+        CELL    DOT_CFA                ; print value
+        CELL    SPACE_CFA
+        CELL    CELLPLUS_CFA           ; advance past value
+        CELL    BRANCH_CFA
+        CELL    SEE_LOOP
 
 SEE_NOT_LIT:
         ; Check BRANCH
-        .word   DUP_CFA                ; ( scan-ptr cell cell )
-        .word   LIT_CFA
-        .word   BRANCH_CFA
-        .word   EQUAL_CFA              ; ( scan-ptr cell flag )
-        .word   ZBRANCH_CFA
-        .word   SEE_NOT_BRANCH
-        .word   DROP_CFA               ; ( scan-ptr )
-        .word   CELLPLUS_CFA           ; ( scan-ptr+2 )
-        .word   DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
-        .word   FETCH_CFA              ; ( scan-ptr+2 target )
-        .word   LIT_CFA
-        .word   branch_msg
-        .word   CPUTS_CFA
-        .word   DOTHEX_CFA
-        .word   SPACE_CFA
-        .word   CELLPLUS_CFA           ; advance past target
-        .word   BRANCH_CFA
-        .word   SEE_LOOP
+        CELL    DUP_CFA                ; ( scan-ptr cell cell )
+        CELL    LIT_CFA
+        CELL    BRANCH_CFA
+        CELL    EQUAL_CFA              ; ( scan-ptr cell flag )
+        CELL    ZBRANCH_CFA
+        CELL    SEE_NOT_BRANCH
+        CELL    DROP_CFA               ; ( scan-ptr )
+        CELL    CELLPLUS_CFA           ; ( scan-ptr+2 )
+        CELL    DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
+        CELL    FETCH_CFA              ; ( scan-ptr+2 target )
+        CELL    LIT_CFA
+        CELL    branch_msg
+        CELL    CPUTS_CFA
+        CELL    DOTHEX_CFA
+        CELL    SPACE_CFA
+        CELL    CELLPLUS_CFA           ; advance past target
+        CELL    BRANCH_CFA
+        CELL    SEE_LOOP
 
 SEE_NOT_BRANCH:
         ; Check ZBRANCH
-        .word   DUP_CFA                ; ( scan-ptr cell cell )
-        .word   LIT_CFA
-        .word   ZBRANCH_CFA
-        .word   EQUAL_CFA              ; ( scan-ptr cell flag )
-        .word   ZBRANCH_CFA
-        .word   SEE_NOT_ZBRANCH
-        .word   DROP_CFA               ; ( scan-ptr )
-        .word   CELLPLUS_CFA           ; ( scan-ptr+2 )
-        .word   DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
-        .word   FETCH_CFA              ; ( scan-ptr+2 target )
-        .word   LIT_CFA
-        .word   zbranch_msg
-        .word   CPUTS_CFA
-        .word   DOTHEX_CFA
-        .word   SPACE_CFA
-        .word   CELLPLUS_CFA           ; advance past target
-        .word   BRANCH_CFA
-        .word   SEE_LOOP
+        CELL    DUP_CFA                ; ( scan-ptr cell cell )
+        CELL    LIT_CFA
+        CELL    ZBRANCH_CFA
+        CELL    EQUAL_CFA              ; ( scan-ptr cell flag )
+        CELL    ZBRANCH_CFA
+        CELL    SEE_NOT_ZBRANCH
+        CELL    DROP_CFA               ; ( scan-ptr )
+        CELL    CELLPLUS_CFA           ; ( scan-ptr+2 )
+        CELL    DUP_CFA                ; ( scan-ptr+2 scan-ptr+2 )
+        CELL    FETCH_CFA              ; ( scan-ptr+2 target )
+        CELL    LIT_CFA
+        CELL    zbranch_msg
+        CELL    CPUTS_CFA
+        CELL    DOTHEX_CFA
+        CELL    SPACE_CFA
+        CELL    CELLPLUS_CFA           ; advance past target
+        CELL    BRANCH_CFA
+        CELL    SEE_LOOP
 
 SEE_NOT_ZBRANCH:
         ; General case - look up CFA name
-        .word   DROP_CFA               ; ( scan-ptr ) drop cell
-        .word   DUP_CFA                ; ( scan-ptr scan-ptr )
-        .word   FETCH_CFA              ; ( scan-ptr cell )
-        .word   CFANAME_CFA            ; ( scan-ptr c-addr u true | scan-ptr false )
-        .word   ZBRANCH_CFA
-        .word   SEE_UNKNOWN
-        .word   TYPE_CFA               ; ( scan-ptr ) print name
-        .word   SPACE_CFA
-        .word   CELLPLUS_CFA           ; advance scan-ptr
-        .word   BRANCH_CFA
-        .word   SEE_LOOP
+        CELL    DROP_CFA               ; ( scan-ptr ) drop cell
+        CELL    DUP_CFA                ; ( scan-ptr scan-ptr )
+        CELL    FETCH_CFA              ; ( scan-ptr cell )
+        CELL    CFANAME_CFA            ; ( scan-ptr c-addr u true | scan-ptr false )
+        CELL    ZBRANCH_CFA
+        CELL    SEE_UNKNOWN
+        CELL    TYPE_CFA               ; ( scan-ptr ) print name
+        CELL    SPACE_CFA
+        CELL    CELLPLUS_CFA           ; advance scan-ptr
+        CELL    BRANCH_CFA
+        CELL    SEE_LOOP
 
 SEE_UNKNOWN:
         ; Unknown CFA - print hex value
-        .word   DUP_CFA                ; ( scan-ptr scan-ptr )
-        .word   FETCH_CFA              ; ( scan-ptr cell )
-        .word   DOTHEX_CFA             ; print hex
-        .word   SPACE_CFA
-        .word   CELLPLUS_CFA           ; advance scan-ptr
-        .word   BRANCH_CFA
-        .word   SEE_LOOP
+        CELL    DUP_CFA                ; ( scan-ptr scan-ptr )
+        CELL    FETCH_CFA              ; ( scan-ptr cell )
+        CELL    DOTHEX_CFA             ; print hex
+        CELL    SPACE_CFA
+        CELL    CELLPLUS_CFA           ; advance scan-ptr
+        CELL    BRANCH_CFA
+        CELL    SEE_LOOP
 
 SEE_PRIMITIVE:
-        .word   DROP_CFA               ; ( ) drop xt
-        .word   LIT_CFA
-        .word   primitive_msg
-        .word   CPUTS_CFA
-        .word   CR_CFA
-        .word   EXIT_CFA
+        CELL    DROP_CFA               ; ( ) drop xt
+        CELL    LIT_CFA
+        CELL    primitive_msg
+        CELL    CPUTS_CFA
+        CELL    CR_CFA
+        CELL    EXIT_CFA
 
 SEE_NOTFOUND:
-        .word   TWODROP_CFA            ; drop addr and 0
-        .word   LIT_CFA
-        .word   notfound_msg
-        .word   CPUTS_CFA
-        .word   ABORT_CFA
-        .word   EXIT_CFA
+        CELL    TWODROP_CFA            ; drop addr and 0
+        CELL    LIT_CFA
+        CELL    notfound_msg
+        CELL    CPUTS_CFA
+        CELL    ABORT_CFA
+        CELL    EXIT_CFA
 
 colon_msg:      .byte ": ", $00
 exit_msg:       .byte "EXIT ;", $00
@@ -7043,11 +7043,11 @@ unknown_msg:    .byte "??? ", $00
 ;------------------------------------------------------------------------------
         HEADER  "UNUSED", UNUSED_ENTRY, UNUSED_CFA, 0, SEE_ENTRY
         CODEPTR DOCOL
-        .word   LIT_CFA
-        .word   DICT_TOP
-        .word   HERE_CFA
-        .word   MINUS_CFA
-        .word   EXIT_CFA
+        CELL    LIT_CFA
+        CELL    DICT_TOP
+        CELL    HERE_CFA
+        CELL    MINUS_CFA
+        CELL    EXIT_CFA
 
 .ifdef DEBUG
 ;------------------------------------------------------------------------------
