@@ -49,6 +49,12 @@ DICT_TOP        = $7FFF         ; RAM dictionary end
 FORTH_TRUE      = $FFFF
 FORTH_FALSE     = $0000
 
+; Integer constants (based on C's limits.h)
+INT_MIN         = $8000
+INT_MAX         = $7FFF
+MINUS_ONE       = $FFFF
+UINT_MAX        = $FFFF
+
 ; Compiler Security Numbers
 CS_BEGIN_AGAIN  = 1
 CS_IF_ELSE_THEN = 2

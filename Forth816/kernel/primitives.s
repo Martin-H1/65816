@@ -285,11 +285,11 @@ QDUP_DONE:
                 NEXT
 
 calc_depth:     TXA
-                EOR     #$FFFF          ; Two's complement
+                EOR     #UINT_MAX       ; Two's complement
                 INC     A
                 CLC
                 ADC     #PSP_INIT       ; PSP_INIT - result / 2
-                CMP     #$8000          ; if bit 15 is set, carry = 1
+                CMP     #INT_MIN        ; if bit 15 is set, carry = 1
                 ROR     A               ; Divide by 2 (cells)
                 RTS
 	ENDPUBLIC
@@ -482,7 +482,7 @@ calc_depth:     TXA
         HEADER  "MIN-INT", MININT_ENTRY, MININT_CFA, 0, ONE_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
-        .word   $8000                   ; Sign bit only
+        .word   INT_MIN                 ; Platform dependant constant
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -491,7 +491,7 @@ calc_depth:     TXA
         HEADER  "MAX-INT", MAXINT_ENTRY, MAXINT_CFA, 0, MININT_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
-        .word   $7FFF                   ; Sign bit only
+        .word   INT_MAX                 ; Platform dependant constant
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -509,7 +509,7 @@ calc_depth:     TXA
         HEADER  "MAX-2INT", MAXTWOINT_ENTRY, MAXTWOINT_CFA, 0, MINTWOINT_ENTRY
         CODEPTR DOCOL
         .word   LIT_CFA
-        .word   $FFFF
+        .word   UINT_MAX                ; UINT_MAX has all bits set.
         .word   MAXINT_CFA              ; Sign bit clear, all other bits set.
         .word   EXIT_CFA
 
@@ -938,7 +938,7 @@ calc_depth:     TXA
                 ; Take absolute value of n
                 LDA     0,X
                 BPL     @n_pos
-                EOR     #$FFFF
+                EOR     #UINT_MAX
                 INC     A
                 STA     0,X
 @n_pos:
@@ -946,12 +946,12 @@ calc_depth:     TXA
                 LDA     2,X             ; d-high
                 BPL     @d_pos
                 LDA     4,X             ; d-low
-                EOR     #$FFFF          ; invert
+                EOR     #UINT_MAX       ; invert
                 CLC
                 ADC     #1              ; +1, carry set if result = 0
                 STA     4,X
                 LDA     2,X             ; d-high
-                EOR     #$FFFF          ; invert
+                EOR     #UINT_MAX       ; invert
                 ADC     #0              ; add carry
                 STA     2,X
 @d_pos:
@@ -962,7 +962,7 @@ calc_depth:     TXA
                 BPL     @quot_pos
                 LDA     0,X
                 BEQ     @quot_pos
-                EOR     #$FFFF
+                EOR     #UINT_MAX
                 INC     A
                 STA     0,X
 @quot_pos:
@@ -971,7 +971,7 @@ calc_depth:     TXA
                 BPL     @rem_pos
                 LDA     2,X
                 BEQ     @rem_pos
-                EOR     #$FFFF
+                EOR     #UINT_MAX
                 INC     A
                 STA     2,X
 @rem_pos:
@@ -1024,7 +1024,7 @@ calc_depth:     TXA
         .a16
         .i16
                 PEEK_TOS
-                EOR     #$FFFF
+                EOR     #UINT_MAX
                 INC     A
                 PUT_TOS
                 NEXT
@@ -1040,7 +1040,7 @@ calc_depth:     TXA
         .i16
                 PEEK_TOS
                 BPL     @done
-                EOR     #$FFFF
+                EOR     #UINT_MAX
                 INC     A
                 PUT_TOS
 @done:          NEXT
@@ -1139,7 +1139,7 @@ DABS_DONE:
         .i16
                 PEEK_TOS
                 ; Arithmetic shift right: preserve sign bit
-                CMP     #$8000          ; Set carry if negative
+                CMP     #INT_MIN        ; Set carry if negative
                 ROR     A               ; Shift right, sign bit from carry
                 PUT_TOS
                 NEXT
@@ -1190,7 +1190,7 @@ DABS_DONE:
                 DEX
                 PEEK_NOS                ; n
                 BPL     @positive
-                LDA     #$FFFF          ; negative → high cell = $FFFF
+                LDA     #MINUS_ONE      ; negative → high cell = -1
                 PUT_TOS
                 NEXT
 @positive:
@@ -1216,10 +1216,10 @@ DABS_DONE:
         .a16
         .i16
                 PEEK_TOS                ; high cell
-                EOR     #$FFFF          ; invert
+                EOR     #UINT_MAX       ; invert
                 PUT_TOS
                 PEEK_NOS                ; low cell
-                EOR     #$FFFF          ; invert
+                EOR     #UINT_MAX       ; invert
                 INC     A               ; +1
                 PUT_NOS
                 BNE     @done           ; no carry
@@ -1337,7 +1337,7 @@ MSTARS_THEN:
 
 ;==============================================================================
 ; SECTION 4: COMPARISON PRIMITIVES
-; ANS Forth: TRUE = $FFFF, FALSE = $0000
+; ANS Forth: TRUE = UINT_MAX, FALSE = 0
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
@@ -1770,7 +1770,7 @@ DMIN_THEN:
         .a16
         .i16
                 PEEK_TOS
-                EOR     #$FFFF
+                EOR     #UINT_MAX
                 PUT_TOS
                 NEXT
         ENDPUBLIC
@@ -3954,11 +3954,11 @@ HEX_BODY:
         LOC_ADDR     = 1        ; original c-addr (for fail return)
         LOC_PTR      = 3        ; current char pointer
         LOC_COUNT    = 5        ; remaining character count
-        LOC_SIGN     = 7        ; 0=positive, $FFFF=negative
+        LOC_SIGN     = 7        ; 0=positive, MINUS_ONE=negative
         LOC_BASE     = 9        ; saved original BASE
         LOC_TMPBASE  = 11       ; working base for this conversion
         LOC_UP       = 13       ; local UP to avoid refetching
-        LOC_ISDOUBLE = 15       ; $FFFF if double (trailing '.'), 0 if single
+        LOC_ISDOUBLE = 15       ; TRUE if double (trailing '.'), 0 if single
         LOC_SIZE     = LOC_ISDOUBLE + 1
 
                 PHD
@@ -4120,10 +4120,10 @@ HEX_BODY:
 
                 ; Negate 32-bit: invert both cells, add 1 to low cell
                 LDA     a:2,X           ; ud_lo
-                EOR     #$FFFF
+                EOR     #UINT_MAX
                 STA     a:2,X
                 LDA     a:0,X           ; ud_hi
-                EOR     #$FFFF
+                EOR     #UINT_MAX
                 STA     a:0,X
                 INC     a:2,X           ; ud_lo + 1
                 BNE     @positive
@@ -4265,7 +4265,7 @@ NUMBER_ERR:
                 BEQ     @next_byte      ; bytes equal -> continue
                 BCC     @str1_greater   ; str2[Y] < str1[Y]  -> str1 > str2
                 ; else  str2[Y] > str1[Y] -> str1 < str2
-                LDA     #$FFFF          ; result = -1
+                LDA     #MINUS_ONE      ; result = -1
                 BRA     @store_result
 
 @str1_greater:
@@ -4286,13 +4286,13 @@ NUMBER_ERR:
                 CMP     SCRATCH1        ; u1 - u2  (unsigned)
                 BEQ     @equal          ; u1 == u2 -> strings are equal
                 BCS     @str1_longer    ; u1 >  u2 -> str1 longer -> str1 > str2
-                LDA     #$FFFF          ; u1 <  u2 -> str1 shorter -> str1 < str2
+                LDA     #MINUS_ONE      ; u1 <  u2 -> str1 shorter -> str1 < str2
                 BRA     @store_result
 @str1_longer:
-                LDA     #$0001
+                LDA     #1
                 BRA     @store_result
 @equal:
-                LDA     #$0000
+                LDA     #0
 
 @store_result:
                 ;----------------------------------------------------------
@@ -4574,7 +4574,7 @@ QUIT_LOOP:
 ; Returns:
 ;   addr  0   word not found; addr is the original counted string address
 ;   xt    1   word found, not immediate
-;   xt   -1   word found, immediate ($FFFF)
+;   xt   -1   word found, immediate
 ;
 ; Dictionary entry layout (produced by HEADER macro):
 ;   +0  link field   (2 bytes) pointer to previous entry, 0 = end of chain
@@ -4859,7 +4859,7 @@ INTERPRET_FOUND:
 INTERPRET_COMPILE_WORD:
         ; Compiling: execute if immediate (-1), compile if normal (1)
         .word   LIT_CFA
-        .word   $FFFF                   ; -1 = immediate
+        .word   MINUS_ONE               ; -1 = immediate
         .word   EQUAL_CFA               ; ( xt flag ) true if immediate
         .word   ZBRANCH_CFA
         .word   INTERPRET_COMPILE_NORMAL
@@ -4983,7 +4983,7 @@ print_sdec:
                 CMP     #0
                 BPL     print_udec
                 ; Negative: negate value, then print minus sign
-                EOR     #$FFFF
+                EOR     #UINT_MAX
                 INC     A
                 STA     SCRATCH0
                 LDA     #'-'
@@ -5171,21 +5171,15 @@ print_udec:
 ;------------------------------------------------------------------------------
         HEADER  "HEADER>CFA", HEADERCFA_ENTRY, HEADERCFA_CFA, 0, DOT_PROMPT_ENTRY
         CODEPTR DOCOL
-        .word   DUP_CFA                ; ( header header )
-        .word   CELLPLUS_CFA           ; ( header header+2 )
-        .word   CFETCH_CFA             ; ( header flags/len )
+        .word   CELLPLUS_CFA            ; ( entry+CELL_SIZE )
+        .word   DUP_CFA                 ; ( entry+CELL_SIZE entry+CELL_SIZE )
+        .word   CFETCH_CFA              ; ( entry+CELL_SIZE flags/len )
         .word   LIT_CFA
         .word   F_LENMASK
-        .word   AND_CFA                ; ( header namelen )
-        .word   SWAP_CFA               ; ( namelen header )
-        .word   LIT_CFA
-        .word   3
-        .word   PLUS_CFA               ; ( namelen header+3 )
-        .word   PLUS_CFA               ; ( header+3+namelen )
-        .word   ONEPLUS_CFA            ; ( +1 )
-        .word   LIT_CFA
-        .word   $FFFE
-        .word   AND_CFA                ; ( cfa aligned )
+        .word   AND_CFA                 ; ( entry+CELL_SIZE namelen )
+        .word   ONEPLUS_CFA             ; Skip over length byte
+        .word   PLUS_CFA                ; ( entry+CELL_SIZE+namelen+1 )
+        .word   ALIGNED_CFA             ; ( cfa aligned )
         .word   EXIT_CFA
 
 ;------------------------------------------------------------------------------
@@ -5193,16 +5187,14 @@ print_udec:
 ;------------------------------------------------------------------------------
         HEADER  "HEADER>NAME", HEADERNAME_ENTRY, HEADERNAME_CFA, 0, HEADERCFA_ENTRY
         CODEPTR DOCOL
-        .word   DUP_CFA                 ; ( entry entry )
-        .word   CELLPLUS_CFA            ; ( entry entry+2 )
-        .word   CFETCH_CFA              ; ( entry flags+len )
+        .word   CELLPLUS_CFA            ; ( entry+CELL_SIZE )
+        .word   DUP_CFA                 ; ( entry+CELL_SIZE entry+CELL_SIZE )
+        .word   CFETCH_CFA              ; ( entry+CELL_SIZE flags/len )
         .word   LIT_CFA
         .word   F_LENMASK
-        .word   AND_CFA                 ; ( entry u )
-        .word   SWAP_CFA                ; ( u entry )
-        .word   LIT_CFA
-        .word   3
-        .word   PLUS_CFA                ; ( u entry+3 ) = c-addr
+        .word   AND_CFA                 ; ( entry+CELL_SIZE namelen )
+        .word   SWAP_CFA                ; ( u entry+CELL_SIZE )
+	.word   ONEPLUS_CFA             ; ( u entry+CELL_SIZE ) = c-addr
         .word   SWAP_CFA                ; ( c-addr u )
         .word   EXIT_CFA
 
