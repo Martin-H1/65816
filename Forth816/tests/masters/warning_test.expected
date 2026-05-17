@@ -1,0 +1,51 @@
+\ warning_test.fs - Redefinition and literal warning regression tests
+ ok 
+
+ ok 
+\ Redefinition warning
+ ok 
+: REDEF-TEST 42 ;
+ ok 
+: REDEF-TEST 99 ;        \ should print "warning: redefined REDEF-TEST"
+warning: redefined REDEF-TEST
+ ok 
+T{ REDEF-TEST -> 99 }T   \ new definition should work correctly
+ ok 
+
+ ok 
+\ Literal defined as word warning
+ ok 
+: 42 ." forty-two" ;     \ should print "warning: defined literal 42 as a word"
+warning: defined literal 42 as a word
+ ok 
+T{ 42 -> }T              \ new word should execute correctly
+forty-two ok 
+
+ ok 
+\ No warning for first definition
+ ok 
+: FIRST-DEF 1 ;
+ ok 
+T{ FIRST-DEF -> 1 }T
+ ok 
+
+ ok 
+\ No warning for non-numeric name
+ ok 
+: NOT-A-NUMBER 2 ;
+ ok 
+T{ NOT-A-NUMBER -> 2 }T
+ ok 
+
+ ok 
+\ Double literal warning
+ ok 
+: 1234. ." double" ;     \ should print "warning: defined literal 1234. as a word"
+warning: defined literal 1234. as a word
+ ok 
+T{ 1234. -> }T
+double ok 
+
+ ok 
+DONE
+###DONE###

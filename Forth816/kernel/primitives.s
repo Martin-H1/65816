@@ -5468,13 +5468,80 @@ WORDS_SKIP:
         CODEPTR DOCOL
 COLON_BODY:
         .word   BL_CFA
-        .word   WORD_CFA                ; ( addr ) parse name from input
+        .word   WORD_CFA                ; ( addr )
+
+        ; --- Check for redefinition ---
+        .word   DUP_CFA                 ; ( addr addr )
+        .word   FIND_CFA                ; ( ... addr 0 | addr xt 1 | addr xt -1)
+        .word   ZBRANCH_CFA
+        .word   COLON_NO_REDEF          ; not found
+        .word   DROP_CFA                ; drop xt ( addr )
+        .word   LIT_CFA
+        .word   redef_msg               ; ( addr msg_addr )
+        .word   CPUTS_CFA
+        .word   DUP_CFA                 ; ( addr addr )
+        .word   COUNT_CFA               ; ( addr addr u )
+        .word   TYPE_CFA
+        .word   LIT_CFA
+        .word   crlf_msg                ; ( addr msg_addr )
+        .word   CPUTS_CFA
+        .word   BRANCH_CFA
+        .word   COLON_CHECK_LIT
+COLON_NO_REDEF:
+        .word   DROP_CFA                ; drop extra addr ( addr )
+
+        ; --- Check for literal redefined as word ---
+COLON_CHECK_LIT:
+        .word   DUP_CFA                 ; ( addr addr )
+        .word   NUMBERQ_CFA             ; ( addr n 1 | addr d_lo d_hi 2 | addr addr 0 )
+        .word   QDUP_CFA                ; ( ... [ flag flag | 0 ] )
+        .word   ZBRANCH_CFA
+        .word   COLON_NO_LIT            ; 0 = not a number
+        ; It's a number — clean up and warn
+        ; flag is 1 or 2
+        .word   ONE_CFA
+        .word   EQUAL_CFA               ; ( addr n is-single? | addr d_lo d_hi is-single? )
+        .word   ZBRANCH_CFA
+        .word   COLON_LIT_DOUBLE
+        ; Single: stack is ( addr n )
+        .word   DROP_CFA                ; drop n
+        .word   BRANCH_CFA
+        .word   COLON_LIT_WARN
+COLON_LIT_DOUBLE:
+        ; Double: stack is ( addr d_lo d_hi )
+        .word   TWODROP_CFA             ; drop d_lo d_hi
+COLON_LIT_WARN:
+        ; Stack: ( addr )
+        .word   LIT_CFA
+        .word   litredef_prefix
+        .word   CPUTS_CFA
+        .word   DUP_CFA
+        .word   COUNT_CFA
+        .word   TYPE_CFA
+        .word   LIT_CFA
+        .word   litredef_suffix
+        .word   CPUTS_CFA
+        .word   BRANCH_CFA
+        .word   COLON_CREATE
+COLON_NO_LIT:
+        ; Stack: ( addr addr ) from the DUP before NUMBERQ — need one more DROP
+        .word   DROP_CFA                ; drop extra addr
+COLON_CREATE:
         .word   DOCREATE_CFA            ; ( ) build header, update LATEST and DP
         .word   LIT_CFA
         .word   DOCOL                   ; code pointer for colon definitions
         .word   COMMA_CFA               ; write DOCOL at CFA
         .word   RBRACKET_CFA            ; STATE = 1 (compile mode)
         .word   EXIT_CFA
+
+redef_msg:
+        .byte   "warning: redefined ", $00
+litredef_prefix:
+        .byte   "warning: defined literal ", $00
+litredef_suffix:
+        .byte   " as a word", C_RETURN, L_FEED, $00
+crlf_msg:
+        .byte   C_RETURN, L_FEED, $00
 
 ;------------------------------------------------------------------------------
 ; :NONAME ( -- xt ) begin anonymous definition, return xt
