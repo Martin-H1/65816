@@ -55,6 +55,14 @@ INT_MAX         = $7FFF
 MINUS_ONE       = $FFFF
 UINT_MAX        = $FFFF
 
+; Parameter stack offsets (relative to X = PSP)
+TOS     = 0
+NOS     = CELL_SIZE
+PSP2    = CELL_SIZE * 2
+PSP3    = CELL_SIZE * 3
+PSP4    = CELL_SIZE * 4
+PSP5    = CELL_SIZE * 5
+
 ; Compiler Security Numbers
 CS_BEGIN_AGAIN  = 1
 CS_IF_ELSE_THEN = 2

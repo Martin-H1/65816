@@ -133,10 +133,10 @@ QDUP_DONE:
         PUBLIC  ROT_CODE
         .a16
         .i16
-                LDA     4,X             ; a (bottom)
+                LDA     PSP2,X          ; a (bottom)
                 STA     SCRATCH0
                 PEEK_NOS                ; b
-                STA     4,X             ; bottom slot = b
+                STA     PSP2,X          ; bottom slot = b
                 PEEK_TOS                ; c (TOS)
                 PUT_NOS                 ; middle slot = c
                 LDA     SCRATCH0        ; a
@@ -152,10 +152,10 @@ QDUP_DONE:
         PUBLIC  MROT_CODE
         .a16
         .i16
-                LDA     4,X             ; a (bottom)
+                LDA     PSP2,X          ; a (bottom)
                 STA     SCRATCH0
                 PEEK_TOS                ; c (TOS)
-                STA     4,X             ; bottom slot = c
+                STA     PSP2,X          ; bottom slot = c
                 PEEK_NOS                ; b (NOS)
                 PUT_TOS                 ; TOS = b
                 LDA     SCRATCH0        ; a
@@ -186,10 +186,10 @@ QDUP_DONE:
         .i16
                 PEEK_TOS                ; b
                 PUSH                    ; TOS = b
-                LDA     4,X             ; a
+                LDA     PSP2,X          ; a
                 PUT_NOS                 ; NOS = a
                 PEEK_TOS                ; b
-                STA     4,X             ; Slot below a = b
+                STA     PSP2,X          ; Slot below a = b
                 NEXT
         ENDPUBLIC
 
@@ -229,16 +229,16 @@ QDUP_DONE:
         PUBLIC  TWOSWAP_CODE
         .a16
         .i16
-                LDA     0,X             ; d
+                LDA     TOS,X           ; d
                 STA     SCRATCH0
-                LDA     2,X             ; c
+                LDA     NOS,X           ; c
                 STA     SCRATCH1
-                LDA     4,X             ; b
-                STA     0,X
+                LDA     PSP2,X          ; b
+                STA     TOS,X
                 LDA     6,X             ; a
-                STA     2,X
+                STA     NOS,X
                 LDA     SCRATCH0        ; d
-                STA     4,X
+                STA     PSP2,X
                 LDA     SCRATCH1        ; c
                 STA     6,X
                 NEXT
@@ -429,8 +429,7 @@ calc_depth:     TXA
         PUBLIC  TWORFROM_CODE
         .a16
         .i16
-                DEX
-                DEX
+                ADVANCE
                 RPOP                    ; x2 (TOS of return stack)
                 PUSH                    ; x2 (TOS)
                 RPOP                    ; x1
@@ -523,7 +522,7 @@ calc_depth:     TXA
         .i16
                 POP                     ; b
                 CLC
-                ADC     0,X             ; a + b
+                ADC     TOS,X           ; a + b
                 PUT_TOS                 ; Replace with result
                 NEXT
         ENDPUBLIC
@@ -556,7 +555,7 @@ calc_depth:     TXA
         .i16
                 PEEK_NOS                ; a
                 SEC
-                SBC     0,X             ; a - b
+                SBC     TOS,X           ; a - b
                 DROP
                 PUT_TOS
                 NEXT
@@ -574,11 +573,11 @@ calc_depth:     TXA
         .i16
                 CLC
                 LDA     6,X             ; d1_lo
-                ADC     2,X             ; + d2_lo
+                ADC     NOS,X           ; + d2_lo
                 STA     6,X             ; result_lo
-                LDA     4,X             ; d1_hi
-                ADC     0,X             ; + d2_hi + carry
-                STA     4,X             ; result_hi
+                LDA     PSP2,X          ; d1_hi
+                ADC     TOS,X           ; + d2_hi + carry
+                STA     PSP2,X          ; result_hi
                 DROP
                 DROP                    ; drop d2 cells
                 NEXT
@@ -595,11 +594,11 @@ calc_depth:     TXA
         .i16
                 SEC
                 LDA     6,X             ; d1_lo
-                SBC     2,X             ; - d2_lo
+                SBC     NOS,X           ; - d2_lo
                 STA     6,X             ; result_lo
-                LDA     4,X             ; d1_hi
-                SBC     0,X             ; - d2_hi - borrow
-                STA     4,X             ; result_hi
+                LDA     PSP2,X          ; d1_hi
+                SBC     TOS,X           ; - d2_hi - borrow
+                STA     PSP2,X          ; result_hi
                 DROP
                 DROP                    ; drop d2 cells
                 NEXT
@@ -688,24 +687,24 @@ calc_depth:     TXA
 ; On exit: NOS = ud_low, TOS = ud_high   (ANS Forth convention)
 ;
 ; Algorithm: shift-and-add over a 32-bit accumulator.
-;   TMPA      = multiplier   (16-bit, shifted right)
-;   TMPB      = multiplicand low  word (shifted left, carry tracked below)
-;   SCRATCH1  = multiplicand high word (starts 0; receives carry from TMPB)
-;   SCRATCH0  = product low  word (accumulator)
-;   2,X slot  = product high word (accumulator, kept on stack)
+;   TMPA       = multiplier   (16-bit, shifted right)
+;   TMPB       = multiplicand low  word (shifted left, carry tracked below)
+;   SCRATCH1   = multiplicand high word (starts 0; receives carry from TMPB)
+;   SCRATCH0   = product low  word (accumulator)
+;   NOS,X slot = product high word (accumulator, kept on stack)
 ;------------------------------------------------------------------------------
         HEADER  "UM*", UMSTAR_ENTRY, UMSTAR_CFA, 0, STAR_ENTRY
         CODEPTR UMSTAR_CODE
         PUBLIC  UMSTAR_CODE
         .a16
         .i16
-                LDA     0,X             ; u2 → TMPA (multiplier)
+                LDA     TOS,X           ; u2 → TMPA (multiplier)
                 STA     TMPA
-                LDA     2,X             ; u1 → TMPB (multiplicand low)
+                LDA     NOS,X           ; u1 → TMPB (multiplicand low)
                 STA     TMPB
                 STZ     SCRATCH1        ; multiplicand high = 0
                 STZ     SCRATCH0        ; product low  = 0
-                STZ     0,X             ; product high = 0  (reuse TOS slot)
+                STZ     TOS,X           ; product high = 0  (reuse TOS slot)
 .ifndef UNROLL
                 PHY                     ; save IP
                 LDY     #16             ; 16 iterations
@@ -718,14 +717,14 @@ calc_depth:     TXA
                 LSR     TMPA            ; multiplier >>= 1; old LSB → carry
                 BCC     @skip           ; bit 0 was 0, nothing to add
 
-                ; Add 32-bit multiplicand (SCRATCH1:TMPB) to prod (0,X:SCRATCH0)
+                ; Add 32-bit multiplicand (SCRATCH1:TMPB) to prod (TOS:SCRATCH0)
                 CLC
                 LDA     SCRATCH0
                 ADC     TMPB            ; product_low  += multiplicand_low
                 STA     SCRATCH0
-                LDA     0,X
+                LDA     TOS,X
                 ADC     SCRATCH1        ; product_high += multiplicand_high + c
-                STA     0,X
+                STA     TOS,X
 @skip:
                 ; Shift 32-bit multiplicand left
                 ASL     TMPB            ; multiplicand_low <<= 1
@@ -757,7 +756,7 @@ calc_depth:     TXA
                 ; Place results on parameter stack:
                 ;   TOS = ud_high, NOS = ud_low
                 LDA     SCRATCH0
-                STA     2,X             ; NOS = low
+                STA     NOS,X           ; NOS = low
 .ifndef UNROLL
                 PLY                     ; restore IP
 .endif
@@ -768,13 +767,13 @@ calc_depth:     TXA
 ; UM/MOD ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
 ; UNDEFINED if quotient overflows 16 bits (i.e. ud_high >= u)
 ; Entry stack: ( ud_low ud_high divisor -- )
-;   0,X = divisor  (u)
-;   2,X = ud_high  (high cell of 32-bit dividend)
-;   4,X = ud_low   (low cell of 32-bit dividend)
+;   TOS,X = divisor  (u)
+;   NOS,X = ud_high  (high cell of 32-bit dividend)
+;   4,X   = ud_low   (low cell of 32-bit dividend)
 ;
 ; Exit stack: ( remainder quotient )
-;   0,X = quotient
-;   2,X = remainder
+;   TOS,X = quotient
+;   NOS,X = remainder
 ; https://forth-standard.org/standard/core/UMDivMOD
 ;------------------------------------------------------------------------------
         HEADER  "UM/MOD", UMSLASHMOD_ENTRY, UMSLASHMOD_CFA, 0, UMSTAR_ENTRY
@@ -792,16 +791,16 @@ calc_depth:     TXA
 ; Called via JSR from UM/MOD and SLASHMOD_IMPL.
 ;
 ; Entry stack layout (X = PSP before JSR):
-;   0,X = divisor  (u16)
-;   2,X = ud_high  (high cell of 32-bit dividend)
-;   4,X = ud_low   (low  cell of 32-bit dividend)
+;   TOS,X = divisor  (u16)
+;   NOS,X = ud_high  (high cell of 32-bit dividend)
+;   4,X   = ud_low   (low  cell of 32-bit dividend)
 ;
 ; Exit stack layout (after internal INX/INX that pops divisor):
-;   0,X = quotient   (u16)
-;   2,X = remainder  (u16)
+;   TOS,X = quotient   (u16)
+;   NOS,X = remainder  (u16)
 ;
 ; Algorithm: restoring shift-and-subtract, 16 iterations.
-;   We treat the pair (2,X  remainder:quotient 0,X) as a single 32-bit
+;   We treat the pair (NOS,X  remainder:quotient TOS,X) as a single 32-bit
 ;   shift register.  Each iteration:
 ;     1. Shift 32-bit register left 1 bit:
 ;          ASL quotient_slot   → old bit 15 goes to carry
@@ -817,8 +816,8 @@ calc_depth:     TXA
         .i16
                 POP                     ; load divisor
                 STA     TMPA            ; TMPA = divisor
-                ; Now: 0,X = ud_high (remainder register)
-                ;      2,X = ud_low  (quotient register)
+                ; Now: TOS,X = ud_high (remainder register)
+                ;      NOS,X = ud_low  (quotient register)
 .ifndef UNROLL
                 PHY                     ; save IP
                 LDY     #16             ; 16 iterations
@@ -827,14 +826,14 @@ calc_depth:     TXA
 .macro SHIFTSUB32
 .scope
 .endif
-                ASL     2,X             ; quotient  <<= 1; old bit15 → carry
-                ROL     0,X             ; remainder <<= 1; carry → bit0
-                LDA     0,X             ; current remainder
+                ASL     NOS,X           ; quotient  <<= 1; old bit15 → carry
+                ROL     TOS,X           ; remainder <<= 1; carry → bit0
+                LDA     TOS,X           ; current remainder
                 SEC
                 SBC     TMPA            ; remainder - divisor
                 BCC     @restore        ; borrow → remainder < divisor, skip
-                STA     0,X             ; update remainder
-                INC     2,X             ; set quotient LSB
+                STA     TOS,X             ; update remainder
+                INC     NOS,X           ; set quotient LSB
 @restore:
 .ifndef UNROLL
                 DEY
@@ -860,14 +859,14 @@ calc_depth:     TXA
                 SHIFTSUB32
                 SHIFTSUB32
 .endif
-                ; 0,X = remainder, 2,X = quotient
+                ; TOS,X = remainder, NOS,X = quotient
                 ; swap to ANS order TOS=quotient NOS=remainder
-                LDA     0,X
+                LDA     TOS,X
                 STA     SCRATCH0
-                LDA     2,X
-                STA     0,X
+                LDA     NOS,X
+                STA     TOS,X
                 LDA     SCRATCH0
-                STA     2,X
+                STA     NOS,X
 .ifndef UNROLL
                 PLY                     ; restore IP
 .endif
@@ -927,53 +926,53 @@ calc_depth:     TXA
         SMREM_SIGN  = 5                 ; saved sign indicator (d-high XOR n)
 
                 ; Save sign indicator, d-high, and n
-                LDA     2,X             ; d-high
-                EOR     0,X             ; XOR with n for sign indicator
+                LDA     NOS,X           ; d-high
+                EOR     TOS,X           ; XOR with n for sign indicator
                 PHA                     ; SMREM_SIGN
-                LDA     2,X             ; d-high
+                LDA     NOS,X           ; d-high
                 PHA                     ; SMREM_DHIGH
-                LDA     0,X             ; n
+                LDA     TOS,X           ; n
                 PHA                     ; SMREM_N
 
                 ; Take absolute value of n
-                LDA     0,X
+                LDA     TOS,X
                 BPL     @n_pos
                 EOR     #UINT_MAX
                 INC     A
-                STA     0,X
+                STA     TOS,X
 @n_pos:
                 ; Take absolute value of 32-bit dividend
-                LDA     2,X             ; d-high
+                LDA     NOS,X           ; d-high
                 BPL     @d_pos
-                LDA     4,X             ; d-low
+                LDA     PSP2,X          ; d-low
                 EOR     #UINT_MAX       ; invert
                 CLC
                 ADC     #1              ; +1, carry set if result = 0
-                STA     4,X
-                LDA     2,X             ; d-high
+                STA     PSP2,X
+                LDA     NOS,X           ; d-high
                 EOR     #UINT_MAX       ; invert
                 ADC     #0              ; add carry
-                STA     2,X
+                STA     NOS,X
 @d_pos:
                 JSR     UMSLASHMOD_IMPL ; ( rem quot )
 
                 ; Apply sign to quotient: sign(d-high XOR n)
                 LDA     SMREM_SIGN,S
                 BPL     @quot_pos
-                LDA     0,X
+                LDA     TOS,X
                 BEQ     @quot_pos
                 EOR     #UINT_MAX
                 INC     A
-                STA     0,X
+                STA     TOS,X
 @quot_pos:
                 ; Apply sign to remainder: sign of original d-high
                 LDA     SMREM_DHIGH,S
                 BPL     @rem_pos
-                LDA     2,X
+                LDA     NOS,X
                 BEQ     @rem_pos
                 EOR     #UINT_MAX
                 INC     A
-                STA     2,X
+                STA     NOS,X
 @rem_pos:
                 PLA                     ; drop SMREM_N
                 PLA                     ; drop SMREM_DHIGH
@@ -993,22 +992,22 @@ calc_depth:     TXA
         PUBLIC  FMMOD_CODE
         .a16
         .i16
-                LDA     2,X             ; d-high
-                EOR     0,X             ; sign indicator
+                LDA     NOS,X           ; d-high
+                EOR     TOS,X           ; sign indicator
                 PHA                     ; save sign indicator
-                LDA     0,X             ; n
+                LDA     TOS,X           ; n
                 PHA                     ; save n
                 JSR     SMREM_IMPL      ; ( rem quot )
                 ; Floor correction
                 LDA     3,S             ; sign indicator
                 BPL     @done           ; same signs → no correction
-                LDA     2,X             ; remainder
+                LDA     NOS,X           ; remainder
                 BEQ     @done           ; zero → no correction
-                DEC     0,X             ; quot -= 1
-                LDA     2,X
+                DEC     TOS,X           ; quot -= 1
+                LDA     NOS,X
                 CLC
                 ADC     1,S             ; rem += n
-                STA     2,X
+                STA     NOS,X
 @done:
                 PLA                     ; drop n
                 PLA                     ; drop sign indicator
@@ -1068,7 +1067,7 @@ DABS_DONE:
         .a16
         .i16
                 PEEK_NOS                ; a
-                CMP     0,X             ; a - b (signed)
+                CMP     TOS,X           ; a - b (signed)
                 BPL     @endif          ; a >= b, a is max
                 PEEK_TOS                ; a < b, overwrite a with b
                 PUT_NOS
@@ -1085,7 +1084,7 @@ DABS_DONE:
         .a16
         .i16
                 PEEK_NOS                ; a
-                CMP     0,X             ; a - b (signed)
+                CMP     TOS,X           ; a - b (signed)
                 BMI     @endif          ; a < b, a is min
                 PEEK_TOS                ; a >= b, overwrite a with b
                 PUT_NOS
@@ -1101,7 +1100,7 @@ DABS_DONE:
         PUBLIC  ONEPLUS_CODE
         .a16
         .i16
-                INC     0,X
+                INC     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1113,7 +1112,7 @@ DABS_DONE:
         PUBLIC  ONEMINUS_CODE
         .a16
         .i16
-                DEC     0,X
+                DEC     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1125,7 +1124,7 @@ DABS_DONE:
         PUBLIC  TWOSTAR_CODE
         .a16
         .i16
-                ASL     0,X
+                ASL     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1186,15 +1185,14 @@ DABS_DONE:
         PUBLIC  STOD_CODE
         .a16
         .i16
-                DEX
-                DEX
+                ADVANCE
                 PEEK_NOS                ; n
                 BPL     @positive
                 LDA     #MINUS_ONE      ; negative → high cell = -1
                 PUT_TOS
                 NEXT
 @positive:
-                STZ     0,X             ; positive → high cell = 0
+                STZ     TOS,X           ; positive → high cell = 0
                 NEXT
         ENDPUBLIC
 
@@ -1223,7 +1221,7 @@ DABS_DONE:
                 INC     A               ; +1
                 PUT_NOS
                 BNE     @done           ; no carry
-                INC     0,X             ; propagate carry to high cell
+                INC     TOS,X           ; propagate carry to high cell
 @done:          NEXT
         ENDPUBLIC
 
@@ -1349,9 +1347,9 @@ MSTARS_THEN:
         .a16
         .i16
                 POP
-                CMP     0,X
+                CMP     TOS,X
                 BEQ     @true
-                STZ     0,X
+                STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
                 PUT_TOS
@@ -1367,9 +1365,9 @@ MSTARS_THEN:
         .a16
         .i16
                 POP
-                CMP     0,X
+                CMP     TOS,X
                 BNE     @true
-                STZ     0,X
+                STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
                 PUT_TOS
@@ -1386,7 +1384,7 @@ MSTARS_THEN:
         .i16
                 PEEK_NOS                ; a
                 SEC
-                SBC     0,X             ; a - b
+                SBC     TOS,X           ; a - b
                 BVS     @overflow       ; Overflow-aware signed compare
                 BMI     @true           ; result negative and no overflow = a<b
                 LDA     #FORTH_FALSE    ; Set TOS to false
@@ -1412,7 +1410,7 @@ MSTARS_THEN:
         .i16
                 PEEK_TOS                ; b
                 SEC
-                SBC     2,X             ; b - a (reversed for >)
+                SBC     NOS,X           ; b - a (reversed for >)
                 BVS     @overflow       ; Overflow-aware signed compare
                 BMI     @true           ; like the previous function
                 LDA     #FORTH_FALSE    ; Set TOS to false
@@ -1437,10 +1435,10 @@ MSTARS_THEN:
         .a16
         .i16
                 PEEK_NOS                ; u1
-                CMP     0,X             ; u1 - u2 (unsigned)
+                CMP     TOS,X           ; u1 - u2 (unsigned)
                 DROP
                 BCC     @true           ; Carry clear = u1 < u2
-                STZ     0,X
+                STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
                 PUT_TOS
@@ -1456,9 +1454,9 @@ MSTARS_THEN:
         .a16
         .i16
                 POP                     ; u2
-                CMP     0,X             ; u2 - u1 (reversed)
+                CMP     TOS,X           ; u2 - u1 (reversed)
                 BCC     @true
-                STZ     0,X
+                STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
                 PUT_TOS
@@ -1478,7 +1476,7 @@ MSTARS_THEN:
                 LDA     #FORTH_TRUE
                 PUT_TOS
                 NEXT
-@false:         STZ     0,X
+@false:         STZ     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1495,7 +1493,7 @@ MSTARS_THEN:
                 LDA     #FORTH_TRUE
                 PUT_TOS
                 NEXT
-@false:         STZ     0,X
+@false:         STZ     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1510,7 +1508,7 @@ MSTARS_THEN:
                 PEEK_TOS
                 BEQ     @false
                 BPL     @true
-@false:         STZ     0,X
+@false:         STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
                 PUT_TOS
@@ -1542,10 +1540,10 @@ MSTARS_THEN:
         .a16
         .i16
                 LDA     6,X             ; d1_lo
-                CMP     2,X             ; d2_lo
+                CMP     NOS,X           ; d2_lo
                 BNE     @false
-                LDA     4,X             ; d1_hi
-                CMP     0,X             ; d2_hi
+                LDA     PSP2,X          ; d1_hi
+                CMP     TOS,X           ; d2_hi
                 BNE     @false
                 LDA     #FORTH_TRUE
                 BRA     @return
@@ -1588,13 +1586,13 @@ MSTARS_THEN:
         .a16
         .i16
                 ; Compare high cells first
-                LDA     4,X             ; ud1_hi
-                CMP     0,X             ; ud2_hi
+                LDA     PSP2,X          ; ud1_hi
+                CMP     TOS,X           ; ud2_hi
                 BCC     @true           ; ud1_hi < ud2_hi unsigned
                 BNE     @false          ; ud1_hi > ud2_hi
                 ; High cells equal, compare low cells
                 LDA     6,X             ; ud1_lo
-                CMP     2,X             ; ud2_lo
+                CMP     NOS,X           ; ud2_lo
                 BCC     @true
 @false:
                 LDA     #FORTH_FALSE
@@ -1621,9 +1619,9 @@ MSTARS_THEN:
         .a16
         .i16
                 ; Compare high cells (signed)
-                LDA     4,X             ; d1_hi
+                LDA     PSP2,X          ; d1_hi
                 SEC
-                SBC     0,X             ; d1_hi - d2_hi
+                SBC     TOS,X           ; d1_hi - d2_hi
                 BEQ     @equal_hi       ; high cells equal, check low
                 BVS     @overflow
                 BMI     @true           ; negative, no overflow -> d1 < d2
@@ -1634,7 +1632,7 @@ MSTARS_THEN:
 @equal_hi:
                 ; High cells equal: unsigned compare of low cells
                 LDA     6,X             ; d1_lo
-                CMP     2,X             ; d2_lo
+                CMP     NOS,X           ; d2_lo
                 BCC     @true
 @false:
                 LDA     #FORTH_FALSE
@@ -1728,7 +1726,7 @@ DMIN_THEN:
         .a16
         .i16
                 POP
-                AND     0,X
+                AND     TOS,X
                 PUT_TOS
                 NEXT
         ENDPUBLIC
@@ -1742,7 +1740,7 @@ DMIN_THEN:
         .a16
         .i16
                 POP
-                ORA     0,X
+                ORA     TOS,X
                 PUT_TOS
                 NEXT
         ENDPUBLIC
@@ -1756,7 +1754,7 @@ DMIN_THEN:
         .a16
         .i16
                 POP
-                EOR     0,X
+                EOR     TOS,X
                 PUT_TOS
                 NEXT
         ENDPUBLIC
@@ -1787,7 +1785,7 @@ DMIN_THEN:
                 PHY                     ; Save IP (TAY below clobbers it)
                 TAY
                 BEQ     @done
-                LDA     0,X
+                LDA     TOS,X
 @loop:          ASL     A
                 DEY
                 BNE     @loop
@@ -1927,7 +1925,7 @@ DMIN_THEN:
                 STA     SCRATCH1
                 PEEK_NOS                ; low cell of d
                 STA     (SCRATCH0)      ; store at addr
-                LDA     4,X             ; high cell of d
+                LDA     PSP2,X          ; high cell of d
                 STA     (SCRATCH1)      ; store at addr+2
                 TXA
                 ADC     #3*CELL_SIZE    ; drop 3 cells (carry still clear from above)
@@ -2465,7 +2463,7 @@ DMIN_THEN:
                 LDY     #U_DP
                 LDA     (UP),Y          ; Fetch DP indirect
                 CLC
-                ADC     0,X             ; Advance to DP + n
+                ADC     TOS,X           ; Advance to DP + n
                 STA     (UP),Y          ; Store new DP
                 PLY
                 DROP                    ; Drop n
@@ -2819,7 +2817,7 @@ DMIN_THEN:
                 LDA     (SCRATCH0)      ; Length byte is at start of string
                 ON16MEM
                 AND     #$00FF          ; Mask off B part of accumulator
-                INC     0,X             ; addr+1 on TOS (in place, no load/store)
+                INC     TOS,X           ; addr+1 on TOS (in place, no load/store)
                 PUSH                    ; Push length
                 NEXT
         ENDPUBLIC
@@ -3024,7 +3022,7 @@ SQUOTE_INTERP:                          ; ( c-addr u )
 
 @return:
                 LDA     LOC_COUNT
-                STA     a:0,X           ; put u' (TOS)
+                STA     a:TOS,X         ; put u' (TOS)
 
                 TSC
                 CLC
@@ -3251,7 +3249,7 @@ DOTQUOTE_INTERP:                        ; ( c-addr u )
         .a16
         .i16
                 ; Pop flag
-                LDA     a:0,X
+                LDA     a:TOS,X
                 INX
                 INX
 
@@ -3463,7 +3461,7 @@ ABORTQUOTE_CLOOP:
 
                 ; Fetch char at scan pointer
                 LDA     (SCRATCH0),Y
-                CMP     0,X             ; matches delimiter?
+                CMP     TOS,X           ; matches delimiter?
                 BNE     @done           ; no → stop skipping
 
                 INY                     ; >IN++
@@ -3572,7 +3570,7 @@ ABORTQUOTE_CLOOP:
                 ;--------------------------------------------------------------
                 ; Peek delimiter
                 ;--------------------------------------------------------------
-                LDA     a:0,X
+                LDA     a:TOS,X
                 AND     #$00FF
                 STA     LOC_CHAR
 
@@ -3657,12 +3655,11 @@ ABORTQUOTE_CLOOP:
                 CLC
                 ADC     LOC_TOIN
 
-                STA     a:0,X           ; overwrite TOS with c-addr
+                STA     a:TOS,X         ; overwrite TOS with c-addr
 
                 PLA                     ; restore u
-                DEX
-                DEX
-                STA     a:0,X           ; push u (TOS)
+                ADVANCE
+                STA     a:TOS,X         ; push u (TOS)
 
                 TSC
                 CLC
@@ -3790,9 +3787,9 @@ HEX_BODY:
                 ; Load stack args into frame
                 ; Stack on entry: ( ud_lo ud_hi c-addr u ) TOS=u
                 ;--------------------------------------------------------------
-                LDA     a:0,X           ; u
+                LDA     a:TOS,X         ; u
                 STA     LOC_U
-                LDA     a:2,X           ; c-addr
+                LDA     a:NOS,X         ; c-addr
                 STA     LOC_ADDR
                 LDA     a:4,X           ; ud_hi
                 STA     LOC_UDHI
@@ -3851,13 +3848,11 @@ HEX_BODY:
                 PHA                     ; save digit on hw stack
                 ; --- Step 1: ud_lo * BASE via UM* ---
                 LDA     LOC_UDLO
-                DEX
-                DEX
-                STA     a:0,X           ; push ud_lo
+                ADVANCE
+                STA     a:TOS,X         ; push ud_lo
                 LDA     LOC_BASE
-                DEX
-                DEX
-                STA     a:0,X           ; push BASE
+                ADVANCE
+                STA     a:TOS,X         ; push BASE
 
                 PHD
                 LDA     #$0000
@@ -3868,13 +3863,11 @@ HEX_BODY:
 
                 ; --- Step 2: ud_hi * BASE via UM* ---
                 LDA     LOC_UDHI        ; D -> frame, safe to use LOC_ names
-                DEX
-                DEX
-                STA     a:0,X           ; push ud_hi
+                ADVANCE
+                STA     a:TOS,X         ; push ud_hi
                 LDA     LOC_BASE
-                DEX
-                DEX
-                STA     a:0,X           ; push BASE
+                ADVANCE
+                STA     a:TOS,X         ; push BASE
 
                 PHD
                 LDA     #$0000
@@ -3889,10 +3882,10 @@ HEX_BODY:
 
                 ; --- Step 3: prod_hi += ud_hi * BASE low word ---
                 CLC
-                LDA     a:0,X           ; ud_hi*BASE_lo (TOS)
+                LDA     a:TOS,X         ; ud_hi*BASE_lo (TOS)
                 INX
                 INX                     ; drop it
-                ADC     a:0,X           ; prod_hi (now TOS)
+                ADC     a:TOS,X         ; prod_hi (now TOS)
                 INX
                 INX                     ; drop prod_hi
                 STA     LOC_UDHI        ; store updated ud_hi into frame
@@ -3900,7 +3893,7 @@ HEX_BODY:
                 ; --- Step 4: prod_lo += digit ---
                 PLA                     ; restore digit
                 CLC
-                ADC     a:0,X           ; prod_lo (now TOS)
+                ADC     a:TOS,X         ; prod_lo (now TOS)
                 INX
                 INX                     ; drop prod_lo
                 STA     LOC_UDLO        ; store updated ud_lo into frame
@@ -3922,9 +3915,9 @@ HEX_BODY:
                 LDA     LOC_UDHI
                 STA     a:4,X
                 LDA     LOC_ADDR
-                STA     a:2,X
+                STA     a:NOS,X
                 LDA     LOC_U
-                STA     a:0,X
+                STA     a:TOS,X
 
                 TSC
                 CLC
@@ -3973,7 +3966,7 @@ HEX_BODY:
                 ;--------------------------------------------------------------
                 ; Save original addr, load length, set up pointer
                 ;--------------------------------------------------------------
-                LDA     a:0,X           ; c-addr
+                LDA     a:TOS,X         ; c-addr
                 STA     LOC_ADDR
                 INC     A               ; Advance ptr to first char
                 STA     LOC_PTR
@@ -4073,18 +4066,15 @@ HEX_BODY:
                 ; TOS=u, NOS=c-addr, NOS2=ud_hi=0, NOS3=ud_lo=0
                 ;--------------------------------------------------------------
                 LDA     #0
-                STA     a:0,X           ; ud_lo (reuse existing TOS slot)
-                DEX
-                DEX
-                STA     a:0,X           ; ud_hi
+                STA     a:TOS,X         ; ud_lo (reuse existing TOS slot)
+                ADVANCE
+                STA     a:TOS,X         ; ud_hi
                 LDA     LOC_PTR         ; c-addr (first digit)
-                DEX
-                DEX
-                STA     a:0,X
+                ADVANCE
+                STA     a:TOS,X
                 LDA     LOC_COUNT       ; u
-                DEX
-                DEX
-                STA     a:0,X           ; TOS = u
+                ADVANCE
+                STA     a:TOS,X         ; TOS = u
 
                 JSR     TONUMBER_IMPL   ; ( ud_lo ud_hi c-addr u )
 
@@ -4098,7 +4088,7 @@ HEX_BODY:
                 ;--------------------------------------------------------------
                 ; Check u = 0 (all chars consumed = success)
                 ;--------------------------------------------------------------
-                LDA     a:0,X           ; u remaining
+                LDA     a:TOS,X         ; u remaining
                 TAY
                 INX                     ; drop u
                 INX
@@ -4112,22 +4102,22 @@ HEX_BODY:
 
                 ; Single: ud_hi must be zero for a valid single-cell number.
                 ; If ud_hi != 0 the number overflowed a cell -> fail.
-                LDA     a:0,X           ; ud_hi
+                LDA     a:TOS,X         ; ud_hi
                 BNE     @fail_overflow
 
 @apply_sign:    LDA     LOC_SIGN        ; Apply sign to 32-bit result
                 BEQ     @positive
 
                 ; Negate 32-bit: invert both cells, add 1 to low cell
-                LDA     a:2,X           ; ud_lo
+                LDA     a:NOS,X         ; ud_lo
                 EOR     #UINT_MAX
-                STA     a:2,X
-                LDA     a:0,X           ; ud_hi
+                STA     a:NOS,X
+                LDA     a:TOS,X         ; ud_hi
                 EOR     #UINT_MAX
-                STA     a:0,X
-                INC     a:2,X           ; ud_lo + 1
+                STA     a:TOS,X
+                INC     a:NOS,X         ; ud_lo + 1
                 BNE     @positive
-                INC     a:0,X           ; carry into ud_hi
+                INC     a:TOS,X         ; carry into ud_hi
 @positive:
                 ;--------------------------------------------------------------
                 ; Return result
@@ -4153,12 +4143,11 @@ HEX_BODY:
                 INX
 @fail_return:
                 LDA     LOC_ADDR
-                STA     a:0,X
+                STA     a:TOS,X
                 LDA     #FORTH_FALSE
 @return:
-                DEX
-                DEX
-                STA     a:0,X           ; push flag
+                ADVANCE
+                STA     a:TOS,X         ; push flag
 
                 TSC
                 CLC
@@ -4448,11 +4437,11 @@ QUIT_LOOP:
 ;   All other characters stored if buffer not full, echoed to terminal.
 ;
 ; Stack on entry (X = PSP):
-;   0,X = maxlen
-;   2,X = addr
+;   TOS,X = maxlen
+;   NOS,X = addr
 ;
 ; Stack on exit:
-;   0,X = actual (character count)
+;   TOS,X = actual (character count)
 ;------------------------------------------------------------------------------
         HEADER  "ACCEPT", ACCEPT_ENTRY, ACCEPT_CFA, 0, REFILL_ENTRY
         CODEPTR ACCEPT_CODE
@@ -4479,9 +4468,9 @@ QUIT_LOOP:
                 TCD                     ; DP -> stack frame
 
                 ; Pop arguments from parameter stack using absolute addressing
-                LDA     a:0,X           ; maxlen
+                LDA     a:TOS,X         ; maxlen
                 STA     LOC_MAXLEN
-                LDA     a:2,X           ; addr
+                LDA     a:NOS,X         ; addr
                 STA     LOC_BUF
                 ; Drop both cells from parameter stack
                 TXA
@@ -4551,9 +4540,8 @@ QUIT_LOOP:
 
 @return:
                 LDA     LOC_COUNT       ; actual character count = result
-                DEX                     ; Push result onto parameter stack
-                DEX
-                STA     a:0,X
+                ADVANCE                 ; Push result onto parameter stack
+                STA     a:TOS,X
 
                 ; Tear down frame, restore IP and DP
                 TSC
@@ -4622,7 +4610,7 @@ QUIT_LOOP:
                 ;--------------------------------------------------------------
                 ; Load input addr from TOS, cache name length
                 ;--------------------------------------------------------------
-                LDA     a:0,X           ; addr (counted string)
+                LDA     a:TOS,X         ; addr (counted string)
                 STA     LOC_ADDR
 
                 OFF16MEM
@@ -4712,7 +4700,7 @@ QUIT_LOOP:
 
                 ; Push xt then flag
                 LDA     LOC_CFA
-                STA     a:0,X           ; Replace addr on TOS with xt
+                STA     a:TOS,X         ; Replace addr on TOS with xt
                 LDA     LOC_RESULT
                 BRA     @return
 
@@ -4728,16 +4716,15 @@ QUIT_LOOP:
                 ; Not found: leave original addr on stack, push 0
                 ;--------------------------------------------------------------
 @not_found:
-                ; addr is still at a:0,X (untouched)
+                ; addr is still at a:TOS,X (untouched)
                 LDA     #FORTH_FALSE    ; 0
 
                 ;--------------------------------------------------------------
                 ; Single return path
                 ;--------------------------------------------------------------
 @return:
-                DEX                     ; Push flag onto parameter stack
-                DEX
-                STA     a:0,X
+                ADVANCE                 ; Push flag onto parameter stack
+                STA     a:TOS,X
                 TSC                     ; Tear down frame
                 CLC
                 ADC     #LOC_SIZE
@@ -5125,9 +5112,8 @@ print_udec:
 @print_loop:    TXA                     ; Print stack items bottom to top.
                 CMP     1,S
                 BEQ     @ds_done
-                DEX
-                DEX
-                LDA     0,X
+                ADVANCE
+                LDA     TOS,X
                 STA     SCRATCH0
                 JSR     DOT_CODE::print_sdec
                 LDA     #SPACE
@@ -5194,7 +5180,7 @@ print_udec:
         CELL    F_LENMASK
         CELL    AND_CFA                 ; ( entry+CELL_SIZE namelen )
         CELL    SWAP_CFA                ; ( u entry+CELL_SIZE )
-	CELL    ONEPLUS_CFA             ; ( u entry+CELL_SIZE ) = c-addr
+        CELL    ONEPLUS_CFA             ; ( u entry+CELL_SIZE ) = c-addr
         CELL    SWAP_CFA                ; ( c-addr u )
         CELL    EXIT_CFA
 
@@ -5331,7 +5317,7 @@ WORDS_SKIP:
                 STA     LOC_UP
 
                 ; --- Pop addr from parameter stack into LOC_ENTRY ---
-                LDA     a:0,X           ; addr of counted string (from WORD)
+                LDA     a:TOS,X         ; addr of counted string (from WORD)
                 INX
                 INX
                 STA     LOC_ENTRY       ; save as new entry address
@@ -6189,7 +6175,7 @@ ACTIONOF_ERROR:
         .a16
         .i16
                 POP                     ; pop val (TOS)
-                CMP     0,X             ; peek n (NOS)
+                CMP     TOS,X           ; peek n (NOS)
                 BNE     @nomatch
 
                 ; Match: drop n
@@ -6399,7 +6385,7 @@ ENDCASE_LEAVE:
         .a16
         .i16
                 PEEK_NOS                ; limit
-                CMP     0,X             ; index
+                CMP     TOS,X           ; index
                 BNE     @enter_loop     ; limit <> index so enter loop
                 ; limit = index: skip loop, jump to leave target
                 DROP                    ; drop index
