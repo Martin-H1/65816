@@ -1942,7 +1942,7 @@ DMIN_THEN:
         CODEPTR DOCOL
         CELL    ONEPLUS_CFA
         CELL    LIT_CFA
-        CELL    $FFFE
+        CELL    (UINT_MAX - 1)
         CELL    AND_CFA
         CELL    EXIT_CFA
 
@@ -2419,7 +2419,7 @@ DMIN_THEN:
                 LDY     #U_DP
                 LDA     (UP),Y          ; fetch DP
                 INC     A               ; round up
-                AND     #$FFFE          ; align to even
+                AND     #(UINT_MAX - 1) ; align to even
                 STA     (UP),Y          ; write back
                 PLY
                 NEXT
@@ -2833,7 +2833,7 @@ DMIN_THEN:
                 CLC
                 ADC     SCRATCH0        ; IP + u
                 INC     A               ; round up
-                AND     #$FFFE          ; align to even
+                AND     #(UINT_MAX - 1) ; align to even
                 TAY                     ; IP updated
 
                 LDA     SCRATCH0        ; restore u
@@ -3098,7 +3098,7 @@ SBACKSLASH_INTERP:
                 CLC
                 ADC     SCRATCH0        ; + string length
                 INC     A               ; round up
-                AND     #$FFFE          ; align to even
+                AND     #(UINT_MAX - 1) ; align to even
                 TAY                     ; IP updated
                 NEXT
         ENDPUBLIC
@@ -3174,7 +3174,7 @@ CQUOTE_INTERP:                          ; ( c-addr u )
                 CLC
                 ADC     SCRATCH0        ; IP + u
                 INC     A               ; round up
-                AND     #$FFFE          ; align to even
+                AND     #(UINT_MAX - 1) ; align to even
                 TAY                     ; IP updated
 
                 NEXT
@@ -3272,7 +3272,7 @@ DOTQUOTE_INTERP:                        ; ( c-addr u )
                 CLC
                 ADC     SCRATCH0        ; IP + u
                 INC     A               ; round up
-                AND     #$FFFE          ; align to even
+                AND     #(UINT_MAX - 1) ; align to even
                 TAY
                 NEXT
         ENDPUBLIC
@@ -4664,7 +4664,7 @@ QUIT_LOOP:
                 ADC     #3              ; Skip link(2) + flags|len(1)
                 ADC     LOC_LEN         ; Skip name bytes
                 INC     A               ; Round up: if odd, +1 makes even;
-                AND     #$FFFE          ; if even, +1 then mask gives same even
+                AND     #(UINT_MAX - 1) ; if even, +1 then mask gives same even
                 STA     LOC_CFA         ; LOC_CFA = CFA (execution token)
 
                 ; Determine result flag from F_IMMEDIATE
