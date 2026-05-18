@@ -105,10 +105,10 @@ QDUP_DONE:
         .i16
                 LDA     TOS,X           ; b (TOS)
                 STA     SCRATCH0
-                PEEK_NOS                ; a (NOS)
-                PUT_TOS                 ; TOS = a
+                LDA     NOS,X           ; a (NOS)
+                STA     TOS,X           ; TOS = a
                 LDA     SCRATCH0        ; b
-                PUT_NOS                 ; NOS = b
+                STA     NOS,X           ; NOS = b
                 NEXT
         ENDPUBLIC
 
@@ -120,7 +120,7 @@ QDUP_DONE:
         PUBLIC  OVER_CODE
         .a16
         .i16
-                PEEK_NOS                ; a (NOS)
+                LDA     NOS,X           ; a (NOS)
                 PUSH                    ; Push copy of a
                 NEXT
         ENDPUBLIC
@@ -135,12 +135,12 @@ QDUP_DONE:
         .i16
                 LDA     PSP2,X          ; a (bottom)
                 STA     SCRATCH0
-                PEEK_NOS                ; b
+                LDA     NOS,X           ; b
                 STA     PSP2,X          ; bottom slot = b
                 LDA     TOS,X           ; c (TOS)
-                PUT_NOS                 ; middle slot = c
+                STA     NOS,X           ; middle slot = c
                 LDA     SCRATCH0        ; a
-                PUT_TOS                 ; TOS = a
+                STA     TOS,X           ; TOS = a
                 NEXT
         ENDPUBLIC
 
@@ -156,10 +156,10 @@ QDUP_DONE:
                 STA     SCRATCH0
                 LDA     TOS,X           ; c (TOS)
                 STA     PSP2,X          ; bottom slot = c
-                PEEK_NOS                ; b (NOS)
-                PUT_TOS                 ; TOS = b
+                LDA     NOS,X           ; b (NOS)
+                STA     TOS,X           ; TOS = b
                 LDA     SCRATCH0        ; a
-                PUT_NOS                 ; NOS = a
+                STA     NOS,X           ; NOS = a
                 NEXT
         ENDPUBLIC
 
@@ -172,7 +172,7 @@ QDUP_DONE:
         .a16
         .i16
                 POP                     ; b (TOS)
-                PUT_TOS                 ; Overwrite a with b
+                STA     TOS,X           ; Overwrite a with b
                 NEXT
         ENDPUBLIC
 
@@ -187,7 +187,7 @@ QDUP_DONE:
                 LDA     TOS,X           ; b
                 PUSH                    ; TOS = b
                 LDA     PSP2,X          ; a
-                PUT_NOS                 ; NOS = a
+                STA     NOS,X           ; NOS = a
                 LDA     TOS,X           ; b
                 STA     PSP2,X          ; Slot below a = b
                 NEXT
@@ -214,9 +214,9 @@ QDUP_DONE:
         PUBLIC  TWODUP_CODE
         .a16
         .i16
-                PEEK_NOS                ; a
+                LDA     NOS,X           ; a
                 PUSH                    ; Push a
-                PEEK_NOS                ; b
+                LDA     NOS,X           ; b
                 PUSH                    ; Push b
                 NEXT
         ENDPUBLIC
@@ -310,7 +310,7 @@ calc_depth:     TXA
                 ADC     SCRATCH0        ; X + (u+1)*2
                 STA     SCRATCH0
                 LDA     (SCRATCH0)      ; Fetch xu
-                PUT_TOS                 ; Replace u with xu
+                STA     TOS,X           ; Replace u with xu
                 NEXT
         ENDPUBLIC
 
@@ -355,7 +355,7 @@ calc_depth:     TXA
                 BNE     @shift_loop
 
                 RPOP                    ; restore x_n
-                PUT_TOS                 ; store at TOS (x_0 position)
+                STA     TOS,X           ; store at TOS (x_0 position)
 
 @return:        PLY                     ; restore IP
                 NEXT
@@ -413,7 +413,7 @@ calc_depth:     TXA
         PUBLIC  TWOTOR_CODE
         .a16
         .i16
-                PEEK_NOS                ; x1 (NOS)
+                LDA     NOS,X           ; x1 (NOS)
                 RPUSH                   ; push x1 first
                 POP                     ; x2 (TOS)
                 RPUSH                   ; push x2 on top
@@ -433,7 +433,7 @@ calc_depth:     TXA
                 RPOP                    ; x2 (TOS of return stack)
                 PUSH                    ; x2 (TOS)
                 RPOP                    ; x1
-                PUT_NOS                 ; x1 (NOS)
+                STA     NOS,X           ; x1 (NOS)
                 NEXT
         ENDPUBLIC
 
@@ -523,7 +523,7 @@ calc_depth:     TXA
                 POP                     ; b
                 CLC
                 ADC     TOS,X           ; a + b
-                PUT_TOS                 ; Replace with result
+                STA     TOS,X           ; Replace with result
                 NEXT
         ENDPUBLIC
 
@@ -553,11 +553,11 @@ calc_depth:     TXA
         PUBLIC  MINUS_CODE
         .a16
         .i16
-                PEEK_NOS                ; a
+                LDA     NOS,X           ; a
                 SEC
                 SBC     TOS,X           ; a - b
                 DROP
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -675,7 +675,7 @@ calc_depth:     TXA
                 SHIFTADD16
 .endif
                 LDA     SCRATCH0
-                PUT_TOS
+                STA     TOS,X
 .ifndef UNROLL
                 PLY
 .endif
@@ -1025,7 +1025,7 @@ calc_depth:     TXA
                 LDA     TOS,X
                 EOR     #UINT_MAX
                 INC     A
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1041,7 +1041,7 @@ calc_depth:     TXA
                 BPL     @done
                 EOR     #UINT_MAX
                 INC     A
-                PUT_TOS
+                STA     TOS,X
 @done:          NEXT
         ENDPUBLIC
 
@@ -1066,11 +1066,11 @@ DABS_DONE:
         PUBLIC  MAX_CODE
         .a16
         .i16
-                PEEK_NOS                ; a
+                LDA     NOS,X           ; a
                 CMP     TOS,X           ; a - b (signed)
                 BPL     @endif          ; a >= b, a is max
                 LDA     TOS,X           ; a < b, overwrite a with b
-                PUT_NOS
+                STA     NOS,X
 @endif:         DROP                    ; Drop TOS as NOS is max
                 NEXT
         ENDPUBLIC
@@ -1083,11 +1083,11 @@ DABS_DONE:
         PUBLIC  MIN_CODE
         .a16
         .i16
-                PEEK_NOS                ; a
+                LDA     NOS,X           ; a
                 CMP     TOS,X           ; a - b (signed)
                 BMI     @endif          ; a < b, a is min
                 LDA     TOS,X           ; a >= b, overwrite a with b
-                PUT_NOS
+                STA     NOS,X
 @endif:         DROP                    ; Drop TOS as NOS is min
                 NEXT
         ENDPUBLIC
@@ -1140,7 +1140,7 @@ DABS_DONE:
                 ; Arithmetic shift right: preserve sign bit
                 CMP     #INT_MIN        ; Set carry if negative
                 ROR     A               ; Shift right, sign bit from carry
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1186,10 +1186,10 @@ DABS_DONE:
         .a16
         .i16
                 ADVANCE
-                PEEK_NOS                ; n
+                LDA     NOS,X           ; n
                 BPL     @positive
                 LDA     #MINUS_ONE      ; negative → high cell = -1
-                PUT_TOS
+                STA     TOS,X
                 NEXT
 @positive:
                 STZ     TOS,X           ; positive → high cell = 0
@@ -1215,11 +1215,11 @@ DABS_DONE:
         .i16
                 LDA     TOS,X           ; high cell
                 EOR     #UINT_MAX       ; invert
-                PUT_TOS
-                PEEK_NOS                ; low cell
+                STA     TOS,X
+                LDA     NOS,X           ; low cell
                 EOR     #UINT_MAX       ; invert
                 INC     A               ; +1
-                PUT_NOS
+                STA     NOS,X
                 BNE     @done           ; no carry
                 INC     TOS,X           ; propagate carry to high cell
 @done:          NEXT
@@ -1352,7 +1352,7 @@ MSTARS_THEN:
                 STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1370,7 +1370,7 @@ MSTARS_THEN:
                 STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1382,7 +1382,7 @@ MSTARS_THEN:
         PUBLIC  LESS_CODE
         .a16
         .i16
-                PEEK_NOS                ; a
+                LDA     NOS,X           ; a
                 SEC
                 SBC     TOS,X           ; a - b
                 BVS     @overflow       ; Overflow-aware signed compare
@@ -1396,7 +1396,7 @@ MSTARS_THEN:
 @true:          LDA     #FORTH_TRUE     ; Set TOS to true
 @return:
                 DROP                    ; Drop b
-                PUT_TOS                 ; Set TOS to result
+                STA     TOS,X           ; Set TOS to result
                 NEXT
         ENDPUBLIC
 
@@ -1422,7 +1422,7 @@ MSTARS_THEN:
 @true:          LDA     #FORTH_TRUE     ; Set TOS to true
 @return:
                 DROP                    ; Drop b
-                PUT_TOS                 ; Set TOS to result
+                STA     TOS,X           ; Set TOS to result
                 NEXT
         ENDPUBLIC
 
@@ -1434,14 +1434,14 @@ MSTARS_THEN:
         PUBLIC  ULESS_CODE
         .a16
         .i16
-                PEEK_NOS                ; u1
+                LDA     NOS,X           ; u1
                 CMP     TOS,X           ; u1 - u2 (unsigned)
                 DROP
                 BCC     @true           ; Carry clear = u1 < u2
                 STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1459,7 +1459,7 @@ MSTARS_THEN:
                 STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1474,7 +1474,7 @@ MSTARS_THEN:
                 LDA     TOS,X
                 BNE     @false
                 LDA     #FORTH_TRUE
-                PUT_TOS
+                STA     TOS,X
                 NEXT
 @false:         STZ     TOS,X
                 NEXT
@@ -1491,7 +1491,7 @@ MSTARS_THEN:
                 LDA     TOS,X
                 BPL     @false
                 LDA     #FORTH_TRUE
-                PUT_TOS
+                STA     TOS,X
                 NEXT
 @false:         STZ     TOS,X
                 NEXT
@@ -1511,7 +1511,7 @@ MSTARS_THEN:
 @false:         STZ     TOS,X
                 NEXT
 @true:          LDA     #FORTH_TRUE
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1526,7 +1526,7 @@ MSTARS_THEN:
                 LDA     TOS,X
                 BEQ     @return
                 LDA     #FORTH_TRUE
-                PUT_TOS
+                STA     TOS,X
 @return:        NEXT
         ENDPUBLIC
 
@@ -1552,7 +1552,7 @@ MSTARS_THEN:
 @return:        DROP                    ; drop 3 cells
                 DROP
                 DROP
-                PUT_TOS                 ; Put flag in 4th cell
+                STA     TOS,X           ; Put flag in 4th cell
                 NEXT
         ENDPUBLIC
 
@@ -1603,7 +1603,7 @@ MSTARS_THEN:
 @return:        DROP                    ; drop 3 cells
                 DROP
                 DROP
-                PUT_TOS                 ; Put flag in 4th cell
+                STA     TOS,X           ; Put flag in 4th cell
                 NEXT
         ENDPUBLIC
 
@@ -1642,7 +1642,7 @@ MSTARS_THEN:
 @return:        DROP                    ; drop 3 cells
                 DROP
                 DROP
-                PUT_TOS                 ; Put flag in 4th cell
+                STA     TOS,X           ; Put flag in 4th cell
                 NEXT
         ENDPUBLIC
 
@@ -1727,7 +1727,7 @@ DMIN_THEN:
         .i16
                 POP
                 AND     TOS,X
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1741,7 +1741,7 @@ DMIN_THEN:
         .i16
                 POP
                 ORA     TOS,X
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1755,7 +1755,7 @@ DMIN_THEN:
         .i16
                 POP
                 EOR     TOS,X
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1769,7 +1769,7 @@ DMIN_THEN:
         .i16
                 LDA     TOS,X
                 EOR     #UINT_MAX
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1789,7 +1789,7 @@ DMIN_THEN:
 @loop:          ASL     A
                 DEY
                 BNE     @loop
-                PUT_TOS
+                STA     TOS,X
 @done:          PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
@@ -1810,7 +1810,7 @@ DMIN_THEN:
 @loop:          LSR     A
                 DEY
                 BNE     @loop
-                PUT_TOS
+                STA     TOS,X
 @done:          PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
@@ -1830,7 +1830,7 @@ DMIN_THEN:
                 LDA     TOS,X           ; addr
                 STA     SCRATCH0
                 LDA     (SCRATCH0)      ; fetch 16-bit value
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1863,7 +1863,7 @@ DMIN_THEN:
                 LDA     (SCRATCH0)
                 ON16MEM
                 AND     #$00FF
-                PUT_TOS
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1901,7 +1901,7 @@ DMIN_THEN:
                 ADC     #CELL_SIZE      ; addr+2 → SCRATCH1 (carry now clear)
                 STA     SCRATCH1
                 LDA     (SCRATCH1)      ; high cell of d
-                PUT_TOS
+                STA     TOS,X
                 LDA     (SCRATCH0)      ; low cell of d
                 PUSH
                 NEXT
@@ -1923,7 +1923,7 @@ DMIN_THEN:
                 CLC
                 ADC     #CELL_SIZE      ; addr+2 → SCRATCH1 (carry now clear)
                 STA     SCRATCH1
-                PEEK_NOS                ; low cell of d
+                LDA     NOS,X           ; low cell of d
                 STA     (SCRATCH0)      ; store at addr
                 LDA     PSP2,X          ; high cell of d
                 STA     (SCRATCH1)      ; store at addr+2
@@ -2277,7 +2277,7 @@ DMIN_THEN:
         .i16
                 IFETCH                  ; Load leave target IP += CELL
                 RPUSH                   ; Push leave target onto return stack
-                PEEK_NOS                ; limit
+                LDA     NOS,X           ; limit
                 RPUSH                   ; Push limit onto return stack
                 POP                     ; index
                 RPUSH                   ; Push index onto return stack
@@ -2932,10 +2932,10 @@ SQUOTE_INTERP:                          ; ( c-addr u )
                 ; Load arguments from parameter stack
                 POP                     ; dest
                 STA     LOC_DEST,S
-                PEEK_NOS                ; c-addr
+                LDA     NOS,X           ; c-addr
                 STA     LOC_SRC,S
                 LDA     LOC_DEST,S
-                PUT_NOS                 ; put back the original dest
+                STA     NOS,X           ; put back the original dest
                 LDA     TOS,X           ; u (remaining count)
                 TAY                     ; Y = u (loop counter)
 
@@ -6384,7 +6384,7 @@ ENDCASE_LEAVE:
         PUBLIC  DOQDO_CODE
         .a16
         .i16
-                PEEK_NOS                ; limit
+                LDA     NOS,X           ; limit
                 CMP     TOS,X           ; index
                 BNE     @enter_loop     ; limit <> index so enter loop
                 ; limit = index: skip loop, jump to leave target
@@ -6396,7 +6396,7 @@ ENDCASE_LEAVE:
 @enter_loop:
                 IFETCH                  ; load leave target and advance IP
                 PHA                     ; push leave target onto return stack
-                PEEK_NOS                ; limit
+                LDA     NOS,X           ; limit
                 PHA                     ; push limit onto return stack
                 POP                     ; index
                 PHA                     ; push index onto return stack
