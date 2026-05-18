@@ -400,7 +400,7 @@ calc_depth:     TXA
         .a16
         .i16
                 ; Peek at return stack top without permanently popping.
-                RPEEK_TOS               ; Peek R@ value (A = value)
+                LDA     RTOS,S          ; Peek R@ value (A = value)
                 PUSH                    ; Push copy onto parameter stack
                 NEXT
         ENDPUBLIC
@@ -446,9 +446,9 @@ calc_depth:     TXA
         PUBLIC  TWORFETCH_CODE
         .a16
         .i16
-                RPEEK_NOS               ; x1
+                LDA     RNOS,S          ; x1
                 PUSH                    ; x1 (future NOS)
-                RPEEK_TOS               ; x2 (TOS of return stack)
+                LDA     RTOS,S          ; x2 (TOS of return stack)
                 PUSH                    ; x2 (TOS)
                 NEXT
         ENDPUBLIC
@@ -2390,7 +2390,7 @@ DMIN_THEN:
         .a16
         .i16
                 ; Return stack: TOS=index NOS=limit
-                RPEEK_TOS               ; Index I
+                LDA     RTOS,S          ; Index I
                 PUSH
                 NEXT
         ENDPUBLIC

@@ -63,6 +63,10 @@ PSP3    = CELL_SIZE * 3
 PSP4    = CELL_SIZE * 4
 PSP5    = CELL_SIZE * 5
 
+; Return stack offsets (relative to S)
+RTOS    = 1
+RNOS    = 3
+
 ; Compiler Security Numbers
 CS_BEGIN_AGAIN  = 1
 CS_IF_ELSE_THEN = 2
