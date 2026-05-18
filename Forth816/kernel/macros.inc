@@ -6,12 +6,27 @@
 MACROS_INC = 1
 
 ;------------------------------------------------------------------------------
-; IFETCH - Fetch inline cell from instruction stream into A, advance IP
+; IPINC - Increment the instruction pointer by CELL_SIZE
 ;------------------------------------------------------------------------------
-.macro  IFETCH
-        LDA     0,Y             ; fetch cell at IP
+.macro  IPINC
         INY                     ; IP += 1
         INY                     ; IP += 2
+.endmacro
+
+;------------------------------------------------------------------------------
+; IPFETCH_INC - Fetch inline cell from instruction stream into A, advance IP
+;------------------------------------------------------------------------------
+.macro  IPFETCH_INC
+        LDA     0,Y             ; fetch cell at IP
+        IPINC                   ; IP += CELL_SIZE
+.endmacro
+
+;------------------------------------------------------------------------------
+; IPFETCH_BRANCH - Fetch address at IP and branch to address.
+;------------------------------------------------------------------------------
+.macro  IPFETCH_BRANCH
+        LDA     0,Y             ; Fetch address at IP
+        TAY                     ; IP = branch target (absolute)
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -35,7 +50,7 @@ MACROS_INC = 1
         .local @underflow
         BCS     @underflow
 .endif
-        IFETCH                  ; A = *IP, IP = IP + CELL_SIZE
+        IPFETCH_INC             ; A = *IP, IP = IP + CELL_SIZE
         STA     W               ; W = CFA
         LDA     (W)             ; A = *W (fetch code pointer)
         STA     SCRATCH0

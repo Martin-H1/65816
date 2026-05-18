@@ -107,8 +107,7 @@ TRACE_EN:       .res 2                  ; Trace enable flag
                 PHY                     ; Push IP onto return stack
                 LDA     W               ; W = CFA of this word
                 TAY                     ; IP = body start
-                INY                     ; Body starts at CFA+CELL_SIZE
-                INY
+                IPINC                   ; Body starts at CFA+CELL_SIZE
                 NEXT                    ; Execute first body word
         ENDPUBLIC
 
@@ -122,9 +121,7 @@ TRACE_EN:       .res 2                  ; Trace enable flag
                 LDA     W               ; CFA
                 CLC
                 ADC     #4              ; skip code pointer(2) + placeholder(2)
-                DEX
-                DEX
-                STA     TOS,X
+                PUSH
                 NEXT
         ENDPUBLIC
 
@@ -250,8 +247,8 @@ RTS_CFA_LIST:
         HEADER "RTS", RTS_ENTRY, RTS_CFA, 0, 0
         CODEPTR RTS_CODE
         PUBLIC  RTS_CODE
-                ldy     #RTS_CFA_LIST
-                rts
+                LDY     #RTS_CFA_LIST
+                RTS
         ENDPUBLIC
 
 ;==============================================================================
