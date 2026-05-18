@@ -124,7 +124,7 @@ TRACE_EN:       .res 2                  ; Trace enable flag
                 ADC     #4              ; skip code pointer(2) + placeholder(2)
                 DEX
                 DEX
-                STA     0,X
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 

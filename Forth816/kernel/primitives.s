@@ -235,12 +235,12 @@ QDUP_DONE:
                 STA     SCRATCH1
                 LDA     PSP2,X          ; b
                 STA     TOS,X
-                LDA     6,X             ; a
+                LDA     PSP3,X          ; a
                 STA     NOS,X
                 LDA     SCRATCH0        ; d
                 STA     PSP2,X
                 LDA     SCRATCH1        ; c
-                STA     6,X
+                STA     PSP3,X
                 NEXT
         ENDPUBLIC
 
@@ -252,9 +252,9 @@ QDUP_DONE:
         PUBLIC  TWOOVER_CODE
         .a16
         .i16
-                LDA     6,X             ; a
+                LDA     PSP3,X          ; a
                 PUSH                    ; Push a (NOS)
-                LDA     6,X             ; b
+                LDA     PSP3,X          ; b
                 PUSH                    ; Push b
                 NEXT
         ENDPUBLIC
@@ -572,9 +572,9 @@ calc_depth:     TXA
         .a16
         .i16
                 CLC
-                LDA     6,X             ; d1_lo
+                LDA     PSP3,X          ; d1_lo
                 ADC     NOS,X           ; + d2_lo
-                STA     6,X             ; result_lo
+                STA     PSP3,X          ; result_lo
                 LDA     PSP2,X          ; d1_hi
                 ADC     TOS,X           ; + d2_hi + carry
                 STA     PSP2,X          ; result_hi
@@ -593,9 +593,9 @@ calc_depth:     TXA
         .a16
         .i16
                 SEC
-                LDA     6,X             ; d1_lo
+                LDA     PSP3,X          ; d1_lo
                 SBC     NOS,X           ; - d2_lo
-                STA     6,X             ; result_lo
+                STA     PSP3,X          ; result_lo
                 LDA     PSP2,X          ; d1_hi
                 SBC     TOS,X           ; - d2_hi - borrow
                 STA     PSP2,X          ; result_hi
@@ -767,9 +767,9 @@ calc_depth:     TXA
 ; UM/MOD ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
 ; UNDEFINED if quotient overflows 16 bits (i.e. ud_high >= u)
 ; Entry stack: ( ud_low ud_high divisor -- )
-;   TOS,X = divisor  (u)
-;   NOS,X = ud_high  (high cell of 32-bit dividend)
-;   4,X   = ud_low   (low cell of 32-bit dividend)
+;   TOS,X  = divisor  (u)
+;   NOS,X  = ud_high  (high cell of 32-bit dividend)
+;   PSP2,X = ud_low   (low cell of 32-bit dividend)
 ;
 ; Exit stack: ( remainder quotient )
 ;   TOS,X = quotient
@@ -791,9 +791,9 @@ calc_depth:     TXA
 ; Called via JSR from UM/MOD and SLASHMOD_IMPL.
 ;
 ; Entry stack layout (X = PSP before JSR):
-;   TOS,X = divisor  (u16)
-;   NOS,X = ud_high  (high cell of 32-bit dividend)
-;   4,X   = ud_low   (low  cell of 32-bit dividend)
+;   TOS,X  = divisor  (u16)
+;   NOS,X  = ud_high  (high cell of 32-bit dividend)
+;   PSP2,X = ud_low   (low  cell of 32-bit dividend)
 ;
 ; Exit stack layout (after internal INX/INX that pops divisor):
 ;   TOS,X = quotient   (u16)
@@ -1539,7 +1539,7 @@ MSTARS_THEN:
         PUBLIC  DEQ_CODE
         .a16
         .i16
-                LDA     6,X             ; d1_lo
+                LDA     PSP3,X          ; d1_lo
                 CMP     NOS,X           ; d2_lo
                 BNE     @false
                 LDA     PSP2,X          ; d1_hi
@@ -1591,7 +1591,7 @@ MSTARS_THEN:
                 BCC     @true           ; ud1_hi < ud2_hi unsigned
                 BNE     @false          ; ud1_hi > ud2_hi
                 ; High cells equal, compare low cells
-                LDA     6,X             ; ud1_lo
+                LDA     PSP3,X          ; ud1_lo
                 CMP     NOS,X           ; ud2_lo
                 BCC     @true
 @false:
@@ -1631,7 +1631,7 @@ MSTARS_THEN:
                 BRA     @false
 @equal_hi:
                 ; High cells equal: unsigned compare of low cells
-                LDA     6,X             ; d1_lo
+                LDA     PSP3,X          ; d1_lo
                 CMP     NOS,X           ; d2_lo
                 BCC     @true
 @false:
@@ -3791,9 +3791,9 @@ HEX_BODY:
                 STA     LOC_U
                 LDA     a:NOS,X         ; c-addr
                 STA     LOC_ADDR
-                LDA     a:4,X           ; ud_hi
+                LDA     a:PSP2,X        ; ud_hi
                 STA     LOC_UDHI
-                LDA     a:6,X           ; ud_lo
+                LDA     a:PSP3,X        ; ud_lo
                 STA     LOC_UDLO
 
                 ;--------------------------------------------------------------
@@ -3911,9 +3911,9 @@ HEX_BODY:
                 ;--------------------------------------------------------------
 @done:
                 LDA     LOC_UDLO
-                STA     a:6,X
+                STA     a:PSP3,X
                 LDA     LOC_UDHI
-                STA     a:4,X
+                STA     a:PSP2,X
                 LDA     LOC_ADDR
                 STA     a:NOS,X
                 LDA     LOC_U
