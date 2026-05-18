@@ -65,7 +65,7 @@ underflow_msg:
         PUBLIC  DUP_CODE
         .a16
         .i16
-                PEEK_TOS                ; Load TOS
+                LDA     TOS,X           ; Load TOS
                 PUSH                    ; Push copy
                 NEXT
         ENDPUBLIC
@@ -103,7 +103,7 @@ QDUP_DONE:
         PUBLIC  SWAP_CODE
         .a16
         .i16
-                PEEK_TOS                ; b (TOS)
+                LDA     TOS,X           ; b (TOS)
                 STA     SCRATCH0
                 PEEK_NOS                ; a (NOS)
                 PUT_TOS                 ; TOS = a
@@ -137,7 +137,7 @@ QDUP_DONE:
                 STA     SCRATCH0
                 PEEK_NOS                ; b
                 STA     PSP2,X          ; bottom slot = b
-                PEEK_TOS                ; c (TOS)
+                LDA     TOS,X           ; c (TOS)
                 PUT_NOS                 ; middle slot = c
                 LDA     SCRATCH0        ; a
                 PUT_TOS                 ; TOS = a
@@ -154,7 +154,7 @@ QDUP_DONE:
         .i16
                 LDA     PSP2,X          ; a (bottom)
                 STA     SCRATCH0
-                PEEK_TOS                ; c (TOS)
+                LDA     TOS,X           ; c (TOS)
                 STA     PSP2,X          ; bottom slot = c
                 PEEK_NOS                ; b (NOS)
                 PUT_TOS                 ; TOS = b
@@ -184,11 +184,11 @@ QDUP_DONE:
         PUBLIC  TUCK_CODE
         .a16
         .i16
-                PEEK_TOS                ; b
+                LDA     TOS,X           ; b
                 PUSH                    ; TOS = b
                 LDA     PSP2,X          ; a
                 PUT_NOS                 ; NOS = a
-                PEEK_TOS                ; b
+                LDA     TOS,X           ; b
                 STA     PSP2,X          ; Slot below a = b
                 NEXT
         ENDPUBLIC
@@ -303,7 +303,7 @@ calc_depth:     TXA
         .a16
         .i16
                 STX     SCRATCH0        ; SCRATCH0 = stack base (PSP)
-                PEEK_TOS                ; u
+                LDA     TOS,X           ; u
                 INC     A               ; u+1 (skip u itself)
                 ASL     A               ; * 2 (cell size)
                 CLC
@@ -631,7 +631,7 @@ calc_depth:     TXA
         .i16
                 POP                     ; b = multiplier
                 STA     TMPA
-                PEEK_TOS                ; a = multiplicand
+                LDA     TOS,X           ; a = multiplicand
                 STA     TMPB            ; shifting multiplicand lives in TMPB
                 STZ     SCRATCH0        ; product accumulator = 0
 .ifndef UNROLL
@@ -1022,7 +1022,7 @@ calc_depth:     TXA
         PUBLIC  NEGATE_CODE
         .a16
         .i16
-                PEEK_TOS
+                LDA     TOS,X
                 EOR     #UINT_MAX
                 INC     A
                 PUT_TOS
@@ -1037,7 +1037,7 @@ calc_depth:     TXA
         PUBLIC  ABS_CODE
         .a16
         .i16
-                PEEK_TOS
+                LDA     TOS,X
                 BPL     @done
                 EOR     #UINT_MAX
                 INC     A
@@ -1069,7 +1069,7 @@ DABS_DONE:
                 PEEK_NOS                ; a
                 CMP     TOS,X           ; a - b (signed)
                 BPL     @endif          ; a >= b, a is max
-                PEEK_TOS                ; a < b, overwrite a with b
+                LDA     TOS,X           ; a < b, overwrite a with b
                 PUT_NOS
 @endif:         DROP                    ; Drop TOS as NOS is max
                 NEXT
@@ -1086,7 +1086,7 @@ DABS_DONE:
                 PEEK_NOS                ; a
                 CMP     TOS,X           ; a - b (signed)
                 BMI     @endif          ; a < b, a is min
-                PEEK_TOS                ; a >= b, overwrite a with b
+                LDA     TOS,X           ; a >= b, overwrite a with b
                 PUT_NOS
 @endif:         DROP                    ; Drop TOS as NOS is min
                 NEXT
@@ -1136,7 +1136,7 @@ DABS_DONE:
         PUBLIC  TWOSLASH_CODE
         .a16
         .i16
-                PEEK_TOS
+                LDA     TOS,X
                 ; Arithmetic shift right: preserve sign bit
                 CMP     #INT_MIN        ; Set carry if negative
                 ROR     A               ; Shift right, sign bit from carry
@@ -1213,7 +1213,7 @@ DABS_DONE:
         PUBLIC  DNEGATE_CODE
         .a16
         .i16
-                PEEK_TOS                ; high cell
+                LDA     TOS,X           ; high cell
                 EOR     #UINT_MAX       ; invert
                 PUT_TOS
                 PEEK_NOS                ; low cell
@@ -1408,7 +1408,7 @@ MSTARS_THEN:
         PUBLIC  GREATER_CODE
         .a16
         .i16
-                PEEK_TOS                ; b
+                LDA     TOS,X           ; b
                 SEC
                 SBC     NOS,X           ; b - a (reversed for >)
                 BVS     @overflow       ; Overflow-aware signed compare
@@ -1471,7 +1471,7 @@ MSTARS_THEN:
         PUBLIC  ZEROEQ_CODE
         .a16
         .i16
-                PEEK_TOS
+                LDA     TOS,X
                 BNE     @false
                 LDA     #FORTH_TRUE
                 PUT_TOS
@@ -1488,7 +1488,7 @@ MSTARS_THEN:
         PUBLIC  ZEROLESS_CODE
         .a16
         .i16
-                PEEK_TOS
+                LDA     TOS,X
                 BPL     @false
                 LDA     #FORTH_TRUE
                 PUT_TOS
@@ -1505,7 +1505,7 @@ MSTARS_THEN:
         PUBLIC  ZEROGT_CODE
         .a16
         .i16
-                PEEK_TOS
+                LDA     TOS,X
                 BEQ     @false
                 BPL     @true
 @false:         STZ     TOS,X
@@ -1523,7 +1523,7 @@ MSTARS_THEN:
         PUBLIC  ZERONE_CODE
         .a16
         .i16
-                PEEK_TOS
+                LDA     TOS,X
                 BEQ     @return
                 LDA     #FORTH_TRUE
                 PUT_TOS
@@ -1767,7 +1767,7 @@ DMIN_THEN:
         PUBLIC  INVERT_CODE
         .a16
         .i16
-                PEEK_TOS
+                LDA     TOS,X
                 EOR     #UINT_MAX
                 PUT_TOS
                 NEXT
@@ -1806,7 +1806,7 @@ DMIN_THEN:
                 PHY                     ; Save IP (TAY below clobbers it)
                 TAY
                 BEQ     @done
-                PEEK_TOS
+                LDA     TOS,X
 @loop:          LSR     A
                 DEY
                 BNE     @loop
@@ -1827,7 +1827,7 @@ DMIN_THEN:
         PUBLIC  FETCH_CODE
         .a16
         .i16
-                PEEK_TOS                ; addr
+                LDA     TOS,X           ; addr
                 STA     SCRATCH0
                 LDA     (SCRATCH0)      ; fetch 16-bit value
                 PUT_TOS
@@ -1857,7 +1857,7 @@ DMIN_THEN:
         PUBLIC  CFETCH_CODE
         .a16
         .i16
-                PEEK_TOS
+                LDA     TOS,X
                 STA     SCRATCH0
                 OFF16MEM
                 LDA     (SCRATCH0)
@@ -1895,7 +1895,7 @@ DMIN_THEN:
         PUBLIC  TWOFETCH_CODE
         .a16
         .i16
-                PEEK_TOS                ; peek addr → SCRATCH0
+                LDA     TOS,X           ; peek addr → SCRATCH0
                 STA     SCRATCH0
                 CLC
                 ADC     #CELL_SIZE      ; addr+2 → SCRATCH1 (carry now clear)
@@ -1918,7 +1918,7 @@ DMIN_THEN:
         PUBLIC  TWOSTORE_CODE
         .a16
         .i16
-                PEEK_TOS                ; peek addr → SCRATCH0
+                LDA     TOS,X           ; peek addr → SCRATCH0
                 STA     SCRATCH0
                 CLC
                 ADC     #CELL_SIZE      ; addr+2 → SCRATCH1 (carry now clear)
@@ -2811,7 +2811,7 @@ DMIN_THEN:
         PUBLIC  COUNT_CODE
         .a16
         .i16
-                PEEK_TOS                ; Copy addr to scratch pointer
+                LDA     TOS,X           ; Copy addr to scratch pointer
                 STA     SCRATCH0
                 OFF16MEM
                 LDA     (SCRATCH0)      ; Length byte is at start of string
@@ -2936,7 +2936,7 @@ SQUOTE_INTERP:                          ; ( c-addr u )
                 STA     LOC_SRC,S
                 LDA     LOC_DEST,S
                 PUT_NOS                 ; put back the original dest
-                PEEK_TOS                ; u (remaining count)
+                LDA     TOS,X           ; u (remaining count)
                 TAY                     ; Y = u (loop counter)
 
                 TSC                     ; point direct page to stack frame
