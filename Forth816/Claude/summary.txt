@@ -214,10 +214,9 @@ Dictionary rollback:
 
 New macros:
 
-* IFETCH — LDA 0,Y / INY / INY — fetch inline cell from instruction stream.
-* PUSHIP — pushes Y (IP) onto parameter stack.
-* IPFETCH — IFETCH followed by PUSH.
-* POPIP — pops TOS into Y (IP).
+* IPINC — Increments IP by CELL_SIZE
+* IPFETCH_INC — LDA 0,Y / IPINC — fetch inline cell from instruction stream.
+* IPFETCH_BRANCH — FETCH at IP and assign to IP
 * CELL+ — add one cell size to TOS (replaces LIT 2 PLUS pattern).
 
 New HAL functions:
@@ -237,9 +236,11 @@ Regression test infrastructure:
   (T{/->/ }T), RECOVERED? ( -- flag ) for error recovery testing, DONE
   sentinel word, and MARKER RESET-TEST for dictionary cleanup between tests.
 * Test files in tests/tests/, masters in tests/masters/, output in tests/output/.
-* Completed test files: compare_test, compiler_test, double_test, error_test,
-  harness_test, interpret_test, io_test, loop_test, math_test, memory_test,
-  number_test, stack_test, value_test.
+* Completed test files: c_quote_test.fs, compare_test.fs, compiler_test.fs
+  defer_test.fs, double_test.fs, error_test.fs, harness_test.fs,
+  interpret_test.fs, io_test.fs, loop_test.fs, math_test.fs, memory_test.fs,
+  noname_test.fs, number_test.fs, s_backslash_quote_test.fs, stack_test.fs,
+  value_test.fs, warning_test.fs
 
 Important bugs found and fixed:
 
@@ -306,11 +307,8 @@ Debugging tools:
   hex IP values in trace output to symbol names with offsets.
 
 TODO items carried forward:
-- Replace magic number 2 (cell size) with symbolic constant CELL_SIZE
-  (opportunistic — do a function at a time):
-
-  Replace INX/INX and DEX/DEX pairs with DROP and ADVANCE macros.
-  ADC #2 / SBC #2 used for cell arithmetic.
+- Integreate Garth's Forth based interupt scheme.
+- Cell size abstraction. (opportunistic — do a function at a time):
   Frame layout offsets expressible as LOC_PTR = LOC_ADDR + CELL_SIZE.
   The CFA alignment rounding in FIND and DOCREATE.
 
