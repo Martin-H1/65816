@@ -3,16 +3,23 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
-.include "macros.inc"
+.include "vmachine.inc"
 
 ; Main entry point for the test
-.proc main
-	INIT
+PUBLIC MAIN
+	CALL	LOOP_EXAMPLE
+	HALT			; return to monitor.
+ENDPUBLIC
+
+PUBLIC LOOP_EXAMPLE
 	PUSHI 10
-@loop:	DUP
+@loop:	CPUTS	"Count = "
+	DUP
 	DOT
+	PRINTCR
 	PUSHI 1
 	SUB
-	ZBRANCH @loop
-	HALT		; return to monitor.
-.endproc
+	BRANCHZ @loop
+	RETURN
+ENDPUBLIC
+

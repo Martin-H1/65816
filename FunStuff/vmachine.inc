@@ -1,16 +1,35 @@
 ;------------------------------------------------------------------------------
 ; Platform specific initialization
 ;------------------------------------------------------------------------------
-; Control bits for REP and SEP
-MEM16   = $20                   ; Accumulator width bit
-IND16   = $10                   ; Index register width bit
 
-.macro	INIT
-	REP	#(MEM16|IND16)	; All registers = 16-bit
+; Conditionally import virtual machine functions in consuming modules.
+.ifndef __vmachine_s__
+.import vm_cputs
+.import vm_getch
+.import vm_putahex
+.import vm_putchex
+.import vm_putch
+.endif
+
+;------------------------------------------------------------------------------
+; PUBLIC / ENDPUBLIC - Export a subroutine as a global symbol
+;
+; Usage:
+;   PUBLIC my_function
+;       ... code ...
+;   ENDPUBLIC
+;------------------------------------------------------------------------------
+.macro  PUBLIC function_name
+        .export function_name
+        .proc   function_name
 	.A16
 	.I16
-	LDX	#$03FF		; Parameter stack pointer
 .endmacro
+
+.macro  ENDPUBLIC
+        .endproc
+.endmacro
+
 
 ;==============================================================================
 ; Stack operations
@@ -94,16 +113,33 @@ IND16   = $10                   ; Index register width bit
 	DROP
 .endmacro
 
+;------------------------------------------------------------------------------
+; NEGATE - Perform two's compliment of TOS
+;------------------------------------------------------------------------------
+.macro	NEGATE
+	PEEK
+	EOR	#$FFFF
+	INC
+	PUT
+.endmacro
+
 
 ;==============================================================================
 ; Flow control
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
-; ZBRANCH - Branch to argument if Z bit is set.
+; BRANCHZ - Branch to argument if Z bit is set.
 ;------------------------------------------------------------------------------
-.macro  ZBRANCH arg
+.macro  BRANCHZ arg
 	BEQ	arg
+.endmacro
+
+;------------------------------------------------------------------------------
+; BRANCHNZ - Branch to argument if Z bit is not set.
+;------------------------------------------------------------------------------
+.macro  BRANCHNZ arg
+	BNE	arg
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -111,6 +147,20 @@ IND16   = $10                   ; Index register width bit
 ;------------------------------------------------------------------------------
 .macro  BRANCH arg
 	JMP	arg
+.endmacro
+
+;------------------------------------------------------------------------------
+; CALL - Call a subroutine
+;------------------------------------------------------------------------------
+.macro  CALL arg
+	JSR	arg
+.endmacro
+
+;------------------------------------------------------------------------------
+; RETURN - Return for a subroutine
+;------------------------------------------------------------------------------
+.macro  RETURN
+	RTS
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -129,17 +179,29 @@ IND16   = $10                   ; Index register width bit
 ; DOT - pops TOS and prints to console.
 ;------------------------------------------------------------------------------
 .macro  DOT
-	NOP
+	POP
+	JSR	vm_putchex
 .endmacro
 
 ;------------------------------------------------------------------------------
-; TYPE - prints text to console.
+; PRINTCR - prints a CR to the console.
 ;------------------------------------------------------------------------------
-.macro  TYPE arg
-.scope
+.macro  PRINTCR
+	LDA	#$0D
+	JSR	vm_putch
+	LDA	#$0A
+	JSR	vm_putch
+.endmacro
+
+;------------------------------------------------------------------------------
+; CPUTS - prints text to console.
+;------------------------------------------------------------------------------
+.macro  CPUTS arg
+	.local @text
+	.local @skip
+	LDA	#@text
+	JSR	vm_cputs
 	BRA	@skip
 @text:	.asciiz arg
 @skip:
-.endscope
 .endmacro
-

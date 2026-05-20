@@ -6,7 +6,7 @@ all: debug
 
 debug: bin bin/debug bin/debug/tarpit.bin bin/debug/tarpit.srec
 
-bin/debug/tarpit.bin: obj/debug/tarpit.o
+bin/debug/tarpit.bin: obj/debug/vmachine.o obj/debug/tarpit.o
 	$(LD65) -C debug.cfg -o bin/debug/tarpit.bin -m bin/debug/tarpit.map $^
 
 %.srec : %.bin
