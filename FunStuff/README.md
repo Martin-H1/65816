@@ -1,4 +1,3 @@
-```markdown
 # FunStuff
 
 Random experiments, demos, tests, and small projects written in 65816 assembly.
@@ -40,4 +39,3 @@ See comments inside individual source files for details.
 This directory exists mainly for experimentation, learning, and preserving interesting snippets of 65816 assembly code that might be useful later.
 
 Sometimes the best way to understand a processor is to write strange little programs for it.
-```
