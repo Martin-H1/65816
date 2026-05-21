@@ -114,4 +114,4 @@ PUBLIC DENOMINATOR
 	WMULS			; ( N ++N*++N+ )
 	WMULS			; ( N*++N*++N )
 	RTS
-.endproc
+ENDPUBLIC
