@@ -61,6 +61,8 @@ ISDECIMAL		= $E09B	; Checks character for ASCII Decimal Digit.
 ISHEX			= $E09F	; Checks character for ASCII Hexadecimal Digit
 UPPER_CASE		= $E0A3	; Converts lower-case ASCII chars to upper-case.
 
+PSP_INIT		= $03FF
+
 ; Nibble masks (from monitor ROM listing)
 LOWNIB  = $0F
 HINIB   = $F0
@@ -123,7 +125,7 @@ TMPB:		.res 2		; Temp for multiply/divide
 ; Initializes parameter stack and calls main.
 PUBLIC INIT
 	REP	#(MEM16|IND16)	; All registers = 16-bit
-	LDX	#$03FF		; Parameter stack pointer
+	LDX	#PSP_INIT	; Parameter stack pointer
 	JMP	MAIN
 ENDPUBLIC
 
@@ -378,6 +380,138 @@ PUBLIC vm_cputs
 	plx
 	ply
 	rts
+ENDPUBLIC
+
+PUBLIC	vm_calc_depth
+	TXA
+	EOR	#UINT_MAX	; Two's complement
+	INC
+	CLC
+	ADC	#PSP_INIT	; PSP_INIT - result / 2
+	CMP	#INT_MIN	; if bit 15 is set, carry = 1
+	ROR			; Divide by 2 (cells)
+	RTS
+ENDPUBLIC
+
+; vm_print_num - prints a 16 bit signed number to the console.
+; Inputs:
+;   C - number to print
+;   Y - numeric base
+; Outputs:
+;   C - clobbered
+;   Y - clobbered
+PUBLIC	vm_print_num
+	CMP	#0
+	BPL	vm_print_unum
+	; Negative: negate value, then print minus sign
+	EOR	#UINT_MAX
+	INC	A
+	PHA
+	LDA	#'-'
+	JSR	vm_putch
+	PLA
+ENDPUBLIC
+
+; vm_print_unum - prints a 16 bit unsigned number to the console.
+; Inputs:
+;   C - number to print
+;   Y - numeric base
+; Outputs:
+;   C - clobbered
+;   Y - clobbered
+PUBLIC vm_print_unum
+	; Print SCRATCH0 as unsigned decimal via repeated division
+	; Digits pushed onto hardware stack in reverse, then printed
+	NUM_MSB = 4		; Offsets to locals
+	NUM_LSB = 3
+	BCD = 2
+	BASE = 1
+
+	PHD			; save direct page register
+	PHA			; Establish working area
+	PHY			; BASE (10 or 16)
+	TSC			; Xfer RSP to direct page reg
+	TCD			; stack local space is now direct page.
+
+	OFF16MEM		; Switch to byte mode.
+
+	LDA	#0		; null delimiter for print loop
+	PHA
+@while:				; divide TOS by base
+	STZ	BCD		; clr BCD
+	LDY	#16		; {>} = loop counter
+@foreachbit:
+	ASL	NUM_LSB		; TOS is gradually replaced
+	ROL	NUM_MSB		; with the quotient
+	ROL	BCD		; BCD result is gradually replaced
+	LDA	BCD		; with the remainder
+	SEC
+	SBC	BASE		; partial BCD >= base ?
+	BCC	@else
+	STA	BCD		; yes: update the partial result
+	INC	NUM_LSB		; set low bit in partial quotient
+@else:
+	DEY
+	BNE	@foreachbit	; loop 16 times
+	LDA	BCD
+	CMP	#10
+	BCC	@decdigit
+	ADC	#6		; 'A'-10-1+carry
+@decdigit:	ADC	#'0'		; convert BCD result to ASCII
+	PHA			; stack digits in ascending
+	LDA	NUM_LSB		; order ('0' for zero)
+	ORA	NUM_MSB
+	BNE	@while		; } until TOS is 0
+@print:
+	PLA
+@loop:
+	JSR	vm_putch       ; print digits in descending order
+	PLA			; until null delimiter is encountered
+	BNE	@loop
+	ON16MEM			; exit byte mode
+	PLY			; clean up working area
+	PLA
+	PLD
+	RTS
+ENDPUBLIC
+
+; vm_print_stack - prints the stack elements
+; Inputs:
+;   X - parameter stack pointer.
+; Outputs:
+;   X - preserverd
+;   C - clobbered
+;   Y - clobbered
+PUBLIC	vm_print_stack
+	PHX			; Save PSP
+
+	JSR	vm_calc_depth
+	BEQ	@ds_done	; no items on stack, we're done.
+
+	PHA			; print "<depth> "
+	LDA	#'<'
+	JSR	vm_putch
+	PLA
+	JSR	vm_print_num
+	LDA	#'>'
+	JSR	vm_putch
+	LDA	#SPACE
+	JSR	vm_putch
+	LDX	#PSP_INIT
+
+@print_loop:
+	TXA			; Print stack items bottom to top.
+	CMP	1,S
+	BEQ	@ds_done
+	ADVANCE
+	LDA	TOS,X
+	JSR	vm_print_num
+	LDA	#SPACE
+	JSR	vm_putch
+	BRA	@print_loop
+@ds_done:
+	PLX			; Restore PSP
+	RTS
 ENDPUBLIC
 
 ; returns a character from the terminal input buffer.

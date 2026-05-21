@@ -8,11 +8,14 @@
 ; Main entry point for the test
 PUBLIC MAIN
 	JSR	LOOP_EXAMPLE
+	JSR	STACK_EXAMPLE
+	JSR	CALC_PI
 	HALT			; return to monitor.
 ENDPUBLIC
 
 ; Count down from ten
 PUBLIC LOOP_EXAMPLE
+	PRINTCR
 	PUSHI 10
 @loop:	CPUTS	"Count = "
 	DUP
@@ -20,12 +23,34 @@ PUBLIC LOOP_EXAMPLE
 	PRINTCR
 	DECTOS
 	BNE @loop
+	DROP
 	RTS
 ENDPUBLIC
 
+; Count down from ten
+PUBLIC STACK_EXAMPLE
+	PRINTCR
+	PUSHI	10
+	PUSHI	20
+	PUSHI	30
+	CPUTS	"Stack contents = "
+	PRINT_STACK
+	PRINTCR
+	ADDS			; ( 10 50 )
+	ADDS			; ( 60 )
+	CPUTS	"Sum of contents = "
+	PRINTTOS
+	PRINTCR
+	CPUTS	"Stack contents = "
+	PRINT_STACK
+	PRINTCR
+	RTS
+ENDPUBLIC
+
+
 N:	WORD 0
 
-RESCALE = %0001000000000000
+RESCALE = INT_MIN / 8		; ( 1 sign bit and 3 integer bits )
 THREE = 3 * RESCALE
 FOUR = 4 * RESCALE
 
@@ -42,18 +67,15 @@ PUBLIC	CALC_PI
 	BRA	@while
 @done:
 	DROP			; drop unneeded zero
-	CPUTS	"Pi = 0x"
+	CPUTS	"Pi = "
 	PRINTTOS			; pop the results
-	PRINTCR
 
-	CPUTS	" / 0x"
+	CPUTS	" / "
 	PUSHI	RESCALE
 	PRINTTOS
-	PUSHI	0
-	PRINTTOS
 	PRINTCR
 
-	CPUTS	"N = 0x"
+	CPUTS	"N = "
 	PUSH	N
 	PRINTTOS
 	PRINTCR
