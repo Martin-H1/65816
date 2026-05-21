@@ -109,14 +109,250 @@ IND16   = $10                   ; Index register width bit
         .I8
 .endmacro
 
+.segment "ZEROPAGE"
+SCRATCH0:	.res 2		; General purpose scratch
+SCRATCH1:	.res 2		; General purpose scratch
+TMPA:		.res 2		; Temp for multiply/divide
+TMPB:		.res 2		; Temp for multiply/divide
+
+.segment "CODE"
+
 .import MAIN
-	
+
+; INIT - External entry point and initialization.
+; Initializes parameter stack and calls main.
 PUBLIC INIT
 	REP	#(MEM16|IND16)	; All registers = 16-bit
-	.A16
-	.I16
 	LDX	#$03FF		; Parameter stack pointer
 	JMP	MAIN
+ENDPUBLIC
+
+; vm_stod - sign extend a word to a long.
+PUBLIC	vm_stod
+	DEX
+	DEX
+	LDA	NOS,X		; n
+	BPL	@positive
+	LDA	#MINUS_ONE	; negative -> high cell = -1
+	STA	TOS,X
+	RTS
+@positive:
+	STZ	TOS,X		; positive -> high cell = 0
+	RTS
+ENDPUBLIC
+
+; vm_wmuls - multiplies TOS and NOS, and replaces T
+PUBLIC vm_wmuls
+	POP	TMPA		; b = multiplier
+	LDA	TOS,X		; a = multiplicand
+	STA	TMPB		; shifting multiplicand lives in TMPB
+	STZ	SCRATCH0	; product accumulator = 0
+.ifndef UNROLL
+	PHY
+	LDY	#16
+@loop:
+.else
+.macro SHIFTADD16
+.scope
+.endif
+	LSR	TMPA		; multiplier >>= 1; LSB -> carry
+	BCC	@skip
+	LDA	SCRATCH0
+	CLC
+	ADC	TMPB		; product += curr shifted multiplicand
+	STA	SCRATCH0
+@skip:
+	ASL	TMPB		; shift multiplicand, not the sum
+.ifndef UNROLL
+	DEY
+	BNE	@loop
+.else
+.endscope
+.endmacro
+	; Unroll the loop for performance.
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+	SHIFTADD16
+.endif
+	LDA	SCRATCH0
+	STA	TOS,X
+.ifndef UNROLL
+	PLY
+.endif
+	RTS
+ENDPUBLIC
+
+; vm_umslashmod - subroutine: unsigned 32/16 -> 16r 16q
+PUBLIC vm_umslashmod
+	POP	TMPA		; TMPA = divisor
+	; Now: TOS,X = ud_high (remainder register)
+	;      NOS,X = ud_low  (quotient register)
+.ifndef UNROLL
+	PHY			; save IP
+	LDY	#16		; 16 iterations
+@loop:
+.else
+.macro SHIFTSUB32
+.scope
+.endif
+	ASL	NOS,X		; quotient  <<= 1; old bit15 -> carry
+	ROL	TOS,X		; remainder <<= 1; carry -> bit0
+	LDA	TOS,X		; current remainder
+	SEC
+	SBC	TMPA		; remainder - divisor
+	BCC	@restore	; borrow -> remainder < divisor, skip
+	STA	TOS,X		  ; update remainder
+	INC	NOS,X		; set quotient LSB
+@restore:
+.ifndef UNROLL
+	DEY
+	BNE	@loop
+.else
+.endscope
+.endmacro
+	; Unroll the loop for performance.
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+	SHIFTSUB32
+.endif
+	; TOS,X = remainder, NOS,X = quotient
+	; swap to ANS order TOS=quotient NOS=remainder
+	LDA	TOS,X
+	STA	SCRATCH0
+	LDA	NOS,X
+	STA	TOS,X
+	LDA	SCRATCH0
+	STA	NOS,X
+.ifndef UNROLL
+	PLY			; restore IP
+.endif
+	RTS
+.endproc
+
+PUBLIC vm_smrem
+	SMREM_N	    = 1		; saved divisor (n)
+	SMREM_DHIGH = 3		; saved d-high
+	SMREM_SIGN  = 5		; saved sign indicator (d-high XOR n)
+
+	; Save sign indicator, d-high, and n
+	LDA	NOS,X		; d-high
+	EOR	TOS,X		; XOR with n for sign indicator
+	PHA			; SMREM_SIGN
+	LDA	NOS,X		; d-high
+	PHA			; SMREM_DHIGH
+	LDA	TOS,X		; n
+	PHA			; SMREM_N
+
+	; Take absolute value of n
+	LDA	TOS,X
+	BPL	@n_pos
+	EOR	#UINT_MAX
+	INC	A
+	STA	TOS,X
+@n_pos:
+	; Take absolute value of 32-bit dividend
+	LDA	NOS,X		; d-high
+	BPL	@d_pos
+	LDA	4,X		; d-low
+	EOR	#UINT_MAX	; invert
+	CLC
+	ADC	#1		; +1, carry set if result = 0
+	STA	4,X
+	LDA	NOS,X		; d-high
+	EOR	#UINT_MAX	; invert
+	ADC	#0		; add carry
+	STA	NOS,X
+@d_pos:
+	JSR	vm_umslashmod	; ( rem quot )
+
+	; Apply sign to quotient: sign(d-high XOR n)
+	LDA	SMREM_SIGN,S
+	BPL	@quot_pos
+	LDA	TOS,X
+	BEQ	@quot_pos
+	EOR	#UINT_MAX
+	INC	A
+	STA	TOS,X
+@quot_pos:
+	; Apply sign to remainder: sign of original d-high
+	LDA	SMREM_DHIGH,S
+	BPL	@rem_pos
+	LDA	NOS,X
+	BEQ	@rem_pos
+	EOR	#UINT_MAX
+	INC	A
+	STA	NOS,X
+@rem_pos:
+	PLA			; drop SMREM_N
+	PLA			; drop SMREM_DHIGH
+	PLA			; drop SMREM_SIGN
+	RTS
+ENDPUBLIC
+
+; FM/MOD ( d1 n1 -- n2 n3 ) Divide d1 by n1, giving the floored quotient n3 and
+; the remainder n2. Input and output stack arguments are signed.
+PUBLIC  vm_fmmod
+	LDA	NOS,X		; d-high
+	EOR	TOS,X		; sign indicator
+	PHA			; save sign indicator
+	LDA	TOS,X		; n
+	PHA			; save n
+	JSR	vm_smrem	; ( rem quot )
+	; Floor correction
+	LDA	3,S		; sign indicator
+	BPL	@done		; same signs -> no correction
+	LDA	NOS,X		; remainder
+	BEQ	@done		; zero -> no correction
+	DEC	TOS,X		; quot -= 1
+	LDA	NOS,X
+	CLC
+	ADC	1,S		; rem += n
+	STA	NOS,X
+@done:
+	PLA			; drop n
+	PLA			; drop sign indicator
+	RTS
+ENDPUBLIC
+
+PUBLIC vm_slashmod
+	SWAP
+	STOD
+	ROT
+	JSR	vm_fmmod
+	RTS
+ENDPUBLIC
+
+; vm_wdivs - ( n1 n2 -- quotient )
+PUBLIC vm_wdivs
+	JSR	vm_slashmod
+	NIP
+	RTS
 ENDPUBLIC
 
 ; vm_cputs - prints a null terminated string to the console

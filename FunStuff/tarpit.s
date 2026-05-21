@@ -7,19 +7,89 @@
 
 ; Main entry point for the test
 PUBLIC MAIN
-	CALL	LOOP_EXAMPLE
+	JSR	LOOP_EXAMPLE
 	HALT			; return to monitor.
 ENDPUBLIC
 
+; Count down from ten
 PUBLIC LOOP_EXAMPLE
 	PUSHI 10
 @loop:	CPUTS	"Count = "
 	DUP
-	DOT
+	PRINTTOS
 	PRINTCR
-	PUSHI 1
-	SUB
-	BRANCHZ @loop
-	RETURN
+	DECTOS
+	BNE @loop
+	RTS
 ENDPUBLIC
 
+N:	WORD 0
+
+RESCALE = %0001000000000000
+THREE = 3 * RESCALE
+FOUR = 4 * RESCALE
+
+; Pi calculation
+; Described in C syntax n starts at 2 and iterates to the desired precision.
+; pi = 3 + 4/((n)*(++n)*(++n)) - 4/((n)*(++n)*(++n)) + ...
+
+PUBLIC	CALC_PI
+	PUSHI	THREE
+@while:	JSR	CALC_TERM
+ 	TOSZERO			; Nondestructively compare TOS with zero.
+	BEQ	@done
+	ADDS			; add term to the sum
+	BRA	@while
+@done:
+	DROP			; drop unneeded zero
+	CPUTS	"Pi = 0x"
+	PRINTTOS			; pop the results
+	PRINTCR
+
+	CPUTS	" / 0x"
+	PUSHI	RESCALE
+	PRINTTOS
+	PUSHI	0
+	PRINTTOS
+	PRINTCR
+
+	CPUTS	"N = 0x"
+	PUSH	N
+	PRINTTOS
+	PRINTCR
+	RTS
+ENDPUBLIC
+
+PUBLIC CALC_TERM
+	JSR	QUOTIENT
+	JSR	QUOTIENT
+	SUBS
+ENDPUBLIC
+
+; quotient: calculates a single scaled quotient term
+PUBLIC QUOTIENT
+	PUSH	FOUR		; numerator of fixed point four
+	JSR	DENOMINATOR	; calculate N*++N*++N
+	WDIVS
+	rts
+ENDPUBLIC
+
+; denominator: calculates (n)*(++n)*(++n)
+; Inputs:
+;   memory N
+; Outputs:
+;   N updated
+;   Data stack contains product
+PUBLIC DENOMINATOR
+	PUSH N			; ( N )
+	DUP			; ( N N )
+	INCTOS			; ( N ++N )
+	DUP			; ( N ++N ++N )
+	INCTOS			; ( N ++N ++N )
+	DUP			; ( N ++N ++N ++N )
+	PUSHI N			; ( N ++N ++N ++N addr )
+	WSTORE			; ( N ++N ++N )
+	WMULS			; ( N ++N*++N+ )
+	WMULS			; ( N*++N*++N )
+	RTS
+.endproc
