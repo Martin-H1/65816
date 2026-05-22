@@ -4,6 +4,7 @@
 
 ; Conditionally import virtual machine functions in consuming modules.
 .ifndef __vmachine_s__
+.import vm_clear
 .import vm_cputs
 .import vm_getch
 .import vm_print_num
@@ -25,6 +26,7 @@ INT_MAX         = $7FFF
 MINUS_ONE       = $FFFF
 UINT_MAX        = $FFFF
 
+; Parameter stack offsets
 TOS		= 0
 NOS		= 2
 
@@ -102,6 +104,13 @@ XOFF            = DC3           ; punch (send) OFF
 .endmacro
 
 ;------------------------------------------------------------------------------
+; CLEAR - Reset the stack to its empty state.
+;------------------------------------------------------------------------------
+.macro  CLEAR
+        JSR	vm_clear
+.endmacro
+
+;------------------------------------------------------------------------------
 ; DROP - Drops the top of stack (TOS)
 ;------------------------------------------------------------------------------
 .macro	DROP
@@ -120,12 +129,33 @@ XOFF            = DC3           ; punch (send) OFF
 .endmacro
 
 ;------------------------------------------------------------------------------
+; QDUP - Conditionally Ddplicates the TOS ( x -- 0 | x x )
+;------------------------------------------------------------------------------
+.macro	QDUP
+	LDA	TOS,X
+	.local @skip
+	BEQ	@skip
+	DEX
+	DEX
+	STA	TOS,X
+@skip:
+.endmacro
+
+;------------------------------------------------------------------------------
 ; NIP - Replace NOS with TOS and drop a cell
 ;------------------------------------------------------------------------------
 .macro  NIP
 	LDA	TOS,X
 	DROP
 	STA	TOS,X
+.endmacro
+
+;------------------------------------------------------------------------------
+; PEEK - Copies the value at TOS to the address arg.
+;------------------------------------------------------------------------------
+.macro  PEEK addr
+	LDA	TOS,X
+	STA	addr
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -173,6 +203,20 @@ XOFF            = DC3           ; punch (send) OFF
 .endmacro
 
 ;------------------------------------------------------------------------------
+; MROT - ( a b c -- c a b )
+;------------------------------------------------------------------------------
+.macro	MROT
+	LDA	4,X		; a (bottom)
+	PHA
+	LDA	TOS,X		; b
+	STA	4,X		; bottom slot = b
+	LDA	NOS,X		; c (TOS)
+	STA	TOS,X		; middle slot = c
+	PLA
+	STA	NOS,X		; TOS = a
+.endmacro
+
+;------------------------------------------------------------------------------
 ; SWAP - exchanges top two stack elements ( a b - b a )
 ;------------------------------------------------------------------------------
 .macro  SWAP
@@ -194,6 +238,69 @@ XOFF            = DC3           ; punch (send) OFF
 	LDA	TOS,X			; b
 	STA	4,X			; Slot below a = b
 .endmacro
+
+
+;==============================================================================
+; Double cell stack operations
+;==============================================================================
+
+;------------------------------------------------------------------------------
+; TWODROP - Drops the top two stack elements (TOS NOS)
+;------------------------------------------------------------------------------
+.macro	TWODROP
+	INX
+	INX
+	INX
+	INX
+.endmacro
+
+;------------------------------------------------------------------------------
+; TWODUP - ( a b -- a b a b )
+;------------------------------------------------------------------------------
+.macro	TWODUP
+	LDA	NOS,X			; a
+	DEX
+	DEX
+	STA	TOS,X			; ( a b a )
+	LDA	NOS,X			; b
+	DEX
+	DEX
+	STA	TOS,X			; ( a b a b )
+.endmacro
+
+;------------------------------------------------------------------------------
+; TWOSWAP - ( a b c d -- c d a b )
+;------------------------------------------------------------------------------
+.macro	TWOSWAP
+	LDA	TOS,X			; d
+	PHA
+	LDA	NOS,X			; c
+	PHA
+	LDA	4,X			; b
+	STA	TOS,X
+	LDA	6,X			; a
+	STA	NOS,X
+	PLA				; c
+	STA	6,X
+	PLA				; d
+	STA     4,X
+.endmacro
+
+;------------------------------------------------------------------------------
+; TWOOVER ( a b c d -- a b c d a b )
+;------------------------------------------------------------------------------
+.macro	TWOOVER
+	LDA	6,X			; a
+	ADVANCE
+	STA	TOS,X			; Push a
+	LDA	6,X			; b
+	ADVANCE
+	STA	TOS,X			; Push b
+.endmacro
+
+;==============================================================================
+; Return stack operations
+;==============================================================================
 
 ;------------------------------------------------------------------------------
 ; TOR - ( a - ) R: ( - a )

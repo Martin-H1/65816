@@ -71,6 +71,8 @@ HINIB   = $F0
 MEM16   = $20                   ; Accumulator width bit
 IND16   = $10                   ; Index register width bit
 
+CELL_SIZE = 2
+
 ;==============================================================================
 ; REGISTER WIDTH MACROS
 ; These match the W65C265 monitor ROM conventions exactly.
@@ -125,9 +127,54 @@ TMPB:		.res 2		; Temp for multiply/divide
 ; Initializes parameter stack and calls main.
 PUBLIC INIT
 	REP	#(MEM16|IND16)	; All registers = 16-bit
-	LDX	#PSP_INIT	; Parameter stack pointer
+	CLEAR			; Initialize the parameter stack
 	JMP	MAIN
 ENDPUBLIC
+
+PUBLIC vm_clear
+	LDX	#PSP_INIT	; Parameter stack pointer
+	RTS
+ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; ROLL ( xu xu-1 ... x0 u -- xu-1 ... x0 xu )
+; Remove u. Rotate u+1 items on the top of the stack. An ambiguous condition
+; exists if there are less than u+2 items on the stack before ROLL is executed.
+PUBLIC	vm_roll
+	POP	SCRATCH0	; save n
+	CMP	#00		; n=0, nothing to do
+	BEQ	@return
+
+	ASL	SCRATCH0	; SCRATCH0 = n*2 (byte offset)
+
+	; Fetch x_n
+	TXA
+	CLC
+	ADC	SCRATCH0
+	STA	SCRATCH1	; SCRATCH1 = addr of x_n
+	LDA	(SCRATCH1)	; fetch x_n
+	PHA			; save on return stack
+
+	; Shift x_0..x_n-1 up by one cell
+@shift_loop:
+	LDA	SCRATCH1
+	SEC
+	SBC	#CELL_SIZE
+	STA	SCRATCH1	; point to next lower item
+	LDA	(SCRATCH1)	; fetch it
+	LDY	#CELL_SIZE
+	STA	(SCRATCH1),Y	; store one cell higher
+	TXA
+	CMP	SCRATCH1	; reached PSP (x_0 position)?
+	BNE	@shift_loop
+
+	PLA			; restore x_n
+	STA	TOS,X		; store at TOS (x_0 position)
+@return:
+	RTS
+ENDPUBLIC
+
+
 
 ; vm_stod - sign extend a word to a long.
 PUBLIC	vm_stod
