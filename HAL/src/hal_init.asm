@@ -16,7 +16,6 @@
 ;   - hal_uart_putc, hal_uart_getc, hal_uart_puts, hal_uart_status
 ;   - hal_uart_rx_ready, hal_isr_uart0_rx, hal_isr_uart0_tx
 ;   - hal_isr_uart1_rx, hal_isr_uart1_tx
-;   - hal_via_init, hal_via_set_dir, hal_via_write, hal_via_read
 ;   - hal_set_brk, hal_set_isr, hal_set_nmi
 ;
 ; All stubs are .proc blocks that immediately RTL (or RTI for ISRs).
@@ -40,6 +39,8 @@
         .global hal_ver_lo, hal_ver_hi
 
         .segment "HAL_CODE"
+
+.import hal_via_init
 
 ; =============================================================================
 ; hal_reset — cold start entry point
@@ -110,7 +111,7 @@
         STA     hal_ver_hi
 
         ; ── 6. Init VIA ───────────────────────────────────────────────────────
-        JSR     hal_via_init        ; same bank — JSR is fine
+        JSL     hal_via_init	; Init via
 
         ; ── 7. Configure baud timer and init UART0 ───────────────────────────
         ; T3 → 19200 baud; bind UART0 and UART1 to T3
@@ -373,30 +374,6 @@ hal_idle:
         .export hal_isr_uart1_tx
         .proc   hal_isr_uart1_tx
         RTI
-        .endproc
-
-; =============================================================================
-; VIA stubs — replace with real implementations in hal_via.asm
-; =============================================================================
-
-        .export hal_via_init
-        .proc   hal_via_init
-        RTS                         ; called via JSR from hal_reset
-        .endproc
-
-        .export hal_via_set_dir
-        .proc   hal_via_set_dir
-        RTL
-        .endproc
-
-        .export hal_via_write
-        .proc   hal_via_write
-        RTL
-        .endproc
-
-        .export hal_via_read
-        .proc   hal_via_read
-        RTL
         .endproc
 
 ; =============================================================================

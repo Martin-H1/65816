@@ -52,6 +52,7 @@ SOURCES = \
     $(SRCDIR)/hal_zp.asm        \
     $(SRCDIR)/hal_page2.asm     \
     $(SRCDIR)/hal_init.asm      \
+    $(SRCDIR)/hal_via.asm       \
     $(SRCDIR)/hal_jumptable.asm \
     $(SRCDIR)/hal_vectors.asm
 
