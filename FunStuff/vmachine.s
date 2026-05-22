@@ -140,6 +140,7 @@ ENDPUBLIC
 ; ROLL ( xu xu-1 ... x0 u -- xu-1 ... x0 xu )
 ; Remove u. Rotate u+1 items on the top of the stack. An ambiguous condition
 ; exists if there are less than u+2 items on the stack before ROLL is executed.
+;------------------------------------------------------------------------------
 PUBLIC	vm_roll
 	POP	SCRATCH0	; save n
 	CMP	#00		; n=0, nothing to do
@@ -174,7 +175,21 @@ PUBLIC	vm_roll
 	RTS
 ENDPUBLIC
 
-
+;------------------------------------------------------------------------------
+; PICK ( xu...x1 x0 u -- xu...x1 x0 xu )
+;------------------------------------------------------------------------------
+PUBLIC	vm_pick
+	STX	SCRATCH0	; SCRATCH0 = stack base (PSP)
+	LDA	TOS,X		; u
+	INC	A		; u+1 (skip u itself)
+	ASL	A		; * 2 (cell size)
+	CLC
+	ADC	SCRATCH0	; X + (u+1)*2
+	STA	SCRATCH0
+	LDA	(SCRATCH0)	; Fetch xu
+	STA	TOS,X		; Replace u with xu
+	RTS
+ENDPUBLIC
 
 ; vm_stod - sign extend a word to a long.
 PUBLIC	vm_stod

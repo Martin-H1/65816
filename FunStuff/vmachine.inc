@@ -13,6 +13,7 @@
 .import vm_putahex
 .import vm_putchex
 .import vm_putch
+.import vm_roll
 .import vm_stod
 .import vm_wmuls
 .import vm_wdivs
@@ -80,14 +81,14 @@ XOFF            = DC3           ; punch (send) OFF
 ;   ENDPUBLIC
 ;------------------------------------------------------------------------------
 .macro  PUBLIC function_name
-        .export function_name
-        .proc   function_name
+	.export function_name
+	.proc   function_name
 	.A16
 	.I16
 .endmacro
 
 .macro  ENDPUBLIC
-        .endproc
+	.endproc
 .endmacro
 
 
@@ -99,15 +100,15 @@ XOFF            = DC3           ; punch (send) OFF
 ; ADVANCE - Increments the parameter stack pointer.
 ;------------------------------------------------------------------------------
 .macro  ADVANCE
-        DEX
-        DEX
+	DEX
+	DEX
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; CLEAR - Reset the stack to its empty state.
 ;------------------------------------------------------------------------------
 .macro  CLEAR
-        JSR	vm_clear
+	JSR	vm_clear
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -179,6 +180,13 @@ XOFF            = DC3           ; punch (send) OFF
 .endmacro
 
 ;------------------------------------------------------------------------------
+; PICK ( xu...x1 x0 u -- xu...x1 x0 xu )
+;------------------------------------------------------------------------------
+.macro PICK
+       JSR	vm_pick
+.endmacro
+
+;------------------------------------------------------------------------------
 ; POP - Pop top of parameter stack to address
 ;------------------------------------------------------------------------------
 .macro  POP addr
@@ -186,6 +194,15 @@ XOFF            = DC3           ; punch (send) OFF
 	STA	addr
 	INX
 	INX
+.endmacro
+
+;------------------------------------------------------------------------------
+; ROLL ( xu xu-1 ... x0 u -- xu-1 ... x0 xu )
+; Remove u. Rotate u+1 items on the top of the stack. An ambiguous condition
+; exists if there are less than u+2 items on the stack before ROLL is executed.
+;------------------------------------------------------------------------------
+.macro	ROLL
+	JSR	vm_roll
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -298,6 +315,18 @@ XOFF            = DC3           ; punch (send) OFF
 	STA	TOS,X			; Push b
 .endmacro
 
+;------------------------------------------------------------------------------
+; TWOROT
+; ( d1_lo d1_hi d2_lo d2_hi d3_lo d3_hi -- d2_lo d2_hi d3_lo d3_hi d1_lo d1_hi )
+;------------------------------------------------------------------------------
+.macro TWOROLL
+       PUSHI	5
+       JSR	vm_roll			;( d1_hi d2_lo d2_hi d3_lo d3_hi d1_lo )
+       PUSHI	5
+       JSR	vm_roll			;( d2_lo d2_hi d3_lo d3_hi d1_lo d1_hi )
+.endmacro
+
+
 ;==============================================================================
 ; Return stack operations
 ;==============================================================================
@@ -312,13 +341,60 @@ XOFF            = DC3           ; punch (send) OFF
 .endmacro
 
 ;------------------------------------------------------------------------------
-; FROMR - ( - a ) R: ( a - )
+; RFROM - ( - a ) R: ( a - )
 ;------------------------------------------------------------------------------
-.macro  FROMR
+.macro  RFROM
 	PLA				; a
 	DEX
 	DEX
 	STA	TOS,X			; a
+.endmacro
+
+;------------------------------------------------------------------------------
+; R_AT - ( -- a ) R: ( a -- a )
+;------------------------------------------------------------------------------
+.macro  R_AT
+	LDA	1,S			; a
+	DEX
+	DEX
+	STA	TOS,X			; a
+.endmacro
+
+;------------------------------------------------------------------------------
+; TWOTOR  ( x1 x2 -- ) R: ( -- x1 x2 ) Semantically equivalent to SWAP >R >R.
+;------------------------------------------------------------------------------
+.macro  TWOTOR
+	LDA	NOS,X			; x1 (NOS)
+	PHA
+	LDA	TOS,X			; x2
+	PHA
+	DROP
+	DROP
+.endmacro
+
+;------------------------------------------------------------------------------
+; TWORFROM ( -- x1 x2 ) R: ( x1 x2 -- ) Semantically equivalent to R> R> SWAP.
+;------------------------------------------------------------------------------
+.macro  TWORFROM
+	ADVANCE
+	ADVANCE
+	PLA				; x2
+	STA	TOS,X			; x2
+	PLA				; x1
+	STA	NOS,X			; x1
+.endmacro
+
+;------------------------------------------------------------------------------
+; TWOR_AT ( -- x1 x2 ) R: ( x1 x2 -- x1 x2 )
+; Semantically equivalent to R> R> 2DUP >R >R SWAP.
+;------------------------------------------------------------------------------
+.macro  TWOR_AT
+	ADVANCE
+	ADVANCE
+	LDA	3,S			; x1
+	STA	NOS,X			; x1
+	LDA	1,S			; x2
+	STA	TOS,X			; x2
 .endmacro
 
 
@@ -330,14 +406,27 @@ XOFF            = DC3           ; punch (send) OFF
 ; BFETCH - Replace TOS with the byte value at that address
 ;------------------------------------------------------------------------------
 .macro  BFETCH
-	JSR	vm_bfetch	; fetch 8-bit value
+	LDY	TOS,X		; addr
+	SEP     #MEM16          ; Accumulator = 8-bit
+	.A8
+	LDA	0,Y		; fetch 8-bit value
+	REP     #MEM16          ; Accumulator = 16-bit
+	.A16
+	AND	#$00FF		; Mask off top byte
+	STA	TOS,X
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; BSTORE - stores NOS byte value at TOS address and drops both cells.
 ;------------------------------------------------------------------------------
 .macro  BSTORE
-	JSR	vm_bstore	; fetch 8-bit value
+	LDY	TOS,X		; addr
+	LDA	NOS,X		; byte value
+	SEP     #MEM16          ; Accumulator = 8-bit
+	.A8
+	STA	0,Y
+	REP     #MEM16          ; Accumulator = 16-bit
+	.A16
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -387,9 +476,9 @@ XOFF            = DC3           ; punch (send) OFF
 ; ANDS - ANDs the NOS and TOS cells on the data stack
 ;------------------------------------------------------------------------------
 .macro  ANDS
-        LDA	TOS,X
+	LDA	TOS,X
 	DROP
-        AND	TOS,X
+	AND	TOS,X
 	STA	TOS,X
 .endmacro
 
@@ -397,9 +486,9 @@ XOFF            = DC3           ; punch (send) OFF
 ; ORS - ORs the NOS and TOS cells on the data stack
 ;------------------------------------------------------------------------------
 .macro  ORS
-        LDA	TOS,X
+	LDA	TOS,X
 	DROP
-        ORA	TOS,X
+	ORA	TOS,X
 	STA	TOS,X
 .endmacro
 
@@ -416,9 +505,9 @@ XOFF            = DC3           ; punch (send) OFF
 ; XORS - XORs the NOS and TOS on the data stack
 ;------------------------------------------------------------------------------
 .macro  XORS
-        LDA	TOS,X
+	LDA	TOS,X
 	DROP
-        EOR	TOS,X
+	EOR	TOS,X
 	STA	TOS,X
 .endmacro
 
@@ -431,7 +520,7 @@ XOFF            = DC3           ; punch (send) OFF
 ; ADDS - Adds the first two cells on the data stack
 ;------------------------------------------------------------------------------
 .macro  ADDS
-        LDA	TOS,X
+	LDA	TOS,X
 	DROP
 	CLC
 	ADC	TOS,X
