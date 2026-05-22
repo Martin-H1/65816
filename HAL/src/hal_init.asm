@@ -207,20 +207,27 @@ hal_idle:
 
         .endproc
 
-.macro JSL_INDIRECT vector_addr
-	REP     #$20
-        LDA     vector_addr         ; low word of target
-	DEC     A                   ; RTL adds 1, so pre-decrement
-	PHA                         ; push low word
+.macro IRQ_TRAMPOLINE vector_addr
+	PHA
+	PHX
+	PHY
 
-	SEP     #$20
-        .a8
-        LDA     vector_addr+2       ; bank byte
-	PHA                         ; push bank byte
+	LDA	irq_vector	; low word
+	ORA	irq_vector+2	; (bank byte of 24-bit addr + padding)
+	BEQ	@return
 
-        REP     #$20
-        .a16
-	RTL                         ; "returns" to IRQ target address
+	.local @trampoline
+	JSL	@trampoline
+
+	.local @return
+@return:
+	PLY
+	PLX
+	PLA
+	RTI
+
+@trampoline:
+	JML	[vector_addr]	; "returns" when target does an RTL.
 .endmacro
 
 ; =============================================================================
@@ -232,25 +239,12 @@ hal_idle:
 
         .export hal_isr_irq
         .proc   hal_isr_irq
-
         REP     #$30
         .a16
         .i16
-        PHA
-        PHX
 
-        ; Check if irq_vector is non-zero
-        LDA     irq_vector          ; low word
-        ORA     irq_vector+2        ; (second byte of 24-bit addr + padding)
-        BEQ     :+                  ; zero → no handler, skip
-
-	; 65816 has no indirect JSL, use macro to do the RTL trick
-	JSL_INDIRECT irq_vector
-
-:       PLX
-        PLA
-	RTI
-
+	; Use trampoline macro which handles the indirection and RTI
+	IRQ_TRAMPOLINE irq_vector
         .endproc
 
 ; =============================================================================
@@ -263,20 +257,8 @@ hal_idle:
         REP     #$30
         .a16
         .i16
-        PHA
-        PHX
-
-        LDA     nmi_vector
-        ORA     nmi_vector+2
-        BEQ     :+
-
-	; 65816 has no indirect JSL, use macro to do the RTL trick
-	JSL_INDIRECT nmi_vector
-
-:       PLX
-        PLA
-        RTI
-
+	; Use trampoline macro which handles the indirection and RTI
+	IRQ_TRAMPOLINE nmi_vector
         .endproc
 
 ; =============================================================================
@@ -293,20 +275,8 @@ hal_idle:
         REP     #$30
         .a16
         .i16
-        PHA
-        PHX
-
-        LDA     brk_vector
-        ORA     brk_vector+2
-        BEQ     :+
-
-	; 65816 has no indirect JSL, use macro to do the RTL trick
-	JSL_INDIRECT brk_vector
-
-:       PLX
-        PLA
-        RTI
-
+	; Use trampoline macro which handles the indirection and RTI
+	IRQ_TRAMPOLINE nmi_vector
         .endproc
 
 ; =============================================================================
@@ -324,7 +294,6 @@ hal_idle:
 
         ; TODO: read COP operand, index cop_fn_table, call handler, RTI
         RTI
-
         .endproc
 
 ; =============================================================================

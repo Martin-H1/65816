@@ -76,9 +76,8 @@ dirs:
 # ── Link ──────────────────────────────────────────────────────────────────────
 $(TARGET): $(OBJECTS) $(LDCFG)
 	$(LD65) $(LD65FLAGS) -o $@ $(OBJECTS)
-	@echo.
-	@echo Built: $@
-	@echo Map:   $(MAPFILE)
+	@cmd /c echo Built: $@
+	@cmd /c echo Map:   $(MAPFILE)
 
 # ── Assemble — pattern rule for all .asm -> .o ───────────────────────────────
 $(OBJDIR)/%.o: $(SRCDIR)/%.asm
@@ -95,7 +94,7 @@ clean:
 
 # ── Info — print segment layout from map file ─────────────────────────────────
 info: $(TARGET)
-	@echo === Segment layout ===
+	@cmd /c echo === Segment layout ===
 	@findstr /N "" $(MAPFILE)
 
 # ── Disassemble ───────────────────────────────────────────────────────────────
