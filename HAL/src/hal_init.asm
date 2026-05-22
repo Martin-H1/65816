@@ -26,6 +26,7 @@
         .smart  on
 
         .include "hal_sfr.inc"
+	.include "macros.inc"
 
         ; Page-two variables (defined in hal_page2.asm)
         .globalzp hal_tmp0, hal_tmp1, hal_tmp_ptr, hal_flags, hal_errflg
@@ -41,6 +42,9 @@
         .segment "HAL_CODE"
 
 .import hal_via_init
+.import hal_uart_init
+.import hal_uart_set_timer
+.import hal_baud_set_timer
 
 ; =============================================================================
 ; hal_reset — cold start entry point
@@ -53,8 +57,7 @@
 ;           interrupt disable set (I=1), decimal clear (D=0).
 ; =============================================================================
 
-        .export hal_reset
-        .proc   hal_reset
+PUBLIC	hal_reset
 
         ; ── 1. Set CPU to a known state ──────────────────────────────────────
         SEI                         ; interrupts off (already set by reset, be explicit)
@@ -144,7 +147,7 @@ hal_idle:
         WAI                         ; wait for interrupt
         BRA     hal_idle
 
-        .endproc
+ENDPUBLIC
 
 ; =============================================================================
 ; hal_probe_forth — check for Forth signature at $8000, JSL if found
@@ -183,15 +186,14 @@ hal_idle:
 ; switches to native mode and jumps to hal_reset.
 ; =============================================================================
 
-        .export hal_reset_emul
-        .proc   hal_reset_emul
+PUBLIC	hal_reset_emul
 
         ; In emulation mode on entry. Switch to native mode.
         CLC
         XCE                         ; emulation→native; M and X set to 1 by hardware
         JMP     hal_reset           ; native mode from here
 
-        .endproc
+ENDPUBLIC
 
 ; =============================================================================
 ; hal_isr_unused — default handler for unimplemented vectors
@@ -200,13 +202,12 @@ hal_idle:
 ; unrelated sources) and RTIs. Prevents interrupt storms on stray vectors.
 ; =============================================================================
 
-        .export hal_isr_unused
-        .proc   hal_isr_unused
+PUBLIC	hal_isr_unused
 
         ; No register save needed — RTI restores P, PC, PBR
         RTI
 
-        .endproc
+ENDPUBLIC
 
 .macro IRQ_TRAMPOLINE vector_addr
 	PHA
@@ -238,29 +239,27 @@ hal_idle:
 ; User handler must end with RTL.
 ; =============================================================================
 
-        .export hal_isr_irq
-        .proc   hal_isr_irq
+PUBLIC	hal_isr_irq
         REP     #$30
         .a16
         .i16
 
 	; Use trampoline macro which handles the indirection and RTI
 	IRQ_TRAMPOLINE irq_vector
-        .endproc
+ENDPUBLIC
 
 ; =============================================================================
 ; hal_isr_nmi — NMI dispatcher → nmi_vector
 ; =============================================================================
 
-        .export hal_isr_nmi
-        .proc   hal_isr_nmi
+PUBLIC	hal_isr_nmi
 
         REP     #$30
         .a16
         .i16
 	; Use trampoline macro which handles the indirection and RTI
 	IRQ_TRAMPOLINE nmi_vector
-        .endproc
+ENDPUBLIC
 
 ; =============================================================================
 ; hal_isr_brk — BRK dispatcher → brk_vector
@@ -270,15 +269,14 @@ hal_idle:
 ; If no brk_vector is installed, RTIs silently.
 ; =============================================================================
 
-        .export hal_isr_brk
-        .proc   hal_isr_brk
+PUBLIC	hal_isr_brk
 
         REP     #$30
         .a16
         .i16
 	; Use trampoline macro which handles the indirection and RTI
 	IRQ_TRAMPOLINE nmi_vector
-        .endproc
+ENDPUBLIC
 
 ; =============================================================================
 ; hal_isr_cop — COP dispatcher
@@ -290,107 +288,38 @@ hal_idle:
 ; when the COP subsystem is built.
 ; =============================================================================
 
-        .export hal_isr_cop
-        .proc   hal_isr_cop
+PUBLIC	hal_isr_cop
 
         ; TODO: read COP operand, index cop_fn_table, call handler, RTI
         RTI
-        .endproc
+ENDPUBLIC
 
 ; =============================================================================
 ; hal_version — return HAL version
 ;   Out: A (16-bit) = HAL_VERSION ($0100 = v1.0)
 ; =============================================================================
 
-        .export hal_version
-        .proc   hal_version
+PUBLIC	hal_version
 
         REP     #$20
         .a16
         LDA     #HAL_VERSION
         RTL
 
-        .endproc
-
-; =============================================================================
-; UART stubs — replace with real implementations in hal_uart.asm
-; =============================================================================
-
-        .export hal_baud_set_timer
-        .proc   hal_baud_set_timer
-        RTL
-        .endproc
-
-        .export hal_uart_set_timer
-        .proc   hal_uart_set_timer
-        RTL
-        .endproc
-
-        .export hal_uart_init
-        .proc   hal_uart_init
-        RTL
-        .endproc
-
-        .export hal_uart_putc
-        .proc   hal_uart_putc
-        RTL
-        .endproc
-
-        .export hal_uart_getc
-        .proc   hal_uart_getc
-        RTL
-        .endproc
-
-        .export hal_uart_puts
-        .proc   hal_uart_puts
-        RTL
-        .endproc
-
-        .export hal_uart_status
-        .proc   hal_uart_status
-        RTL
-        .endproc
-
-        .export hal_uart_rx_ready
-        .proc   hal_uart_rx_ready
-        RTL
-        .endproc
-
-        .export hal_isr_uart0_rx
-        .proc   hal_isr_uart0_rx
-        RTI
-        .endproc
-
-        .export hal_isr_uart0_tx
-        .proc   hal_isr_uart0_tx
-        RTI
-        .endproc
-
-        .export hal_isr_uart1_rx
-        .proc   hal_isr_uart1_rx
-        RTI
-        .endproc
-
-        .export hal_isr_uart1_tx
-        .proc   hal_isr_uart1_tx
-        RTI
-        .endproc
+ENDPUBLIC
 
 ; =============================================================================
 ; Interrupt callback API stubs
 ; =============================================================================
 
-        .export hal_set_brk
-        .proc   hal_set_brk
+PUBLIC	hal_set_brk
         RTL
-        .endproc
+ENDPUBLIC
 
-        .export hal_set_isr
-        .proc   hal_set_isr
+PUBLIC	hal_set_isr
         RTL
-        .endproc
+ENDPUBLIC
 
-        .export hal_set_nmi
-        .proc   hal_set_nmi
+PUBLIC	hal_set_nmi
         RTL
-        .endproc
+ENDPUBLIC
