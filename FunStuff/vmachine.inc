@@ -594,6 +594,18 @@ XOFF            = DC3           ; punch (send) OFF
 	JSR	vm_wdivs
 .endmacro
 
+;------------------------------------------------------------------------------
+; PLUS_STORE ( n addr -- ) adds n to the cell at addr.
+;------------------------------------------------------------------------------
+.macro PLUS_STORE
+	LDY	TOS,X			; addr
+	LDA	NOS,X			; n
+	CLC
+	ADC	0,Y			; n + [addr]
+	STA	0,Y			; store back
+	TWODROP
+.endmacro
+
 
 ;==============================================================================
 ; Bit shifts
