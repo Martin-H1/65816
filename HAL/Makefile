@@ -54,6 +54,7 @@ SOURCES = \
     $(SRCDIR)/hal_init.asm      \
     $(SRCDIR)/hal_via.asm       \
     $(SRCDIR)/hal_uart.asm      \
+    $(SRCDIR)/hal_cop.asm       \
     $(SRCDIR)/hal_jumptable.asm \
     $(SRCDIR)/hal_vectors.asm
 

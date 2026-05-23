@@ -41,6 +41,7 @@
         .import hal_uart_init
         .import hal_uart_set_timer
         .import hal_baud_set_timer
+        .import hal_isr_cop
 
         .segment "HAL_CODE"
 
@@ -98,6 +99,10 @@ PUBLIC  hal_reset
         ; ── 1. Set CPU to a known state ───────────────────────────────────────
         SEI                         ; interrupts off (explicit — already set by reset)
         CLD                         ; decimal mode off
+        ; On entry from hal_reset_emul: native mode, M=1, X=1 (8-bit)
+        ; Tell ca65 the current register state before widening
+        .a8
+        .i8
         ON16                        ; 16-bit A and X/Y
 
         ; Set direct page to $0000
@@ -109,6 +114,9 @@ PUBLIC  hal_reset
         XBA                         ; move $00 to high byte of A
         PHA
         PLB                         ; DBR = $00
+        ; ca65 loses track of M/X after PLB — re-assert 16-bit state
+        .a16
+        .i16
 
         ; ── 2. Init BCR ───────────────────────────────────────────────────────
         OFF16MEM                    ; 8-bit A only
@@ -251,17 +259,6 @@ ENDPUBLIC
 PUBLIC  hal_isr_brk
         ON16
         IRQ_TRAMPOLINE brk_vector
-ENDPUBLIC
-
-; =============================================================================
-; hal_isr_cop — COP dispatcher
-;
-; TODO: read COP operand byte, index cop_fn_table, call handler, RTI.
-; Stub RTIs immediately.
-; =============================================================================
-
-PUBLIC  hal_isr_cop
-        RTI
 ENDPUBLIC
 
 ; =============================================================================
