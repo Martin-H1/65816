@@ -142,6 +142,7 @@ ENDPUBLIC
 ; exists if there are less than u+2 items on the stack before ROLL is executed.
 ;------------------------------------------------------------------------------
 PUBLIC	vm_roll
+	PHY
 	POP	SCRATCH0	; save n
 	CMP	#00		; n=0, nothing to do
 	BEQ	@return
@@ -172,6 +173,7 @@ PUBLIC	vm_roll
 	PLA			; restore x_n
 	STA	TOS,X		; store at TOS (x_0 position)
 @return:
+	PLY
 	RTS
 ENDPUBLIC
 
