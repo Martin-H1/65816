@@ -276,18 +276,48 @@ PUBLIC  hal_version
 ENDPUBLIC
 
 ; =============================================================================
-; Interrupt callback API stubs
-; Replace with real implementations in hal_isr.asm
+; hal_set_brk — install a BRK interrupt callback
+; hal_set_isr — install an IRQ callback
+; hal_set_nmi — install an NMI callback
+;
+;   In:  X (16-bit) = handler address (low word)
+;        Y (8-bit)  = handler bank byte
+;
+; Stores the 24-bit JSL target into the appropriate page-two vector.
+; Pass X=0, Y=0 to clear (disable) a handler.
+;
+; The vectors are read by the IRQ_TRAMPOLINE macro in the ISR dispatchers:
+;   brk_vector  $0200  — read by hal_isr_brk
+;   irq_vector  $0203  — read by hal_isr_irq
+;   nmi_vector  $0206  — read by hal_isr_nmi
 ; =============================================================================
 
 PUBLIC  hal_set_brk
+        ON16X                   ; 16-bit X = handler address
+        STX     brk_vector      ; store low word
+        OFF16X
+        .i8
+        TYA                     ; A = bank byte
+        STA     brk_vector+2    ; store bank byte
         RTL
 ENDPUBLIC
 
 PUBLIC  hal_set_isr
+        ON16X
+        STX     irq_vector
+        OFF16X
+        .i8
+        TYA
+        STA     irq_vector+2
         RTL
 ENDPUBLIC
 
 PUBLIC  hal_set_nmi
+        ON16X
+        STX     nmi_vector
+        OFF16X
+        .i8
+        TYA
+        STA     nmi_vector+2
         RTL
 ENDPUBLIC
