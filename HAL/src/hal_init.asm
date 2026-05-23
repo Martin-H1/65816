@@ -5,17 +5,13 @@
 ;   - hal_reset        — native-mode reset entry point (cold start)
 ;   - hal_reset_emul   — emulation-mode reset (switches to native, jumps above)
 ;   - hal_isr_unused   — safe default for unimplemented interrupt vectors
-;   - hal_isr_irq      — IRQ dispatcher → irq_vector callback
-;   - hal_isr_nmi      — NMI dispatcher → nmi_vector callback
-;   - hal_isr_brk      — BRK dispatcher → brk_vector callback
-;   - hal_isr_cop      — COP dispatcher (by operand byte)
+;   - hal_isr_irq      — IRQ dispatcher -> irq_vector callback
+;   - hal_isr_nmi      — NMI dispatcher -> nmi_vector callback
+;   - hal_isr_brk      — BRK dispatcher -> brk_vector callback
 ;   - hal_version      — returns HAL_VERSION in A
-;
-; Stub implementations for subsystems not yet written:
-;   - hal_set_brk, hal_set_isr, hal_set_nmi
-;
-; All stubs are .proc blocks that immediately RTL (or RTI for ISRs).
-; Replace each stub with the real implementation as subsystems are built.
+;   - hal_set_brk      — install BRK callback
+;   - hal_set_isr      — install IRQ callback
+;   - hal_set_nmi      — install NMI callback
 ; =============================================================================
 
         .p816
@@ -51,15 +47,12 @@
 ; Usage: IRQ_TRAMPOLINE vector_addr
 ;
 ;   vector_addr  — 3-byte page-two address holding the 24-bit JSL target
-;                  (e.g. irq_vector, nmi_vector, brk_vector)
 ;
-; Saves A, X, Y. Checks if the vector is non-zero before calling.
-; Calls the handler via JML [vector_addr] (indirect 24-bit jump through
-; a bank-zero pointer). Handler must end with RTL.
-; Returns via RTI, restoring the interrupted context.
-;
-; Note: JML [addr] always reads the pointer from bank $00, which is
-; correct since all three vectors live in the HAL private page at $02xx.
+; PHA/PHX/PHY are 16-bit (ON16 is in effect) preserving full register state.
+; Zero-check uses OFF16MEM/ON16MEM to read exactly 3 bytes without overlap
+; into adjacent vectors. REP (ON16MEM) does not affect the Z flag, so BEQ
+; correctly reflects the ORA result after the width is restored.
+; Handler is entered with 16-bit registers and must end with RTL.
 ; =============================================================================
 
 .macro IRQ_TRAMPOLINE vector_addr
@@ -67,8 +60,12 @@
         PHX
         PHY
 
-        LDA     vector_addr         ; low word of this vector
-        ORA     vector_addr+2       ; bank byte of this vector
+        ; Check if vector is installed — 8-bit reads to avoid overlap
+        OFF16MEM                    ; 8-bit A for check
+        LDA     vector_addr
+        ORA     vector_addr+1
+        ORA     vector_addr+2
+        ON16MEM                     ; restore 16-bit A (Z flag unchanged by REP)
         BEQ     @return             ; zero = no handler installed
 
         .local @trampoline
@@ -79,7 +76,7 @@
         PLY
         PLX
         PLA
-        RTI                         ; restore PBR, PC, P — back to interrupted code
+        RTI                         ; restore PBR, PC, P
 
 @trampoline:
         JML     [vector_addr]       ; indirect 24-bit jump; handler RTLs back here
@@ -97,10 +94,8 @@
 PUBLIC  hal_reset
 
         ; ── 1. Set CPU to a known state ───────────────────────────────────────
-        SEI                         ; interrupts off (explicit — already set by reset)
+        SEI                         ; interrupts off
         CLD                         ; decimal mode off
-        ; On entry from hal_reset_emul: native mode, M=1, X=1 (8-bit)
-        ; Tell ca65 the current register state before widening
         .a8
         .i8
         ON16                        ; 16-bit A and X/Y
@@ -110,29 +105,25 @@ PUBLIC  hal_reset
         TCD
 
         ; Set data bank register to $00
-        LDA     #$0000
-        XBA                         ; move $00 to high byte of A
-        PHA
+        PEA     $0000
+        PLB                         ; discard high byte
         PLB                         ; DBR = $00
-        ; ca65 loses track of M/X after PLB — re-assert 16-bit state
-        .a16
-        .i16
 
         ; ── 2. Init BCR ───────────────────────────────────────────────────────
         OFF16MEM                    ; 8-bit A only
         LDA     #BCR_NMIB_EN
         STA     BCR
 
-        ; ── 3. Zero HAL zero-page variables ($00–$0F) ─────────────────────────
+        ; ── 3. Zero HAL zero-page variables ($00-$0F) ─────────────────────────
         ON16                        ; 16-bit A and X
-        LDX     #$000E              ; step by 2, covers $00–$0E then $00
+        LDX     #$000E
         LDA     #$0000
 :       STA     $00,X
         DEX
         DEX
         BPL     :-
 
-        ; ── 4. Zero HAL page-two ($0200–$02FF) ───────────────────────────────
+        ; ── 4. Zero HAL page-two ($0200-$02FF) ───────────────────────────────
         LDX     #$00FE
         LDA     #$0000
 :       STA     $0200,X
@@ -151,7 +142,6 @@ PUBLIC  hal_reset
         JSL     hal_via_init
 
         ; ── 7. Configure baud timer and init UART0 ───────────────────────────
-        ; T3 → 19200 baud; bind UART0 to T3 then initialise it
         ON16X                       ; 16-bit X for baud divisor
         LDA     #HAL_TIMER3
         LDX     #BAUD_19200
@@ -169,10 +159,9 @@ PUBLIC  hal_reset
         CLI
 
         ; ── 9. Probe for Forth kernel at $8000 ───────────────────────────────
-        JSR     hal_probe_forth     ; returns here if no Forth found
+        JSR     hal_probe_forth
 
         ; ── 10. Minimal HAL idle loop ─────────────────────────────────────────
-        ; (Replace with a monitor/prompt when that subsystem is built)
 hal_idle:
         WAI
         BRA     hal_idle
@@ -211,23 +200,16 @@ ENDPUBLIC
 
 ; =============================================================================
 ; hal_reset_emul — emulation-mode RESET handler ($FFFC/$FFFD vector)
-;
-; The 65816 always resets into emulation mode. Switch to native and
-; jump to hal_reset.
 ; =============================================================================
 
 PUBLIC  hal_reset_emul
-
         CLC
         XCE                         ; switch to native mode
         JMP     hal_reset
-
 ENDPUBLIC
 
 ; =============================================================================
 ; hal_isr_unused — safe default for unimplemented interrupt vectors
-;
-; RTIs immediately. Prevents lockup on spurious interrupts.
 ; =============================================================================
 
 PUBLIC  hal_isr_unused
@@ -235,7 +217,7 @@ PUBLIC  hal_isr_unused
 ENDPUBLIC
 
 ; =============================================================================
-; hal_isr_irq — level IRQ dispatcher → irq_vector
+; hal_isr_irq — level IRQ dispatcher -> irq_vector
 ; =============================================================================
 
 PUBLIC  hal_isr_irq
@@ -244,7 +226,7 @@ PUBLIC  hal_isr_irq
 ENDPUBLIC
 
 ; =============================================================================
-; hal_isr_nmi — NMI dispatcher → nmi_vector
+; hal_isr_nmi — NMI dispatcher -> nmi_vector
 ; =============================================================================
 
 PUBLIC  hal_isr_nmi
@@ -253,7 +235,7 @@ PUBLIC  hal_isr_nmi
 ENDPUBLIC
 
 ; =============================================================================
-; hal_isr_brk — BRK dispatcher → brk_vector
+; hal_isr_brk — BRK dispatcher -> brk_vector
 ; =============================================================================
 
 PUBLIC  hal_isr_brk
@@ -283,19 +265,17 @@ ENDPUBLIC
 ; Stores the 24-bit JSL target into the appropriate page-two vector.
 ; Pass X=0, Y=0 to clear (disable) a handler.
 ;
-; The vectors are read by the IRQ_TRAMPOLINE macro in the ISR dispatchers:
+; The vectors are read by IRQ_TRAMPOLINE in the ISR dispatchers:
 ;   brk_vector  $0200  — read by hal_isr_brk
 ;   irq_vector  $0203  — read by hal_isr_irq
 ;   nmi_vector  $0206  — read by hal_isr_nmi
 ; =============================================================================
 
 PUBLIC  hal_set_brk
-        ON16X                   ; 16-bit X = handler address
-        STX     brk_vector      ; store low word
+        ON16X                       ; 16-bit X = handler address
+        STX     brk_vector          ; store low word
         OFF16X
-        .i8
-        TYA                     ; A = bank byte
-        STA     brk_vector+2    ; store bank byte
+        STY     brk_vector+2        ; store bank byte
         RTL
 ENDPUBLIC
 
@@ -303,9 +283,7 @@ PUBLIC  hal_set_isr
         ON16X
         STX     irq_vector
         OFF16X
-        .i8
-        TYA
-        STA     irq_vector+2
+        STY     irq_vector+2
         RTL
 ENDPUBLIC
 
@@ -313,8 +291,6 @@ PUBLIC  hal_set_nmi
         ON16X
         STX     nmi_vector
         OFF16X
-        .i8
-        TYA
-        STA     nmi_vector+2
+        STY     nmi_vector+2
         RTL
 ENDPUBLIC
