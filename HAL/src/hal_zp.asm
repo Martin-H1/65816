@@ -8,8 +8,8 @@
 ; hal_init zeros this region at boot.
 ; =============================================================================
 
-        .setcpu "65816"
-        .smart  on
+        .p816
+        .smart  off
 
         .exportzp hal_tmp0, hal_tmp1, hal_tmp2, hal_tmp3
         .exportzp hal_tmp_ptr, hal_dp_save, hal_flags, hal_errflg

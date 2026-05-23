@@ -45,8 +45,8 @@
 ;   $FFBE/$FFBF   reserved
 ; =============================================================================
 
-        .setcpu "65816"
-        .smart  on
+        .p816
+        .smart  off
 
         .include "hal_sfr.inc"
 

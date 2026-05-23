@@ -1,3 +1,6 @@
+        .p816
+        .smart  off
+
 	.include "macros.inc"
 
         .segment "HAL_CODE"

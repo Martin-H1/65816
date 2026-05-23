@@ -28,8 +28,8 @@
 ;   $02D5–$02FF   reserved
 ; =============================================================================
 
-        .setcpu "65816"
-        .smart  on
+        .p816
+        .smart  off
 
         ; Export all symbols so other files can reference them via .global
         .export brk_vector, irq_vector, nmi_vector

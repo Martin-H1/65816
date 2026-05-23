@@ -29,8 +29,8 @@
 ; the SD subsystem is implemented. Do not place other code there.
 ; =============================================================================
 
-        .setcpu "65816"
-        .smart  on
+        .p816
+        .smart  off
 
         .include "hal_sfr.inc"
 
