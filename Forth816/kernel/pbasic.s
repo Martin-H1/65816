@@ -108,7 +108,7 @@ bitsetMask:
 ;------------------------------------------------------------------------------
 ; PBINIT ( -- ) Inits the PBasic library.
 ;------------------------------------------------------------------------------
-        HEADER  "PBINIT", PBINIT_ENTRY, PBINIT_CFA, 0, PBINIT_ENTRY
+        HEADER  "PBINIT", PBINIT_ENTRY, PBINIT_CFA, 0, PRIMITIVES_LAST_ENTRY
         CODEPTR PBINIT_CODE
         PUBLIC  PBINIT_CODE
         .a16
@@ -745,3 +745,9 @@ bitsetMask:
                 PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
+
+;==============================================================================
+; LAST_WORD - must be the ENTRY of the final word defined above
+; Used by FORTH_INIT to seed LATEST
+;==============================================================================
+        LAST_WORD = PBTOGGLE_ENTRY

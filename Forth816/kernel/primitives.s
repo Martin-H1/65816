@@ -6991,35 +6991,25 @@ unknown_msg:    .byte "??? ", $00
 ; TRACEON ( -- ) enable execution tracing
 ;------------------------------------------------------------------------------
         HEADER  "TRACEON", TRACEON_ENTRY, TRACEON_CFA, 0, UNUSED_ENTRY
-        CODEPTR TRACEON_CODE
-        PUBLIC  TRACEON_CODE
-        .a16
-        .i16
-                LDA     #FORTH_TRUE
-                STA     TRACE_EN
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        CELL    TRUE_CFA
+        CELL    LIT_CFA
+        CELL    TRACE_EN
+        CELL    STORE_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; TRACEOFF ( -- ) disable execution tracing
 ;------------------------------------------------------------------------------
         HEADER  "TRACEOFF", TRACEOFF_ENTRY, TRACEOFF_CFA, 0, TRACEON_ENTRY
-        CODEPTR TRACEOFF_CODE
-        PUBLIC  TRACEOFF_CODE
-        .a16
-        .i16
-                LDA     #FORTH_FALSE
-                STA     TRACE_EN
-                NEXT
-        ENDPUBLIC
-.endif
+        CODEPTR DOCOL
+        CELL    FALSE_CFA
+        CELL    LIT_CFA
+        CELL    TRACE_EN
+        CELL    STORE_CFA
+        CELL    EXIT_CFA
 
-;==============================================================================
-; LAST_WORD - must be the ENTRY of the final word defined above
-; Used by FORTH_INIT to seed LATEST
-;==============================================================================
-.ifdef DEBUG
-	LAST_WORD = TRACEOFF_ENTRY
+        PRIMITIVES_LAST_ENTRY = TRACEOFF_ENTRY
 .else
-	LAST_WORD = UNUSED_ENTRY
+        PRIMITIVES_LAST_ENTRY = UNUSED_ENTRY
 .endif

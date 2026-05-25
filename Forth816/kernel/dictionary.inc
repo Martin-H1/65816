@@ -177,6 +177,7 @@ F_LENMASK       = $1F
 
 ; Last word in ROM dictionary (used by FORTH_INIT)
         .global LAST_WORD
+        .global PRIMITIVES_LAST_ENTRY
 
 ; Inner interpreter entry points (defined in forth.s)
         .global DOCOL
