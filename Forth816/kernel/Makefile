@@ -14,7 +14,7 @@ release: bin bin/release bin/release/forth816.rom
 bin/debug/forth816.bin: obj/debug/hal_mench.o obj/debug/forth.o obj/debug/pbasic.o obj/debug/primitives.o
 	$(LD65) -C debug.cfg -o bin/debug/forth816.bin -m bin/debug/forth816.map $^
 
-bin/release/forth816.rom: obj/release/forth.o obj/release/hal_mench.o obj/release/pbasic.o obj/release/primitives.o
+bin/release/forth816.rom: obj/release/hal_mench.o obj/release/forth.o obj/release/pbasic.o obj/release/primitives.o
 	$(LD65) -C forth.cfg -o bin/release/forth816.rom -m bin/release/forth816.map $^
 
 %.srec : %.bin
