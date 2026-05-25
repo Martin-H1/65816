@@ -65,13 +65,16 @@ UPPER_CASE		= $E0A3	; Converts lower-case ASCII chars to upper-case.
 ;==============================================================================
 .segment "CODE"
 
-.ifdef DEBUG
+.ifndef DEBUG
+semaphore:
+        .asciiz "   "
+.endif
+        ; Trampoline to Forth main.
         PUBLIC  MONITOR_ENTRY
                 ON16MEM
                 ON16X
                 JMP     MAIN
         ENDPUBLIC
-.endif
 
 ; reads a CR terminated line from console into buffer
 PUBLIC hal_cgets
