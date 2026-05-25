@@ -425,7 +425,6 @@ bitsetMask:
         .i16
                 POP                     ; pop u
                 PHY                     ; Preserve IP
-                PHY
                 JSR     PBPAUSE_IMPL
                 PLY                     ; Restore IP
                 NEXT
