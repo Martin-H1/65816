@@ -44,7 +44,7 @@ MACROS_INC = 1
 ;------------------------------------------------------------------------------
 .macro  NEXT
 .ifdef DEBUG
-        JSR     TRACEOUT
+        JSR     DOTRACE
         ; --- Stack underflow guard ---
         CPX     #PSP_EMPTY      ; PSP >= PSP_EMPTY?
         .local @underflow

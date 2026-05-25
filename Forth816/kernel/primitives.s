@@ -6774,7 +6774,7 @@ notfound_msg:
         CELL    DP_CFA
         CELL    FETCH_CFA               ; ( latest dp cfa )
         CELL    LIT_CFA
-        CELL    DOMARKER_CODE
+        CELL    DOMARKER
         CELL    SWAP_CFA
         CELL    STORE_CFA               ; CFA = DOMARKER ( latest dp )
         ; Advance DP past CFA cell
@@ -6789,30 +6789,6 @@ notfound_msg:
         CELL    COMMA_CFA               ; body[0] = saved LATEST
         CELL    COMMA_CFA               ; body[1] = saved DP
         CELL    EXIT_CFA
-
-;------------------------------------------------------------------------------
-; DOMARKER - runtime action of a MARKER-created word.
-; Body layout at CFA+2: [ saved_LATEST | saved_DP ]
-; Restores LATEST and DP, erasing the marker and all words defined after it.
-;------------------------------------------------------------------------------
-        PUBLIC  DOMARKER_CODE
-        .a16
-        .i16
-DOMARKER_CODE:
-                PHY
-                ; Restore LATEST from body[0] (CFA + CELL_SIZE)
-                LDY     #CELL_SIZE
-                LDA     (W),Y
-                LDY     #U_LATEST
-                STA     (UP),Y
-                ; Restore DP from body[1] (CFA + CELL_SIZE*2)
-                LDY     #CELL_SIZE * 2
-                LDA     (W),Y
-                LDY     #U_DP
-                STA     (UP),Y
-                PLY
-                NEXT
-        ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; SEE ( "<spaces>name" -- ) skips leading space delimiters. Parse name
@@ -6996,7 +6972,6 @@ branch_msg:     .byte "BRANCH ", $00
 zbranch_msg:    .byte "0BRANCH ", $00
 primitive_msg:  .byte "primitive", $00
 unknown_msg:    .byte "??? ", $00
-;notfound_msg:   .byte "Word not found", $0D, $0A, $00
 
 ;------------------------------------------------------------------------------
 ; UNUSED (  -- u ) u is the amount of space remaining in the region addressed
@@ -7012,22 +6987,6 @@ unknown_msg:    .byte "??? ", $00
         CELL    EXIT_CFA
 
 .ifdef DEBUG
-;------------------------------------------------------------------------------
-; TRACEOUT ( -- ) Prints current IP to console in hex.
-;------------------------------------------------------------------------------
-        .importzp TRACE_EN
-        PUBLIC  TRACEOUT
-        .a16
-        .i16
-                LDA     a:TRACE_EN
-                BEQ     @done           ; FORTH_FALSE = 0, skip if off
-                TYA                     ; Print IP (Y) as 4-digit hex
-                JSR     hal_putchex
-                LDA     #SPACE
-                JSR     hal_putch
-@done:          RTS
-        ENDPUBLIC
-
 ;------------------------------------------------------------------------------
 ; TRACEON ( -- ) enable execution tracing
 ;------------------------------------------------------------------------------

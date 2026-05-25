@@ -187,12 +187,13 @@ F_LENMASK       = $1F
         .global DO2VAL
         .global DODOES
         .global DODEFER
+        .global DOMARKER
+        .global DOTRACE
         .global RTS_CFA_LIST
 
 ; Tracing functions in the DEBUG build.
 .ifdef DEBUG
         .globalzp   TRACE_EN
-        .global TRACEOUT
         .global TRACEON_CFA
         .global TRACEOFF_CFA
 .endif

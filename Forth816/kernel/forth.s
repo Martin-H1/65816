@@ -32,8 +32,9 @@
         .p816                   ; Enable 65816 instruction set
         .smart off              ; Manual size tracking (safer for Forth)
 
-        .include "macros.inc"
         .include "dictionary.inc"
+        .include "hal.inc"
+        .include "macros.inc"
 
 ;------------------------------------------------------------------------------
 ; ZERO PAGE - Direct Page variables
@@ -237,6 +238,47 @@ TRACE_EN:       .res 2                  ; Trace enable flag
                 STA     SCRATCH0
                 JMP     (SCRATCH0)      ; dispatch
         ENDPUBLIC
+
+
+;------------------------------------------------------------------------------
+; DOMARKER - runtime action of a MARKER-created word.
+; Body layout at CFA+2: [ saved_LATEST | saved_DP ]
+; Restores LATEST and DP, erasing the marker and all words defined after it.
+;------------------------------------------------------------------------------
+        PUBLIC  DOMARKER
+        .a16
+        .i16
+                PHY
+                ; Restore LATEST from body[0] (CFA + CELL_SIZE)
+                LDY     #CELL_SIZE
+                LDA     (W),Y
+                LDY     #U_LATEST
+                STA     (UP),Y
+                ; Restore DP from body[1] (CFA + CELL_SIZE*2)
+                LDY     #CELL_SIZE * 2
+                LDA     (W),Y
+                LDY     #U_DP
+                STA     (UP),Y
+                PLY
+                NEXT
+        ENDPUBLIC
+
+.ifdef DEBUG
+;------------------------------------------------------------------------------
+; DOTRACE ( -- ) Prints current IP to console in hex.
+;------------------------------------------------------------------------------
+        PUBLIC  DOTRACE
+        .a16
+        .i16
+                LDA     a:TRACE_EN
+                BEQ     @done           ; FORTH_FALSE = 0, skip if off
+                TYA                     ; Print IP (Y) as 4-digit hex
+                JSR     hal_putchex
+                LDA     #SPACE
+                JSR     hal_putch
+@done:          RTS
+        ENDPUBLIC
+.endif
 
 ;------------------------------------------------------------------------------
 ; RTS_CFA_LIST trampoline used to handle the NEXT at the end of code that
