@@ -424,13 +424,12 @@ bitsetMask:
         .a16
         .i16
                 POP                     ; pop u
-                PHY                     ; Preserve IP
                 JSR     PBPAUSE_IMPL
-                PLY                     ; Restore IP
                 NEXT
         ENDPUBLIC
 
         .proc   PBPAUSE_IMPL
+                PHY                     ; Preserve IP
                 TAY
                 OFF16MEM                ; enter byte transfer mode.
 @while:         STZ     VIA_ACR         ; select one shot mode
@@ -445,6 +444,7 @@ bitsetMask:
                 DEY
                 BPL     @while
                 ON16MEM
+                PLY                     ; Restore IP
                 RTS
         .endproc
 
@@ -570,6 +570,7 @@ bitsetMask:
         .a16
         .i16
                 PHY                     ; Preserve IP
+                LDA     4,X             ; pin index
                 JSR     PBOUTPUT_IMPL
                 STA     4,X             ; Save port mask
                 POP
@@ -608,15 +609,15 @@ bitsetMask:
 
         ; Note Y contains duration
         .proc   PBPWMMASK_IMPL
-                PSP_SAVE = 5
-                DUTY_CYCLE = 3
-                PORT_MASK = 1
+                DUTY_CYCLE = 5
+                PORT_MASK = 3
+                PSP_SAVE = 1
                 PHD                     ; preserve direct page register
-                PHX                     ; preserve PSP
                 POP                     ; u1 duty cycle
                 PHA                     ; initialize duty cycle stack local
                 POP
                 PHA                     ; initialize port mask stack local
+                PHX                     ; preserve PSP
                 TSC                     ; point direct page to stack frame
                 TCD
 
@@ -660,9 +661,9 @@ bitsetMask:
                 BNE    @while           ; loop until no ms left
 
 @return:                                ; clean up stack and return
+                PLX                     ; restore PSP
                 PLA                     ; clean off port mask
                 PLA                     ; clean off duty cycle
-                PLX                     ; restore PSP
                 PLD
                 RTS
         .endproc
