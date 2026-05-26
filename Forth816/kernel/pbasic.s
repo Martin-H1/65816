@@ -220,40 +220,38 @@ bitsetMask:
         PUBLIC  PBFREQOUT_CODE
         .a16
         .i16
-                DURATION = 5
-                FREQUENCY = 3
-                CHANNEL = 1
-
-                POP                     ; Move duration to the return stack
+                POP                     ; ( c u1 ) R: ( u2 ) >R duration
                 PHA
                 LDA     NOS,X
                 CMP     #$00            ; channel 0 or 1?
                 BNE     @channel1
 
                 ; channel 0
-                POP                     ; get the frequency
-                OFF16MEM                ; enter byte transfer mode.
+                POP                     ; get the frequency ( c ) R: ( u2 )
+                CMP     #0
                 BEQ     @skip1
                 STA     T5CL
-@skip1:         LDA     #T5FLG          ; Enable timer 5
+@skip1:         OFF16MEM                ; enter byte transfer mode.
+                LDA     #T5FLG          ; Enable timer 5
                 TSB     TER
                 LDA     #Bit1           ; Enable TG0
                 TSB     BCR
                 ON16MEM
                 BRA     @pause
 
-@channel1:
-                POP                     ; get the frequency
-                OFF16MEM                ; enter byte transfer mode.
+@channel1:      ; channel 1
+                POP                     ; get the frequency ( c ) R: ( u2 )
+                CMP     #0
                 BEQ     @skip2
                 STA     T6CL
-@skip2:         LDA     #T6FLG          ; enable timer 6
+@skip2:         OFF16MEM                ; enter byte transfer mode.
+                LDA     #T6FLG          ; enable timer 6
                 TSB     TER
                 LDA     #Bit2           ; enable TG1
                 TSB     BCR
                 ON16MEM
 @pause:
-                PLA
+                PLA                     ; >R duration ( c )
                 BEQ     @return         ; A zero duration means indefinate
                 JSR     PBPAUSE_IMPL
 
@@ -263,7 +261,7 @@ bitsetMask:
                 LDA     #T5FLG | T6FLG  ; Disable timers 5 and 6.
                 TRB     TER
                 ON16MEM
-@return:        DROP                    ; drop the channel
+@return:        DROP                    ; drop the channel ( )
                 NEXT
         ENDPUBLIC
 
