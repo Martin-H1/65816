@@ -22,7 +22,11 @@ ONE_MS 1000 / constant ONE_US	     \ cycles per us
 
 \ calc_freq( hz - cycles )
 \ Note constant = (fclk / (16 * Hz)) - 1
-: calc_freq FCLK 16 fm/mod swap drop swap / 1 - ;
+: calc_freq
+  FCLK d2/ d2/ d2/ d2/
+  rot ud/mod
+  drop swap drop
+  1 - ;
 
 31 calc_freq constant N_B0
 33 calc_freq constant N_C1
@@ -164,17 +168,17 @@ create pachelbel
   dup pachelbel + @
   swap cell+ pachelbel + @ ;
 
-: playsong
+: play_song
   PBINIT
   0 begin
     dup get_note_and_duration
     ?dup 0<> if
       TG0 -rot PBFREQOUT
     else
-      unloop exit
+      exit
     then
     cell+ cell+
   again
   drop ;
 
-playsong
+play_song
