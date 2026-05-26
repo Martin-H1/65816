@@ -68,7 +68,7 @@ US              = $1F           ; unit separator
 SPACE           = $20           ; space
 DEL             = $7F           ; Delete
 
-XON             = DC1           ; puunch (send) ON
+XON             = DC1           ; punch (send) ON
 XOFF            = DC3           ; punch (send) OFF
 
 
@@ -130,7 +130,7 @@ XOFF            = DC3           ; punch (send) OFF
 .endmacro
 
 ;------------------------------------------------------------------------------
-; QDUP - Conditionally Ddplicates the TOS ( x -- 0 | x x )
+; QDUP - Conditionally Duplicates the TOS ( x -- 0 | x x )
 ;------------------------------------------------------------------------------
 .macro	QDUP
 	LDA	TOS,X
