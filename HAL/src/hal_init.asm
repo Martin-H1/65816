@@ -1,9 +1,9 @@
 ; =============================================================================
-; hal_init.asm — Boot sequence and empty/stub implementations
+; hal_init.asm — Boot sequence and ISR dispatchers
 ;
 ; This file provides:
-;   - hal_reset        — native-mode reset entry point (cold start)
-;   - hal_reset_emul   — emulation-mode reset (switches to native, jumps above)
+;   - hal_reset        — HAL entry point (entered via JMP $8004 from masked ROM)
+;   - hal_reset_emul   — safety fallback if CPU somehow enters emulation mode
 ;   - hal_isr_unused   — safe default for unimplemented interrupt vectors
 ;   - hal_isr_irq      — IRQ dispatcher -> irq_vector callback
 ;   - hal_isr_nmi      — NMI dispatcher -> nmi_vector callback
@@ -85,20 +85,20 @@
 ; =============================================================================
 ; hal_reset — cold start entry point
 ;
-; RESET always vectors through the emulation-mode table ($FFFC/$FFFD).
-; hal_reset_emul switches to native mode and jumps here.
-;
-; On entry: native mode, M=1, X=1, I=1, D=0.
+; Entered via JMP $8004 from the W65C265S masked ROM after it finds
+; the "WDC" signature at $8000. Register state on entry:
+;   native mode, A=8-bit (M=1), X/Y=16-bit (X=0), I=1, D=0, SP=$01FF
 ; =============================================================================
 
 PUBLIC  hal_reset
 
         ; ── 1. Set CPU to a known state ───────────────────────────────────────
-        SEI                         ; interrupts off
-        CLD                         ; decimal mode off
+        SEI                         ; interrupts off (already set, be explicit)
+        CLD                         ; decimal off (already clear, be explicit)
+        ; Entry state: A=8-bit, X/Y=16-bit. Widen A to match X/Y.
         .a8
-        .i8
-        ON16                        ; 16-bit A and X/Y
+        .i16
+        ON16MEM                     ; A -> 16-bit (X/Y already 16-bit)
 
         ; Set direct page to $0000
         LDA     #$0000
@@ -169,29 +169,31 @@ hal_idle:
 ENDPUBLIC
 
 ; =============================================================================
-; hal_probe_forth — check for Forth signature at $8000, JSL if found
+; hal_probe_forth — check for Forth signature, JSL if found
 ;
-; Signature: 4 bytes "FTH\0" at $00:8000.
-; Entry point: $00:8004. Forth returns via RTL if it ever exits.
+; Forth lives somewhere in $8004–$BEEF alongside the HAL.
+; FORTH_PROBE_ADDR and FORTH_ENTRY_ADDR are defined in hal_sfr.inc.
+; The signature is "FTH\0" (4 bytes) at FORTH_PROBE_ADDR.
+; Forth entry point is at FORTH_ENTRY_ADDR. Forth returns via RTL if it exits.
 ; =============================================================================
 
         .proc   hal_probe_forth
 
         OFF16MEM                    ; 8-bit A
-        LDA     $8000
+        LDA     FORTH_PROBE_ADDR
         CMP     #FORTH_SIG_0
         BNE     @no_forth
-        LDA     $8001
+        LDA     FORTH_PROBE_ADDR+1
         CMP     #FORTH_SIG_1
         BNE     @no_forth
-        LDA     $8002
+        LDA     FORTH_PROBE_ADDR+2
         CMP     #FORTH_SIG_2
         BNE     @no_forth
-        LDA     $8003
+        LDA     FORTH_PROBE_ADDR+3
         CMP     #FORTH_SIG_3
         BNE     @no_forth
 
-        JSL     $008004             ; call Forth — RTL returns here if it exits
+        JSL     FORTH_ENTRY_ADDR    ; call Forth — RTL returns here if it exits
 
 @no_forth:
         RTS
@@ -199,7 +201,11 @@ ENDPUBLIC
         .endproc
 
 ; =============================================================================
-; hal_reset_emul — emulation-mode RESET handler ($FFFC/$FFFD vector)
+; hal_reset_emul — safety fallback if CPU enters emulation mode
+;
+; Normal boot enters via JMP $8004 from the masked ROM — already in native
+; mode. This handler is a safety net in case something goes wrong and the
+; CPU ends up in emulation mode unexpectedly.
 ; =============================================================================
 
 PUBLIC  hal_reset_emul

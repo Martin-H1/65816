@@ -51,6 +51,7 @@ LD65FLAGS = -C $(LDCFG) -m $(MAPFILE) -Ln $(LBLFILE)
 SOURCES = \
     $(SRCDIR)/hal_zp.asm        \
     $(SRCDIR)/hal_page2.asm     \
+    $(SRCDIR)/hal_header.asm    \
     $(SRCDIR)/hal_init.asm      \
     $(SRCDIR)/hal_via.asm       \
     $(SRCDIR)/hal_uart.asm      \

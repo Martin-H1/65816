@@ -324,7 +324,11 @@ HAL_UART1       = 1
 HAL_UART2       = 2
 HAL_UART3       = 3
 
-; Forth kernel boot signature (4 bytes at $8000)
+; Forth kernel boot signature and probe locations
+; Forth lives in the $8004-$BEEF region alongside the HAL.
+; These addresses must match the Forth build's linker configuration.
+FORTH_PROBE_ADDR = $B000    ; "FTH\0" signature checked by hal_probe_forth
+FORTH_ENTRY_ADDR = $B004    ; Forth entry point (JSL target)
 FORTH_SIG_0     = $46       ; 'F'
 FORTH_SIG_1     = $54       ; 'T'
 FORTH_SIG_2     = $48       ; 'H'
