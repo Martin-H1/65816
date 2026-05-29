@@ -38,7 +38,6 @@
         .export u1_rx_buf, u1_rx_head, u1_rx_tail
         .export u1_tx_buf, u1_tx_head, u1_tx_tail
         .export via_ddra_shad, via_ddrb_shad
-        .export hal_ver_lo, hal_ver_hi
 
         .segment "BSS_PAGE2"
 
@@ -85,11 +84,6 @@ u1_tx_tail:     .res 1      ; $02D0
 via_ddra_shad:  .res 1      ; $02D1
 via_ddrb_shad:  .res 1      ; $02D2
 
-; ── HAL metadata ─────────────────────────────────────────────────────────────
-
-hal_ver_lo:     .res 1      ; $02D3
-hal_ver_hi:     .res 1      ; $02D4
-
 ; ── Reserved ─────────────────────────────────────────────────────────────────
 
-                .res 43     ; $02D5–$02FF
+                .res 45     ; $02D3–$02FF
