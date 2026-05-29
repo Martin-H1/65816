@@ -3,7 +3,7 @@
 ; Martin Heermance <mheermance@gmail.com>
 ; -----------------------------------------------------------------------------
 
-.include "vmachine.inc"
+.include "vmachine32.inc"
 
 ; Main entry point for the test
 PUBLIC MAIN

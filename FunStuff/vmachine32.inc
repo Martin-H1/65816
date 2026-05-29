@@ -15,6 +15,8 @@
 .import vm_putahex
 .import vm_putchex
 .import vm_putch
+.import vm_mrot
+.import vm_rot
 .import vm_roll
 .import vm_stod
 .import vm_wmuls
@@ -24,14 +26,16 @@
 ; Common constants
 
 ; Integer constants (based on C's limits.h)
-INT_MIN         = $8000
-INT_MAX         = $7FFF
-MINUS_ONE       = $FFFF
-UINT_MAX        = $FFFF
+INT_MIN         = $80000000
+INT_MAX         = $7FFFFFFF
+MINUS_ONE       = $FFFFFFFF
+UINT_MAX        = $FFFFFFFF
 
 ; Parameter stack offsets
-TOS		= 0
-NOS		= 2
+TOS_LSW		= 0
+TOS_MSW		= 2
+NOS_LSW		= 4
+NOS_MSW		= 6
 
 ;------------------------------------------------------------------------------
 ; PUBLIC / ENDPUBLIC - Export a subroutine as a global symbol
@@ -63,6 +67,8 @@ NOS		= 2
 .macro  ADVANCE
 	DEX
 	DEX
+	DEX
+	DEX
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -78,28 +84,29 @@ NOS		= 2
 .macro	DROP
 	INX
 	INX
+	INX
+	INX
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; DUP - Duplicates the top of stack (TOS)
 ;------------------------------------------------------------------------------
 .macro	DUP
-	LDA	TOS,X
-	DEX
-	DEX
-	STA	TOS,X
+	ADVANCE
+	LDA	NOS_LSW,X
+	STA	TOS_LSW,X
+	LDA	NOS_MSW,X
+	STA	TOS_MSW,X
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; QDUP - Conditionally Duplicates the TOS ( x -- 0 | x x )
 ;------------------------------------------------------------------------------
 .macro	QDUP
-	LDA	TOS,X
+	TOSZERO
 	.local @skip
 	BEQ	@skip
-	DEX
-	DEX
-	STA	TOS,X
+	DUP
 @skip:
 .endmacro
 
@@ -107,37 +114,54 @@ NOS		= 2
 ; NIP - Replace NOS with TOS and drop a cell
 ;------------------------------------------------------------------------------
 .macro  NIP
-	LDA	TOS,X
+	LDA	TOS_LSW,X
+	STA	NOS_LSW,X
+	LDA	TOS_MSW,X
+	STA	NOS_MSW,X
 	DROP
-	STA	TOS,X
+.endmacro
+
+;------------------------------------------------------------------------------
+; OVER - ( a b ) -- ( a b a )
+;------------------------------------------------------------------------------
+.macro  OVER
+	ADVANCE
+	LDA	8,X
+	STA	TOS_LSW,X
+	LDA	10,X
+	STA	TOS_MSW,X
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; PEEK - Copies the value at TOS to the address arg.
 ;------------------------------------------------------------------------------
 .macro  PEEK addr
-	LDA	TOS,X
+	LDA	TOS_LSW,X
 	STA	addr
+	LDA	TOS_MSW,X
+	STA	addr+TOS_MSW
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; PUSH - Push value at address arg onto parameter stack
 ;------------------------------------------------------------------------------
 .macro  PUSH addr
+	ADVANCE
 	LDA	addr
-	DEX
-	DEX
-	STA	TOS,X
+	STA	TOS_LSW,X
+	LDA	addr+TOS_MSW
+	STA	TOS_MSW,X
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; PUSHI - Push immediate onto the stack
 ;------------------------------------------------------------------------------
 .macro	PUSHI arg
-	LDA	#arg
-	DEX
-	DEX
-	STA	TOS,X
+	ADVANCE
+	LDA	#<arg
+	STA	TOS_LSW,X
+	LDA	#>arg
+	STA	TOS_MSW,X
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -151,10 +175,11 @@ NOS		= 2
 ; POP - Pop top of parameter stack to address
 ;------------------------------------------------------------------------------
 .macro  POP addr
-	LDA	TOS,X
+	LDA	TOS_LSW,X
 	STA	addr
-	INX
-	INX
+	LDA	TOS_MSW,X
+	STA	addr+TOS_MSW
+	DROP
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -167,43 +192,35 @@ NOS		= 2
 .endmacro
 
 ;------------------------------------------------------------------------------
-; ROT - ( a b c -- b c a )
-;------------------------------------------------------------------------------
-.macro	ROT
-	LDA	4,X		; a (bottom)
-	PHA
-	LDA	NOS,X		; b
-	STA	4,X		; bottom slot = b
-	LDA	TOS,X		; c (TOS)
-	STA	NOS,X		; middle slot = c
-	PLA
-	STA	TOS,X		; TOS = a
-.endmacro
-
-;------------------------------------------------------------------------------
 ; MROT - ( a b c -- c a b )
 ;------------------------------------------------------------------------------
 .macro	MROT
-	LDA	4,X		; a (bottom)
-	PHA
-	LDA	TOS,X		; b
-	STA	4,X		; bottom slot = b
-	LDA	NOS,X		; c (TOS)
-	STA	TOS,X		; middle slot = c
-	PLA
-	STA	NOS,X		; TOS = a
+	JSR	vm_mrot
+.endmacro
+
+;------------------------------------------------------------------------------
+; ROT - ( a b c -- b c a )
+;------------------------------------------------------------------------------
+.macro	ROT
+	JSR	vm_rot
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; SWAP - exchanges top two stack elements ( a b - b a )
 ;------------------------------------------------------------------------------
 .macro  SWAP
-        LDA	TOS,X
+        LDA	TOS_LSW,X
         PHA
-        LDA	NOS,X
-	STA	TOS,X
+        LDA	TOS_MSW,X
+        PHA
+        LDA	NOS_LSW,X
+	STA	TOS_LSW,X
+        LDA	NOS_MSW,X
+	STA	TOS_MSW,X
 	PLA
-	STA	NOS,X
+	STA	NOS_MSW,X
+	PLA
+	STA	NOS_LSW,X
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -211,10 +228,14 @@ NOS		= 2
 ;------------------------------------------------------------------------------
 .macro  TUCK
 	DUP				; TOS = b
-	LDA	4,X			; a
-	STA	NOS,X			; NOS = a
-	LDA	TOS,X			; b
-	STA	4,X			; Slot below a = b
+	LDA	8,X			; a
+	STA	NOS_LSW,X		; NOS = a
+	LDA	10,X			; a
+	STA	NOS_MSW,X		; NOS = a
+	LDA	TOS_LSW,X		; b
+	STA	8,X			; Slot below a = b
+	LDA	TOS_MSW,X		; b
+	STA	10,X			; Slot below a = b
 .endmacro
 
 
@@ -226,42 +247,22 @@ NOS		= 2
 ; TWODROP - Drops the top two stack elements (TOS NOS)
 ;------------------------------------------------------------------------------
 .macro	TWODROP
-	INX
-	INX
-	INX
-	INX
+	DROP
+	DROP
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; TWODUP - ( a b -- a b a b )
 ;------------------------------------------------------------------------------
 .macro	TWODUP
-	LDA	NOS,X			; a
-	DEX
-	DEX
-	STA	TOS,X			; ( a b a )
-	LDA	NOS,X			; b
-	DEX
-	DEX
-	STA	TOS,X			; ( a b a b )
+	jsr	vm_twodup
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; TWOSWAP - ( a b c d -- c d a b )
 ;------------------------------------------------------------------------------
 .macro	TWOSWAP
-	LDA	TOS,X			; d
-	PHA
-	LDA	NOS,X			; c
-	PHA
-	LDA	4,X			; b
-	STA	TOS,X
-	LDA	6,X			; a
-	STA	NOS,X
-	PLA				; c
-	STA	6,X
-	PLA				; d
-	STA     4,X
+	JSR	vm_twoswap
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -296,7 +297,9 @@ NOS		= 2
 ; TOR - ( a - ) R: ( - a )
 ;------------------------------------------------------------------------------
 .macro  TOR
-	LDA	TOS,X			; a
+	LDA	TOS_MSW,X		; a
+	PHA
+	LDA	TOS_LSW,X		; a
 	PHA
 	DROP
 .endmacro
@@ -305,10 +308,11 @@ NOS		= 2
 ; RFROM - ( - a ) R: ( a - )
 ;------------------------------------------------------------------------------
 .macro  RFROM
+	ADVANCE
 	PLA				; a
-	DEX
-	DEX
-	STA	TOS,X			; a
+	STA	TOS_LSW,X		; a
+	PLA				; a
+	STA	TOS_MSW,X		; a
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -316,33 +320,24 @@ NOS		= 2
 ;------------------------------------------------------------------------------
 .macro  R_AT
 	LDA	1,S			; a
-	DEX
-	DEX
-	STA	TOS,X			; a
+	STA	TOS_LSW,X		; a
+	LDA	3,S			; a
+	STA	TOS_MSW,X		; a
+	ADVANCE
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; TWOTOR  ( x1 x2 -- ) R: ( -- x1 x2 ) Semantically equivalent to SWAP >R >R.
 ;------------------------------------------------------------------------------
 .macro  TWOTOR
-	LDA	NOS,X			; x1 (NOS)
-	PHA
-	LDA	TOS,X			; x2
-	PHA
-	DROP
-	DROP
+	JSR	vm_twotor
 .endmacro
 
 ;------------------------------------------------------------------------------
 ; TWORFROM ( -- x1 x2 ) R: ( x1 x2 -- ) Semantically equivalent to R> R> SWAP.
 ;------------------------------------------------------------------------------
 .macro  TWORFROM
-	ADVANCE
-	ADVANCE
-	PLA				; x2
-	STA	TOS,X			; x2
-	PLA				; x1
-	STA	NOS,X			; x1
+	jsr	vm_tworfrom
 .endmacro
 
 ;------------------------------------------------------------------------------
@@ -350,12 +345,7 @@ NOS		= 2
 ; Semantically equivalent to R> R> 2DUP >R >R SWAP.
 ;------------------------------------------------------------------------------
 .macro  TWOR_AT
-	ADVANCE
-	ADVANCE
-	LDA	3,S			; x1
-	STA	NOS,X			; x1
-	LDA	1,S			; x2
-	STA	TOS,X			; x2
+	JSR	vm_twor_at
 .endmacro
 
 
@@ -425,8 +415,8 @@ NOS		= 2
 ; TOSZERO - Nondestructively compares TOS with zero.
 ;------------------------------------------------------------------------------
 .macro  TOSZERO
-	LDA	TOS,X
-	CMP	#0
+	LDA	TOS_LSW,X
+	ORA	TOS_MSW,X
 .endmacro
 
 ;==============================================================================
@@ -437,10 +427,13 @@ NOS		= 2
 ; ANDS - ANDs the NOS and TOS cells on the data stack
 ;------------------------------------------------------------------------------
 .macro  ANDS
-	LDA	TOS,X
+	LDA	TOS_LSW,X
+	AND	NOS_LSW,X
+	STA	NOS_LSW,X
+	LDA	TOS_MSW,X
+	AND	NOS_MSW,X
+	STA	NOS_MSW,X
 	DROP
-	AND	TOS,X
-	STA	TOS,X
 .endmacro
 
 ;------------------------------------------------------------------------------
