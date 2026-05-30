@@ -1189,10 +1189,9 @@ DABS_DONE:
                 LDA     NOS,X           ; n
                 BPL     @positive
                 LDA     #MINUS_ONE      ; negative → high cell = -1
-                STA     TOS,X
-                NEXT
-@positive:
-                STZ     TOS,X           ; positive → high cell = 0
+                BRA     @return
+@positive:      LDA     #0              ; positive → high cell = 0
+@return:        STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1349,10 +1348,10 @@ MSTARS_THEN:
                 POP
                 CMP     TOS,X
                 BEQ     @true
-                STZ     TOS,X
-                NEXT
+                LDA     #FORTH_FALSE
+                BRA     @return
 @true:          LDA     #FORTH_TRUE
-                STA     TOS,X
+@return:        STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1367,10 +1366,10 @@ MSTARS_THEN:
                 POP
                 CMP     TOS,X
                 BNE     @true
-                STZ     TOS,X
-                NEXT
+                LDA     #FORTH_FALSE
+                BRA     @return
 @true:          LDA     #FORTH_TRUE
-                STA     TOS,X
+@return:        STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1438,10 +1437,10 @@ MSTARS_THEN:
                 CMP     TOS,X           ; u1 - u2 (unsigned)
                 DROP
                 BCC     @true           ; Carry clear = u1 < u2
-                STZ     TOS,X
-                NEXT
+                LDA     #FORTH_FALSE
+                BRA     @return
 @true:          LDA     #FORTH_TRUE
-                STA     TOS,X
+@return:        STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1456,10 +1455,10 @@ MSTARS_THEN:
                 POP                     ; u2
                 CMP     TOS,X           ; u2 - u1 (reversed)
                 BCC     @true
-                STZ     TOS,X
-                NEXT
+                LDA     #FORTH_FALSE
+                BRA     @return
 @true:          LDA     #FORTH_TRUE
-                STA     TOS,X
+@return:        STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1474,9 +1473,9 @@ MSTARS_THEN:
                 LDA     TOS,X
                 BNE     @false
                 LDA     #FORTH_TRUE
-                STA     TOS,X
-                NEXT
-@false:         STZ     TOS,X
+                BRA     @return
+@false:         LDA     #FORTH_FALSE
+@return:        STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1491,9 +1490,9 @@ MSTARS_THEN:
                 LDA     TOS,X
                 BPL     @false
                 LDA     #FORTH_TRUE
-                STA     TOS,X
-                NEXT
-@false:         STZ     TOS,X
+                BRA     @return
+@false:         LDA     #FORTH_FALSE
+@return:        STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1508,10 +1507,10 @@ MSTARS_THEN:
                 LDA     TOS,X
                 BEQ     @false
                 BPL     @true
-@false:         STZ     TOS,X
-                NEXT
+@false:         LDA     #FORTH_FALSE
+                BRA     @return
 @true:          LDA     #FORTH_TRUE
-                STA     TOS,X
+@return:        STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -1526,8 +1525,8 @@ MSTARS_THEN:
                 LDA     TOS,X
                 BEQ     @return
                 LDA     #FORTH_TRUE
-                STA     TOS,X
-@return:        NEXT
+@return:        STA     TOS,X
+                NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
@@ -1597,9 +1596,7 @@ MSTARS_THEN:
 @false:
                 LDA     #FORTH_FALSE
                 BRA     @return
-                NEXT
-@true:
-                LDA     #FORTH_TRUE
+@true:          LDA     #FORTH_TRUE
 @return:        DROP                    ; drop 3 cells
                 DROP
                 DROP
@@ -2255,10 +2252,10 @@ DMIN_THEN:
                 CMP     #0              ; Test flag (INX clobbers zero flag,
                 BNE     @no_branch      ; so use CMP not BEQ/BNE directly)
                 IPFETCH_BRANCH          ; Fetch branch target and IP = target
-                NEXT
+                BRA     @return
 @no_branch:
                 IPINC                   ; Skip branch target cell
-                NEXT
+@return:        NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
@@ -2298,11 +2295,11 @@ DMIN_THEN:
                 LDA     SCRATCH0
                 PHA                     ; Push index+1 back
                 IPFETCH_BRANCH          ; Branch target, IP = loop top
-                NEXT
+                BRA     @return
 @done:                                  ; Drop limit, don't push index back
                 PLA                     ; Drop leave target
                 IPINC                   ; Skip branch target
-                NEXT
+@return:        NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
@@ -2347,14 +2344,14 @@ DMIN_THEN:
                 ; Continue
                 PLY                     ; Restore IP (points to branch target)
                 IPFETCH_BRANCH          ; Fetch branch target, IP = loop top
-                NEXT
+                BRA     @return
 @done:
                 PLY                     ; Restore IP
                 PLA                     ; Discard index
                 PLA                     ; Discard limit
                 PLA                     ; Discard leave-target
                 IPINC                   ; Skip branch target cell
-                NEXT
+@return:        NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
@@ -5715,17 +5712,16 @@ TO_ERROR:
 ; https://forth-standard.org/standard/core/Bracket
 ;------------------------------------------------------------------------------
         HEADER  "[", LBRACKET_ENTRY, LBRACKET_CFA, F_IMMEDIATE, TWOVALUE_ENTRY
-        CODEPTR LBRACKET_CODE
-        PUBLIC  LBRACKET_CODE
-        .a16
-        .i16
-                PHY                     ; Save IP
-                LDY     #U_STATE
-                LDA     #FORTH_FALSE
-                STA     (UP),Y          ; STATE = 0 (interpret)
-                PLY                     ; Restore IP
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        CELL    FALSE_CFA               ; STATE = 0 (interpret)
+        CELL    LIT_CFA                 ; Push the User Area Pointer
+        CELL    UP
+        CELL    FETCH_CFA               ; Dereference the pointer.
+        CELL    LIT_CFA                 ; Push state offset within User Area.
+        CELL    U_STATE
+        CELL    PLUS_CFA                ; ( 0 addr )
+        CELL    STORE_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ] ( -- ) enter compilation state
@@ -5733,17 +5729,16 @@ TO_ERROR:
 ; https://forth-standard.org/standard/right-bracket
 ;------------------------------------------------------------------------------
         HEADER  "]", RBRACKET_ENTRY, RBRACKET_CFA, 0, LBRACKET_ENTRY
-        CODEPTR RBRACKET_CODE
-        PUBLIC  RBRACKET_CODE
-        .a16
-        .i16
-                PHY                     ; Save IP
-                LDY     #U_STATE
-                LDA     #FORTH_TRUE
-                STA     (UP),Y          ; STATE = 1 (compile)
-                PLY                     ; Restore IP
-                NEXT
-        ENDPUBLIC
+        CODEPTR DOCOL
+        CELL    TRUE_CFA                ; STATE = 0 (interpret)
+        CELL    LIT_CFA                 ; Push the User Area Pointer
+        CELL    UP
+        CELL    FETCH_CFA               ; Dereference the pointer.
+        CELL    LIT_CFA                 ; Push state offset within User Area.
+        CELL    U_STATE
+        CELL    PLUS_CFA                ; ( 0 addr )
+        CELL    STORE_CFA
+        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; COMPILE, ( xt -- ) compile xt into the current definition
@@ -6160,12 +6155,12 @@ ACTIONOF_ERROR:
                 ; Match: drop n
                 DROP
                 IPINC                   ; skip branch target
-                NEXT
+                BRA     @return
 
 @nomatch:
                 ; No match: drop val, leave n, branch to after ENDOF
                 IPFETCH_BRANCH          ; fetch branch target, IP =target
-                NEXT
+@return:        NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
@@ -6368,7 +6363,7 @@ ENDCASE_LEAVE:
                 DROP                    ; drop index
                 DROP                    ; drop limit
                 IPFETCH_BRANCH          ; fetch leave target and IP = target
-                NEXT
+                BRA     @return
 @enter_loop:
                 IPFETCH_INC             ; load leave target and advance IP
                 PHA                     ; push leave target onto return stack
@@ -6377,7 +6372,7 @@ ENDCASE_LEAVE:
                 POP                     ; index
                 PHA                     ; push index onto return stack
                 DROP
-                NEXT
+@return:        NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
