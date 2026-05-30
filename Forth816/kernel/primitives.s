@@ -5714,12 +5714,7 @@ TO_ERROR:
         HEADER  "[", LBRACKET_ENTRY, LBRACKET_CFA, F_IMMEDIATE, TWOVALUE_ENTRY
         CODEPTR DOCOL
         CELL    FALSE_CFA               ; STATE = 0 (interpret)
-        CELL    LIT_CFA                 ; Push the User Area Pointer
-        CELL    UP
-        CELL    FETCH_CFA               ; Dereference the pointer.
-        CELL    LIT_CFA                 ; Push state offset within User Area.
-        CELL    U_STATE
-        CELL    PLUS_CFA                ; ( 0 addr )
+        CELL    STATE_CFA               ; ( 0 state-addr )
         CELL    STORE_CFA
         CELL    EXIT_CFA
 
@@ -5731,12 +5726,7 @@ TO_ERROR:
         HEADER  "]", RBRACKET_ENTRY, RBRACKET_CFA, 0, LBRACKET_ENTRY
         CODEPTR DOCOL
         CELL    TRUE_CFA                ; STATE = 0 (interpret)
-        CELL    LIT_CFA                 ; Push the User Area Pointer
-        CELL    UP
-        CELL    FETCH_CFA               ; Dereference the pointer.
-        CELL    LIT_CFA                 ; Push state offset within User Area.
-        CELL    U_STATE
-        CELL    PLUS_CFA                ; ( 0 addr )
+        CELL    STATE_CFA               ; ( 0 state-addr )
         CELL    STORE_CFA
         CELL    EXIT_CFA
 
