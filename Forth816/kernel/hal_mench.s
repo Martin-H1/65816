@@ -106,28 +106,6 @@ PUBLIC hal_cputs
 	rts
 ENDPUBLIC
 
-; hal_lpputs - prints a length-prefixed string to the console
-; Inputs:
-;   C - address of the string within the current bank
-; Outputs:
-;   C - preserved
-PUBLIC hal_lpputs
-	STRPTR = 1
-	phy
-	pha
-	pha
-	ldy #$0000
-	lda (STRPTR,S),Y	; Load the length byte
-	and #$00ff
-	tay
-	pla
-	inc
-	jsr hal_nputs
-	pla			; Clean off stack and return
-	ply
-	rts
-ENDPUBLIC
-
 ; hal_nputs - prints n bytes to the console
 ; Inputs:
 ;   C - address of the bytes within the current bank

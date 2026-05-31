@@ -4735,10 +4735,18 @@ compile_only_msg:
         PUBLIC  UNDEFINED_WORD_CODE
         .a16
         .i16
+        LOC_PTR = 1
                 LDA     #@error_undef
                 JSR     hal_cputs
                 POP
-                JSR     hal_lpputs
+                PHA                     ; push pointer to stack
+                LDY     #0              ; no need to preserve IP.
+                LDA     (LOC_PTR,S),Y   ; load the length and
+                AND     #$00FF          ; mask to a single byte
+                TAY
+                PLA
+                INC     A               ; advance past the length byte.
+                JSR     hal_nputs
                 LDA     #@crlf
                 JSR     hal_cputs
                 JMP     ABORT_CODE

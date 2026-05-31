@@ -14,8 +14,6 @@ HAL_INC = 1
 
 .import hal_cputs	; prints a null terminated string to the console.
 
-.import hal_lpputs	; prints a length prefixed string to the console.
-
 .import hal_nputs	; prints n characters of a string to the console.
 
 .import hal_cready	; returns true if characters are available.
