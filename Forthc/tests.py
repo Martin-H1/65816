@@ -266,7 +266,7 @@ def test_codegen_runtime_call():
 
 def test_codegen_word_def_label():
     out = asm(': my-word ;')
-    assert 'my-word:' in out
+    assert 'my_word:' in out
 
 def test_codegen_if_then():
     out = asm(': test if drop then ;')
@@ -361,8 +361,8 @@ def test_integration_full_program():
     assert 'limit = 10' in out
     assert 'acc:' in out
     assert 'reset:' in out
-    assert 'add-to-acc:' in out
-    assert 'sum-to-limit:' in out
+    assert 'add_to_acc:' in out
+    assert 'sum_to_limit:' in out
     assert 'main:' in out
     assert '.org 0x8000' in out
 
