@@ -13,9 +13,11 @@
 ;       $0100-$01FF  hardware stack (return stack, used by JSR/RTS)
 ;       $0200+       code and data
 ;
-; Usage in generated code:
-;   .include "vmachine.inc"
-;   .include "vmachine.s"        ; runtime routines
+; Usage:
+;   Generated code and vmachine.s both .include this file.
+;   vmachine.s defines __vmachine_s__ = 1 before including, so the
+;   .import directives below are skipped there (the symbols are defined,
+;   not imported).  Every other translation unit gets the .imports.
 ;
 ; Register usage:
 ;   A  — scratch / TOS staging
@@ -23,13 +25,58 @@
 ;   Y  — scratch
 ; =============================================================================
 
-.p816                               ; 65816 mode directives (ca65 syntax)
-.smart
+.p816
+.smart  off
 
 ; ---------------------------------------------------------------------------
 ; Stack-pointer initial value (must be even, in zero page)
 ; ---------------------------------------------------------------------------
 PSTACK_INIT = $00FE                 ; empty stack: X starts here
+
+; ---------------------------------------------------------------------------
+; Conditionally import virtual machine runtime functions.
+; Skipped when assembling vmachine.s itself (which exports them).
+; ---------------------------------------------------------------------------
+.ifndef __vmachine_s__
+        .import vm_star
+        .import vm_slash
+        .import vm_mod
+        .import vm_slashmod
+        .import vm_and
+        .import vm_or
+        .import vm_xor
+        .import vm_not
+        .import vm_lshift
+        .import vm_rshift
+        .import vm_lt
+        .import vm_gt
+        .import vm_zeq
+        .import vm_zlt
+        .import vm_over
+        .import vm_swap
+        .import vm_rot
+        .import vm_2dup
+        .import vm_2drop
+        .import vm_do_loop_step
+        .import vm_i
+        .import vm_j
+        .import vm_emit
+        .import vm_key
+        .import vm_cputs
+        .import vm_type
+        .import vm_cr
+        .import vm_space
+        .import vm_spaces
+        .import vm_dot
+        .import vm_udot
+        .import vm_allot
+        .import vm_cells
+        .import vm_cellplus
+        .import vm_here
+        .import vm_count
+        .import vm_move
+        .import vm_fill
+.endif
 
 ; ---------------------------------------------------------------------------
 ; LIT  — push a literal value onto the parameter stack
