@@ -442,23 +442,23 @@ IND16   = $10                       ; index register width bit
         LDA  0,X                    ; addr
         INX
         INX
-	PHX                         ; save P-stack pointer
-	PHA                         ; save addr
-        TYX			    ; X contains count
-	LDY  #0
-	OFF16MEM
+        PHX                         ; save P-stack pointer
+        PHA                         ; save addr
+        TYX                         ; X = count
+        LDY  #0                     ; Y = string index
+        OFF16MEM                    ; 8-bit A for byte fetches
 @loop:
         CPX  #0
         BEQ  @done
-        LDA  (1,S),Y
+        LDA  (1,S),Y                ; fetch byte from addr on stack
         JSR  platform_putc
-        INY
-        DEX
+        INY                         ; advance string index
+        DEX                         ; decrement count
         BRA  @loop
 @done:
-	ON16MEM
-	PLA
-	PLX
+        ON16MEM                     ; restore 16-bit A
+        PLA                         ; restore addr (discard)
+        PLX                         ; restore P-stack pointer
         RTS
 .endproc
 
@@ -568,32 +568,34 @@ IND16   = $10                       ; index register width bit
 
 .export vm_move
 .proc   vm_move                     ; ( src dst u -- )  copy u bytes
-        LDA  0,X                    ; u
+        SRCPTR = 1
+        DSTPTR = 3
+        LDY  0,X                    ; u
         INX
         INX
-        TAY
         LDA  0,X                    ; dst
         INX
         INX
-        STA  vm_tmp2
+        PHA
         LDA  0,X                    ; src
         INX
         INX
-        STX  vm_sp_shadow
-        TAX                         ; X = src temporarily
+        PHA
+
 @loop:
         CPY  #0
-        BEQ  @done
-        SEP  #$20
-        LDA  0,X
-        STA  (vm_tmp2)
-        REP  #$20
+        BMI  @done                  ; loop terminates at -1 to copy 0 byte.
+        OFF16MEM
+        LDA     (SRCPTR,S),Y
+        STA     (DSTPTR,S),Y
+        ON16MEM
         INX
         INC  vm_tmp2
         DEY
         BRA  @loop
 @done:
-        LDX  vm_sp_shadow
+        PLA                         ; Drop stack locals
+        PLA
         RTS
 .endproc
 
