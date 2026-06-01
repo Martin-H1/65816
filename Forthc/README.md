@@ -67,7 +67,7 @@ ca65 --cpu 65816 -I targets/65816 targets/65816/vmachine.s -o obj/vmachine.o
 ### 3. Link (using ld65)
 
 ```bash
-ld65 -C targets/65816/debug.cfg obj/basic.o obj/vmachine.o -o basic.bin
+ld65 -C targets/65816/debug.cfg obj/vmachine.o obj/basic.o -o basic.bin
 ```
 
 `debug.cfg` places the `CODE` segment at `$4000` (aligned to `$100`) and
@@ -90,7 +90,7 @@ $(OBJDIR)/vmachine.o: $(INCDIR)/vmachine.s
 	ca65 --cpu $(TARGET) -I $(INCDIR) $< -o $@
 
 %.bin: $(OBJDIR)/%.o $(OBJDIR)/vmachine.o
-	ld65 -C $(CFGDIR)/debug.cfg $^ -o $@
+	ld65 -C $(CFGDIR)/debug.cfg $(OBJDIR)/vmachine.o $< -o $@
 ```
 
 From Python:

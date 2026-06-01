@@ -20,7 +20,36 @@ __vmachine_s__ = 1
 .I16
 .include "vmachine.inc"
 
+; Accumulator width helpers
+MEM16   = $20                       ; accumulator width bit
+IND16   = $10                       ; index register width bit
+
+.macro ON16MEM
+        REP     #MEM16              ; accumulator = 16-bit
+        .A16
+.endmacro
+
+.macro OFF16MEM
+        SEP     #MEM16              ; accumulator = 8-bit
+        .A8
+.endmacro
+
 .segment "CODE"
+
+; ---------------------------------------------------------------------------
+; MAIN — program entry point, called via JSL from the ROM monitor.
+; Link vmachine.o first so MAIN lands at the start of the CODE segment.
+; The Forth module exports forth_main, which is the word named by .main
+; ---------------------------------------------------------------------------
+.import forth_main
+
+.export MAIN
+.proc   MAIN
+        VM_INIT
+        JSR  forth_main
+        RTL
+.endproc
+
 
 ; ---------------------------------------------------------------------------
 ; vm_star  —  ( n1 n2 -- n3 )   16×16 → 16 multiply
@@ -391,6 +420,7 @@ __vmachine_s__ = 1
         INX
         INX
         TAY                         ; Y = address
+        OFF16MEM                    ; 8-bit A for byte fetches
 @loop:
         LDA  0,Y
         BEQ  @done
@@ -400,6 +430,7 @@ __vmachine_s__ = 1
         INY
         BRA  @loop
 @done:
+        ON16MEM                     ; restore 16-bit A
         RTS
 .endproc
 
@@ -629,19 +660,6 @@ GET_BYTE_FROM_PC    = $E033         ; read next byte from serial port 3
 SEND_BYTE_TO_PC     = $E063         ; write byte in A to serial port 3
                                     ; returns carry clear on success
 
-; Accumulator width helpers
-MEM16   = $20                       ; accumulator width bit
-IND16   = $10                       ; index register width bit
-
-.macro ON16MEM
-        REP     #MEM16              ; accumulator = 16-bit
-        .A16
-.endmacro
-
-.macro OFF16MEM
-        SEP     #MEM16              ; accumulator = 8-bit
-        .A8
-.endmacro
 
 platform_putc:                      ; ( A = char ) — output to serial port 3
 @loop:  JSL  SEND_BYTE_TO_PC        ; retry until buffer is ready

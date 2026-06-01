@@ -166,30 +166,22 @@ class CodeGenerator:
     _variables:   set    = field(default_factory=set, init=False)
     _words:       set    = field(default_factory=set, init=False)
     _str_count:   int    = field(default=0, init=False)
-    _main_directive: object = field(default=None, init=False)
+    _entry_word:  object = field(default=None, init=False)
 
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
 
     def generate(self, program: Program) -> str:
-        # Pre-pass: locate MainDirective so _gen_origin can emit MAIN
-        # immediately after .org, guaranteeing it lands at the origin address.
+        # Pre-pass: find MainDirective to know which word to export.
         mains = [n for n in program.definitions if isinstance(n, MainDirective)]
         if len(mains) > 1:
             raise CodeGenError("Only one .main directive is allowed")
-        self._main_directive = mains[0] if mains else None
+        self._entry_word = mains[0].word if mains else None
 
         self._emit_file_header()
         for node in program.definitions:
-            if isinstance(node, MainDirective):
-                pass  # emitted by _gen_origin immediately after .org
-            else:
-                self._top_def(node)
-        # If .main was present but no .origin preceded it, emit at end.
-        if self._main_directive is not None:
-            self._gen_main(self._main_directive)
-            self._main_directive = None
+            self._top_def(node)
         self._emit_file_footer()
         if isinstance(self.out, io.StringIO):
             return self.out.getvalue()
@@ -274,6 +266,8 @@ class CodeGenerator:
         self._words.add(node.name)
         sym = _mangle(node.name)
         self._emit(f'; word definition: {node.name}')
+        if node.name == self._entry_word:
+            self._emit(f'.export {sym}')
         self._emit_label(sym)
         str_pool: list[tuple[str, str]] = []
         self._gen_body(node.body, str_pool)
@@ -286,21 +280,14 @@ class CodeGenerator:
 
     def _gen_main(self, node: MainDirective):
         sym = _mangle(node.word)
-        self._emit(f'; entry point — calls {node.word}, returns to ROM monitor via RTL')
-        self._emit('.export MAIN')
-        self._emit('.proc   MAIN')
-        self._emit('        VM_INIT')
-        self._emit(f'        JSR  {sym}')
-        self._emit('        RTL')
-        self._emit('.endproc')
+        self._emit(f'; .main: export entry word for vmachine.s MAIN proc')
+        self._emit(f'forth_main = {sym}')
+        self._emit('.export forth_main')
         self._emit()
 
     def _gen_origin(self, node: OriginDirective):
-        self._emit(f'.org ${node.address:X}')
+        self._emit(f'; .origin ${node.address:X} — placement is controlled by the linker config')
         self._emit()
-        if self._main_directive is not None:
-            self._gen_main(self._main_directive)
-            self._main_directive = None  # only emit once
 
     def _gen_segment(self, node: SegmentDirective):
         self._emit(f'.segment "{node.name}"')
