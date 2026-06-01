@@ -436,27 +436,29 @@ IND16   = $10                       ; index register width bit
 
 .export vm_type
 .proc   vm_type                     ; ( addr u -- )  output u characters
-        LDA  0,X                    ; count
+        LDY  0,X                    ; count
         INX
         INX
-        TAY                         ; Y = count
         LDA  0,X                    ; addr
         INX
         INX
-        STA  vm_tmp1                ; save addr
-        STX  vm_sp_shadow           ; save P-stack pointer
+	PHX                         ; save P-stack pointer
+	PHA                         ; save addr
+        TYX			    ; X contains count
+	LDY  #0
+	OFF16MEM
 @loop:
-        CPY  #0
+        CPX  #0
         BEQ  @done
-        LDX  vm_tmp1
-        LDA  0,X
-        INX
-        STX  vm_tmp1
-        LDX  vm_sp_shadow
+        LDA  (1,S),Y
         JSR  platform_putc
-        DEY
+        INY
+        DEX
         BRA  @loop
 @done:
+	ON16MEM
+	PLA
+	PLX
         RTS
 .endproc
 
