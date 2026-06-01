@@ -296,7 +296,7 @@ def test_codegen_string_literal():
 
 def test_codegen_origin():
     out = asm('.origin $C000')
-    assert '.org 0xc000' in out
+    assert '.org $C000' in out
 
 def test_codegen_segment():
     out = asm('.segment CODE')
@@ -325,6 +325,37 @@ def test_codegen_string_after_exit():
     b_label  = out.index('b:')
     assert a_exit < str_byte < b_label
 
+
+
+def test_tokenize_main_keyword():
+    assert TType.MAIN in tok_types('.main')
+
+def test_parse_main_directive():
+    from forthc.ast_nodes import MainDirective
+    prog = parse(tokenize('.main foo'))
+    d = prog.definitions[0]
+    assert isinstance(d, MainDirective)
+    assert d.word == 'foo'
+
+def test_codegen_main_proc():
+    out = asm('.origin $4000\n.main myprog\n: myprog ;')
+    assert '.export MAIN' in out
+    assert '.proc   MAIN' in out
+    assert 'VM_INIT' in out
+    assert 'JSR  myprog' in out
+    assert 'RTL' in out
+    assert '.endproc' in out
+
+def test_codegen_main_after_org():
+    out = asm('.origin $4000\n.main foo\n: foo ;')
+    org_pos  = out.index('.org $4000')
+    main_pos = out.index('.proc   MAIN')
+    foo_pos  = out.index('foo:')
+    assert org_pos < main_pos < foo_pos
+
+def test_codegen_main_mangles_name():
+    out = asm('.main my-entry\n: my-entry ;')
+    assert 'JSR  my_entry' in out
 
 # ===========================================================================
 # END-TO-END INTEGRATION
@@ -364,7 +395,7 @@ def test_integration_full_program():
     assert 'add_to_acc:' in out
     assert 'sum_to_limit:' in out
     assert 'main:' in out
-    assert '.org 0x8000' in out
+    assert '.org $8000' in out
 
 
 # ===========================================================================

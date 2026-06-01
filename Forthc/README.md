@@ -43,18 +43,54 @@ inlined directly (no interpreter overhead for `DUP`, `+`, `@`, etc.).
 
 ## Usage
 
-```bash
-# Compile a Forth source file
-python __main__.py examples/basic.f          # writes basic.s
+### 1. Compile Forth source to VM assembly
 
-# Explicit output file
+```bash
+python __main__.py examples/basic.f          # writes basic.s
 python __main__.py examples/basic.f -o out/basic.s
 
-# Debug: dump token stream
+# Debug: dump token stream or AST
 python __main__.py examples/basic.f --dump-tokens
-
-# Debug: dump AST
 python __main__.py examples/basic.f --dump-ast
+```
+
+### 2. Assemble (65816 target, using ca65)
+
+```bash
+# Assemble the compiled Forth module
+ca65 --cpu 65816 -I targets/65816 basic.s -o obj/basic.o
+
+# Assemble the VM runtime
+ca65 --cpu 65816 -I targets/65816 targets/65816/vmachine.s -o obj/vmachine.o
+```
+
+### 3. Link (using ld65)
+
+```bash
+ld65 -C targets/65816/debug.cfg obj/basic.o obj/vmachine.o -o basic.bin
+```
+
+`debug.cfg` places the `CODE` segment at `$4000` (aligned to `$100`) and
+zero page variables in `$00B4–$00FE`.  `MAIN` — the generated entry point —
+will be the first code in the `CODE` segment, so the ROM monitor should be
+configured to JSL to `$4000`.
+
+A typical `Makefile` rule:
+
+```makefile
+TARGET  = 65816
+INCDIR  = targets/$(TARGET)
+CFGDIR  = targets/$(TARGET)
+OBJDIR  = obj/release
+
+$(OBJDIR)/%.o: %.s
+	ca65 --cpu $(TARGET) -I $(INCDIR) $< -o $@
+
+$(OBJDIR)/vmachine.o: $(INCDIR)/vmachine.s
+	ca65 --cpu $(TARGET) -I $(INCDIR) $< -o $@
+
+%.bin: $(OBJDIR)/%.o $(OBJDIR)/vmachine.o
+	ld65 -C $(CFGDIR)/debug.cfg $^ -o $@
 ```
 
 From Python:
@@ -194,7 +230,8 @@ forthc/
 ├── targets/
 │   └── 65816/
 │       ├── vmachine.inc  65816 macro definitions
-│       └── vmachine.s    65816 runtime routines
+│       ├── vmachine.s    65816 runtime routines
+│       └── debug.cfg     ld65 linker config ($4000 CODE, $00B4 ZP)
 └── examples/
     ├── basic.f           constants, variables, if/then, loops
     └── fibonacci.f       fibonacci sequence

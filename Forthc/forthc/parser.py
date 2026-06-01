@@ -27,7 +27,7 @@ Grammar (informal):
 from .tokenizer import Token, TType, TokenizeError
 from .ast_nodes import (
     Program, ConstantDef, VariableDef, WordDef,
-    OriginDirective, SegmentDirective,
+    OriginDirective, SegmentDirective, MainDirective,
     NumberLit, StringLit, PrintString, WordCall,
     IfThen, BeginUntil, BeginWhileRepeat, DoLoop,
 )
@@ -117,6 +117,12 @@ class Parser:
                 return SegmentDirective(name=str(seg_tok.value),
                                         line=tok.line, col=tok.col)
             raise ParseError("Expected segment name", seg_tok)
+
+        if tok.type == TType.MAIN:
+            self._advance()
+            word_tok = self._expect(TType.WORD)
+            return MainDirective(word=word_tok.value,
+                                 line=tok.line, col=tok.col)
 
         raise ParseError("Unexpected token at top level", tok)
 

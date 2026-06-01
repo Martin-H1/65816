@@ -16,6 +16,8 @@ __vmachine_s__ = 1
 
 .p816
 .smart  off
+.A16
+.I16
 .include "vmachine.inc"
 
 .segment "CODE"
@@ -608,19 +610,48 @@ __vmachine_s__ = 1
 ; ---------------------------------------------------------------------------
 .segment "ZEROPAGE"
 .export vm_sp_shadow
-vm_sp_shadow:   .word 0             ; shadow of X (P-stack pointer)
+vm_sp_shadow:   .res 2              ; shadow of X (P-stack pointer)
 .export vm_here_ptr
-vm_here_ptr:    .word 0             ; HERE pointer
-vm_tmp1:        .word 0             ; scratch
-vm_tmp2:        .word 0             ; scratch
+vm_here_ptr:    .res 2              ; HERE pointer
+.export vm_tmp1
+vm_tmp1:        .res 2              ; scratch
+.export vm_tmp2
+vm_tmp2:        .res 2              ; scratch
 
 ; ---------------------------------------------------------------------------
-; Platform I/O stubs — replace with your platform's character I/O routines
+; Platform I/O — serial port 3 via ROM monitor vectors
 ; ---------------------------------------------------------------------------
 .segment "CODE"
-platform_putc:                      ; ( A = char )
-        RTS                         ; *** REPLACE WITH REAL I/O ***
 
-platform_getc:                      ; ( -> A = char )
-        LDA  #0
-        RTS                         ; *** REPLACE WITH REAL I/O ***
+; ROM monitor entry points
+GET_BYTE_FROM_PC    = $E033         ; read next byte from serial port 3
+                                    ; returns carry clear on success, A = byte
+SEND_BYTE_TO_PC     = $E063         ; write byte in A to serial port 3
+                                    ; returns carry clear on success
+
+; Accumulator width helpers
+MEM16   = $20                       ; accumulator width bit
+IND16   = $10                       ; index register width bit
+
+.macro ON16MEM
+        REP     #MEM16              ; accumulator = 16-bit
+        .A16
+.endmacro
+
+.macro OFF16MEM
+        SEP     #MEM16              ; accumulator = 8-bit
+        .A8
+.endmacro
+
+platform_putc:                      ; ( A = char ) — output to serial port 3
+@loop:  JSL  SEND_BYTE_TO_PC        ; retry until buffer is ready
+        BCS  @loop
+        RTS
+
+platform_getc:                      ; ( -> A = char ) — input from serial port 3
+        OFF16MEM
+@loop:  JSL  GET_BYTE_FROM_PC       ; wait until a byte is available
+        BCS  @loop
+        ON16MEM
+        AND  #$00FF                 ; zero-extend to 16 bits
+        RTS

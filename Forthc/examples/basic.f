@@ -1,20 +1,19 @@
-\ examples/basic.f — demonstrates the constructs from the design doc
+\ examples/basic.f
 
-\ Constant definition:  "15 constant foo" → "foo = 15"
+.origin $4000
+.main main
+
 15 constant foo
 
-\ Word definition:  ": foo 2 3 * ;"
 : multiply-demo
     2 3 *
 ;
 
-\ A word that uses the constant
 : show-foo
     foo .
     cr
 ;
 
-\ If/then/else
 : max   ( n1 n2 -- max )
     over over < if
         swap
@@ -22,7 +21,6 @@
     drop
 ;
 
-\ Begin/until loop — count down from n to 1
 : countdown   ( n -- )
     begin
         dup .
@@ -33,7 +31,6 @@
     drop
 ;
 
-\ Variable usage
 variable counter
 
 : increment-counter
@@ -50,8 +47,13 @@ variable counter
     counter @
 ;
 
-\ String output
 : say-hello
     ." Hello, World!"
     cr
+;
+
+: main
+    say-hello
+    5 countdown
+    show-foo
 ;

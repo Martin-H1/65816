@@ -27,6 +27,8 @@
 
 .p816
 .smart  off
+.A16
+.I16
 
 ; ---------------------------------------------------------------------------
 ; Stack-pointer initial value (must be even, in zero page)
@@ -76,6 +78,10 @@ PSTACK_INIT = $00FE                 ; empty stack: X starts here
         .import vm_count
         .import vm_move
         .import vm_fill
+        .import vm_sp_shadow
+        .import vm_here_ptr
+        .import vm_tmp1
+        .import vm_tmp2
 .endif
 
 ; ---------------------------------------------------------------------------

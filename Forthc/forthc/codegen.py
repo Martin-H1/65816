@@ -42,7 +42,7 @@ import re
 
 from .ast_nodes import (
     Program, ConstantDef, VariableDef, WordDef,
-    OriginDirective, SegmentDirective,
+    OriginDirective, SegmentDirective, MainDirective,
     NumberLit, StringLit, PrintString, WordCall,
     IfThen, BeginUntil, BeginWhileRepeat, DoLoop,
     ASTNode,
@@ -166,15 +166,30 @@ class CodeGenerator:
     _variables:   set    = field(default_factory=set, init=False)
     _words:       set    = field(default_factory=set, init=False)
     _str_count:   int    = field(default=0, init=False)
+    _main_directive: object = field(default=None, init=False)
 
     # ------------------------------------------------------------------
     # Public entry point
     # ------------------------------------------------------------------
 
     def generate(self, program: Program) -> str:
+        # Pre-pass: locate MainDirective so _gen_origin can emit MAIN
+        # immediately after .org, guaranteeing it lands at the origin address.
+        mains = [n for n in program.definitions if isinstance(n, MainDirective)]
+        if len(mains) > 1:
+            raise CodeGenError("Only one .main directive is allowed")
+        self._main_directive = mains[0] if mains else None
+
         self._emit_file_header()
         for node in program.definitions:
-            self._top_def(node)
+            if isinstance(node, MainDirective):
+                pass  # emitted by _gen_origin immediately after .org
+            else:
+                self._top_def(node)
+        # If .main was present but no .origin preceded it, emit at end.
+        if self._main_directive is not None:
+            self._gen_main(self._main_directive)
+            self._main_directive = None
         self._emit_file_footer()
         if isinstance(self.out, io.StringIO):
             return self.out.getvalue()
@@ -235,6 +250,8 @@ class CodeGenerator:
             self._gen_origin(node)
         elif isinstance(node, SegmentDirective):
             self._gen_segment(node)
+        elif isinstance(node, MainDirective):
+            self._gen_main(node)
         else:
             raise CodeGenError(f"Unknown top-level node {type(node).__name__}", node)
 
@@ -267,9 +284,23 @@ class CodeGenerator:
             self._emit(f'    .byte "{escaped}", 0')
         self._emit()
 
-    def _gen_origin(self, node: OriginDirective):
-        self._emit(f'.org {node.address:#x}')
+    def _gen_main(self, node: MainDirective):
+        sym = _mangle(node.word)
+        self._emit(f'; entry point — calls {node.word}, returns to ROM monitor via RTL')
+        self._emit('.export MAIN')
+        self._emit('.proc   MAIN')
+        self._emit('        VM_INIT')
+        self._emit(f'        JSR  {sym}')
+        self._emit('        RTL')
+        self._emit('.endproc')
         self._emit()
+
+    def _gen_origin(self, node: OriginDirective):
+        self._emit(f'.org ${node.address:X}')
+        self._emit()
+        if self._main_directive is not None:
+            self._gen_main(self._main_directive)
+            self._main_directive = None  # only emit once
 
     def _gen_segment(self, node: SegmentDirective):
         self._emit(f'.segment "{node.name}"')

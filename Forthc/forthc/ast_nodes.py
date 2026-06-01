@@ -52,6 +52,12 @@ class SegmentDirective(ASTNode):
     name: str = ''
 
 
+@dataclass
+class MainDirective(ASTNode):
+    """.main foo  →  designate 'foo' as the program entry point."""
+    word: str = ''
+
+
 # ---------------------------------------------------------------------------
 # Expressions / statements inside a word definition
 # ---------------------------------------------------------------------------

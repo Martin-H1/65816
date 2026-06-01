@@ -33,6 +33,7 @@ class TType(Enum):
     SQUOTE      = auto()   # S"  (string literal onto stack)
     ORIGIN      = auto()   # .origin  (extension: set origin address)
     SEGMENT     = auto()   # .segment (extension: set segment name)
+    MAIN        = auto()   # .main    (extension: designate entry-point word)
     EOF         = auto()
 
 
@@ -52,6 +53,7 @@ KEYWORD_MAP = {
     'loop':     TType.LOOP,
     '.origin':  TType.ORIGIN,
     '.segment': TType.SEGMENT,
+    '.main':    TType.MAIN,
 }
 
 
