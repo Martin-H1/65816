@@ -1435,12 +1435,12 @@ MSTARS_THEN:
         .i16
                 LDA     NOS,X           ; u1
                 CMP     TOS,X           ; u1 - u2 (unsigned)
-                DROP
                 BCC     @true           ; Carry clear = u1 < u2
                 LDA     #FORTH_FALSE
                 BRA     @return
 @true:          LDA     #FORTH_TRUE
-@return:        STA     TOS,X
+@return:        DROP
+                STA     TOS,X
                 NEXT
         ENDPUBLIC
 
@@ -5043,14 +5043,8 @@ print_udec:
 ;------------------------------------------------------------------------------
         HEADER  "D.", DDOT_ENTRY, DDOT_CFA, 0, UDOT_ENTRY
         CODEPTR DOCOL
-        CELL    TUCK_CFA                ; ( d_hi d_lo d_hi ) save sign
-        CELL    DABS_CFA                ; ( d_hi ud_lo ud_hi ) absolute value
-        CELL    LESSHASH_CFA            ; <# begin pictured output
-        CELL    HASHS_CFA               ; #S convert all digits
-        CELL    ROT_CFA                 ; ( ud_str d_hi ) bring sign to TOS
-        CELL    SIGN_CFA                ; add '-' if negative
-        CELL    HASHGT_CFA              ; #> ( c-addr u )
-        CELL    TYPE_CFA                ; print
+        CELL    ZERO_CFA                ; No leading spaces
+        CELL    DDOTR_CFA               ; Use pictured I/O to convert digits
         CELL    SPACE_CFA               ; trailing space
         CELL    EXIT_CFA
 
@@ -6657,6 +6651,8 @@ SIGN_DONE:
         CELL    RFROM_CFA               ; #> ( c-addr u n )
         CELL    OVER_CFA                ; #> ( c-addr u n u )
         CELL    MINUS_CFA               ; #> ( c-addr u n-u )
+        CELL    ZERO_CFA                ; #> ( c-addr u n-u 0 )
+        CELL    MAX_CFA                 ; #> ( c-addr u [ n-u | 0 ] )
         CELL    SPACES_CFA              ; #> ( c-addr u )
         CELL    TYPE_CFA
         CELL    EXIT_CFA
