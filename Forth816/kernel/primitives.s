@@ -4731,28 +4731,17 @@ compile_only_msg:
 ; Called when INTERPRET cannot find or convert a word.
 ;------------------------------------------------------------------------------
         HEADER  "UNDEFINED-WORD", UNDEFINED_WORD_ENTRY, UNDEFINED_WORD_CFA, 0, COMPILE_ONLY_ERROR_ENTRY
-        CODEPTR UNDEFINED_WORD_CODE
-        PUBLIC  UNDEFINED_WORD_CODE
-        .a16
-        .i16
-        LOC_PTR = 1
-                LDA     #@error_undef
-                JSR     hal_cputs
-                POP
-                PHA                     ; push pointer to stack
-                LDY     #0              ; no need to preserve IP.
-                LDA     (LOC_PTR,S),Y   ; load the length and
-                AND     #$00FF          ; mask to a single byte
-                TAY
-                PLA
-                INC     A               ; advance past the length byte.
-                JSR     hal_nputs
-                LDA     #@crlf
-                JSR     hal_cputs
-                JMP     ABORT_CODE
+.scope
+        CODEPTR DOCOL
+        CELL    LIT_CFA
+        CELL    @error_undef            ; ( addr -- addr error-addr )
+        CELL    CPUTS_CFA               ; display error test.
+        CELL    COUNT_CFA               ; ( addr -- addr+1 count )
+        CELL    TYPE_CFA                ; display unknown word.
+        CELL    CR_CFA
+        CELL    ABORT_CFA
 @error_undef:   .asciiz "error: Undefined word "
-@crlf:          .byte $0D, $0A, $00
-        ENDPUBLIC
+.endscope
 
 ;------------------------------------------------------------------------------
 ; INTERPRET ( -- ) parse and execute/compile words from input
