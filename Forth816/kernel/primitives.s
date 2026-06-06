@@ -5107,29 +5107,31 @@ print_udec:
 ; DOT-PROMPT - print " ok" prompt (hidden, used by QUIT)
 ;------------------------------------------------------------------------------
         HEADER  "DOT-PROMPT", DOT_PROMPT_ENTRY, DOT_PROMPT_CFA, F_HIDDEN, DOTS_ENTRY
-        CODEPTR DOT_PROMPT_CODE
-        PUBLIC  DOT_PROMPT_CODE
-        .a16
-        .i16
-                LDA     #@prompt
-                JSR     hal_cputs
-
-                ; Print stack depth if nonzero
-                JSR     DEPTH_CODE::calc_depth
-                PHA
-                BEQ     @skip           ; no items on stack.
-                STA     SCRATCH0
-                JSR     DOT_CODE::print_sdec
-
-@skip:          LDA     #@crlf
-                JSR     hal_cputs
-                PLA
-                BMI     @underflow
-                NEXT
-@underflow:     JMP     PSP_UNDERFLOW_HANDLER
+.scope
+        CODEPTR DOCOL
+        CELL    LIT_CFA
+        CELL    @prompt                 ; ( -- c-addr )
+        CELL    CPUTS_CFA
+        CELL    DEPTH_CFA               ; ( -- n )
+        CELL    QDUP_CFA                ; ( n -- [n n | 0] )
+        CELL    ZBRANCH_CFA
+        CELL    @return
+        CELL    DUP_CFA                 ; ( n -- n n )
+        CELL    DOT_CFA                 ; ( n n -- n )
+        CELL    ZEROLESS_CFA            ; ( n -- f )
+        CELL    ZBRANCH_CFA
+        CELL    @return
+        CELL    LIT_CFA
+        CELL    @underflow_msg
+        CELL    CPUTS_CFA
+        CELL    CR_CFA
+        CELL    ABORT_CFA
+@return:
+        CELL    CR_CFA
+        CELL    EXIT_CFA
 @prompt:        .asciiz " ok "
-@crlf:          .byte C_RETURN, L_FEED, 0
-        ENDPUBLIC
+@underflow_msg: .asciiz "Stack underflow"
+.endscope
 
 ;------------------------------------------------------------------------------
 ; HEADER>CFA ( entry -- addr ) extracts the CFA field from a header.

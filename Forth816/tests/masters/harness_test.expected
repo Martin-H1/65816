@@ -20,8 +20,8 @@ INCORRECT RESULT:
  ok 
 T{ 1 2 SWAP -> 1 2 3 }T
 WRONG NUMBER OF RESULTS: 
- ok 3
+ ok 3 
 
- ok 3
+ ok 3 
 DONE
 ###DONE###

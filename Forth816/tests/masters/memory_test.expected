@@ -59,7 +59,7 @@ T{ TWOFETCH-BUF 2@ -> $FEED $BEEF }T
 T{ $FEED $BEEF TWOSTORE-BUF 2!
  ok 
    TWOSTORE-BUF @
- ok 1
+ ok 1 
    TWOSTORE-BUF CELL+ @ -> $BEEF $FEED }T
  ok 
 
