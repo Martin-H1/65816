@@ -6599,6 +6599,8 @@ SIGN_DONE:
         CELL    ROT_CFA                 ; #> ( c-addr u n2 )
         CELL    OVER_CFA                ; #> ( c-addr u n2 u )
         CELL    MINUS_CFA               ; #> ( c-addr u n )
+        CELL    ZERO_CFA                ; #> ( c-addr u n-u 0 )
+        CELL    MAX_CFA                 ; #> ( c-addr u [ n-u | 0 ] )
         CELL    SPACES_CFA              ; #> ( c-addr u )
         CELL    TYPE_CFA
         CELL    EXIT_CFA
@@ -6619,6 +6621,8 @@ SIGN_DONE:
         CELL    RFROM_CFA               ; ( c-addr u n )
         CELL    OVER_CFA                ; #> ( c-addr u n u )
         CELL    MINUS_CFA               ; #> ( c-addr u n-u )
+        CELL    ZERO_CFA                ; #> ( c-addr u n-u 0 )
+        CELL    MAX_CFA                 ; #> ( c-addr u [ n-u | 0 ] )
         CELL    SPACES_CFA              ; #> ( c-addr u )
         CELL    TYPE_CFA
         CELL    EXIT_CFA
