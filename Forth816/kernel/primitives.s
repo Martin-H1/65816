@@ -536,12 +536,12 @@ calc_depth:     TXA
         PUBLIC  PLUSSTORE_CODE
         .a16
         .i16
-                POP                     ; addr
-                STA     SCRATCH0        ; save addr
-                POP                     ; n
+                LDA     NOS,X           ; n
                 CLC
-                ADC     (SCRATCH0)      ; n + [addr]
-                STA     (SCRATCH0)      ; store back
+                ADC     (TOS,X)         ; n + [addr]
+                STA     (TOS,X)         ; store back
+                DROP
+                DROP
                 NEXT
         ENDPUBLIC
 
@@ -1832,9 +1832,7 @@ DMIN_THEN:
         PUBLIC  FETCH_CODE
         .a16
         .i16
-                LDA     TOS,X           ; addr
-                STA     SCRATCH0
-                LDA     (SCRATCH0)      ; fetch 16-bit value
+                LDA     (TOS,X)         ; indirect fetch of 16-bit value
                 STA     TOS,X
                 NEXT
         ENDPUBLIC
@@ -1900,15 +1898,13 @@ DMIN_THEN:
         PUBLIC  TWOFETCH_CODE
         .a16
         .i16
-                LDA     TOS,X           ; peek addr → SCRATCH0
-                STA     SCRATCH0
-                CLC
-                ADC     #CELL_SIZE      ; addr+2 → SCRATCH1 (carry now clear)
-                STA     SCRATCH1
-                LDA     (SCRATCH1)      ; high cell of d
+                PHY                     ; save IP
+                LDY     TOS,X           ; peek addr
+                LDA     a:CELL_SIZE,Y   ; high cell of d
                 STA     TOS,X
-                LDA     (SCRATCH0)      ; low cell of d
+                LDA     a:0,Y           ; low cell of d
                 PUSH
+                PLY                     ; restore IP
                 NEXT
         ENDPUBLIC
 
@@ -4503,7 +4499,7 @@ QUIT_LOOP:
                 ; Backspace: erase last character if any
                 ;--------------------------------------------------------------
 @backspace:
-                TAY
+                LDA     LOC_COUNT
                 BEQ     @getchar        ; Nothing to delete
                 DEC     LOC_COUNT
                 LDA     #BKSP
@@ -5062,10 +5058,26 @@ print_udec:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
+; C.HEX ( n -- ) print a byte as hexadecimal number
+;------------------------------------------------------------------------------
+        HEADER  "C.HEX", CDOTHEX_ENTRY, CDOTHEX_CFA, 0, DOTHEX_ENTRY
+        CODEPTR CDOTHEX_CODE
+        PUBLIC  CDOTHEX_CODE
+        .a16
+        .i16
+                ; Print low byte of TOS as 2-digit hex
+                POP
+                JSR     hal_putahex
+                LDA     #SPACE
+                JSR     hal_putch
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
 ; .S ( -- ) print stack contents non-destructively using ANS Forth format
 ; e.g. <depth> NOS_N ... NOS TOS ok N
 ;------------------------------------------------------------------------------
-        HEADER  ".S", DOTS_ENTRY, DOTS_CFA, 0, DOTHEX_ENTRY
+        HEADER  ".S", DOTS_ENTRY, DOTS_CFA, 0, CDOTHEX_ENTRY
         CODEPTR DOTS_CODE
         PUBLIC  DOTS_CODE
         .a16
@@ -6665,13 +6677,55 @@ SIGN_DONE:
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
+; DUMP ( caddr len -- )  Dump memory in hex
+; https://forth-standard.org/standard/tools/DUMP
+;------------------------------------------------------------------------------
+        HEADER  "DUMP", DUMP_ENTRY, DUMP_CFA, 0, DDOTR_ENTRY
+        CODEPTR DOCOL
+        CELL    ZERO_CFA                ; line length
+@line:  CELL    CR_CFA
+        CELL    @addr                   ; print addr
+        CELL    DOTHEX_CFA
+        CELL    SPACE_CFA
+@byte:  CELL    @get
+        CELL    CDOTHEX_CFA             ;   print byte
+        CELL    OVER_CFA
+        CELL    ZEROGT_CFA
+        CELL    ZBRANCH_CFA             ; done?
+        CELL    @done
+        CELL    DUP_CFA
+        CELL    LIT_CFA
+        CELL    $000F
+        CELL    AND_CFA
+        CELL    ZBRANCH_CFA             ; new line?
+        CELL    @line
+        CELL    BRANCH_CFA
+        CELL    @byte
+
+@done:  CELL    TWODROP_CFA
+        CELL    DROP_CFA
+        CELL    EXIT_CFA
+
+@addr:  .word   *+2                     ; CFA
+        LDA     PSP2,x                  ; get caddr
+        BRA     @pusha
+
+@get:   .word *+2                       ; CFA
+        LDA     (PSP2,x)                ; get byte
+        INC     PSP2,x                  ; addr++
+        DEC     NOS,x                   ; len--
+        INC     TOS,x                   ; line position++
+@pusha: PUSH                            ; Push accumulator
+        NEXT
+
+;------------------------------------------------------------------------------
 ; ENVIRONMENT? ( c-addr u -- false | i * x true ) c-addr is the address of a
 ; character string and u is the string's character count. This is the text
 ; of an environment query which isn't generally used in embedded systems.
 ; Stubbed out with FALSE for compatibility.
 ; https://forth-standard.org/standard/core/ENVIRONMENTq
 ;------------------------------------------------------------------------------
-        HEADER  "ENVIRONMENT?", ENVIRONMENTQ_ENTRY, ENVIRONMENTQ_CFA, 0, DDOTR_ENTRY
+        HEADER  "ENVIRONMENT?", ENVIRONMENTQ_ENTRY, ENVIRONMENTQ_CFA, 0, DUMP_ENTRY
         CODEPTR DOCOL
         CELL    TWODROP_CFA             ; discard c-addr u
         CELL    FALSE_CFA               ; false - not supported

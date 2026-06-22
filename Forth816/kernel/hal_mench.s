@@ -64,6 +64,8 @@ UPPER_CASE		= $E0A3	; Converts lower-case ASCII chars to upper-case.
 ; CODE SEGMENT - ROM kernel
 ;==============================================================================
 .segment "CODE"
+.a16
+.i16
 
 .ifndef DEBUG
 semaphore:
