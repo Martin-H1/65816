@@ -1074,9 +1074,12 @@ DABS_DONE:
         PUBLIC  MAX_CODE
         .a16
         .i16
+                SEC
                 LDA     NOS,X           ; a
-                CMP     TOS,X           ; a - b (signed)
-                BPL     @endif          ; a >= b, a is max
+                SBC     TOS,X           ; a - b (signed)
+                BVC     @skip
+                ROR     A               ; restore sign on overflow
+@skip:          BPL     @endif          ; a >= b, a is max
                 LDA     TOS,X           ; a < b, overwrite a with b
                 STA     NOS,X
 @endif:         DROP                    ; Drop TOS as NOS is max
@@ -1091,9 +1094,12 @@ DABS_DONE:
         PUBLIC  MIN_CODE
         .a16
         .i16
+                SEC
                 LDA     NOS,X           ; a
-                CMP     TOS,X           ; a - b (signed)
-                BMI     @endif          ; a < b, a is min
+                SBC     TOS,X           ; a - b (signed)
+                BVC     @skip
+                ROR     A               ; restore sign on overflow
+@skip:          BMI     @endif          ; a < b, a is min
                 LDA     TOS,X           ; a >= b, overwrite a with b
                 STA     NOS,X
 @endif:         DROP                    ; Drop TOS as NOS is min

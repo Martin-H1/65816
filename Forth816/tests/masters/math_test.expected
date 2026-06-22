@@ -116,11 +116,15 @@ T{ 224 ABS -> 224 }T
  ok 
 T{ 50 4146 MAX -> 4146 }T
  ok 
+T{ MIN-INT MAX-INT MAX -> MAX-INT }T
+ ok 
 
  ok 
 \ MIN
  ok 
 T{ 50 4146 MIN -> 50 }T
+ ok 
+T{ MIN-INT MAX-INT MIN -> MIN-INT }T
  ok 
 
  ok 
