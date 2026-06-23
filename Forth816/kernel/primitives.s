@@ -3412,51 +3412,44 @@ ABORTQUOTE_CLOOP:
 ;------------------------------------------------------------------------------
 ; SKIP-CHAR ( char -- ) scans the TIB skipping instances of char and updates
 ; TOIN in the user area.
+; Note: ' ' is special and represents the class of all white space characters.
 ;------------------------------------------------------------------------------
         HEADER  "SKIP-CHAR", SKIPCHAR_ENTRY, SKIPCHAR_CFA, 0, CELLPLUS_ENTRY
         CODEPTR SKIPCHAR_CODE
         PUBLIC  SKIPCHAR_CODE
         .a16
         .i16
-                PHY
+                PHD
+                PHY                     ; save IP
+                LDA     UP              ; switch D to user area
+                TCD
 
-                ; Cache TIB base
-                LDY     #U_TIB
-                LDA     (UP),Y
-                STA     SCRATCH0
-
-                ; Cache source length
-                LDY     #U_SOURCELEN
-                LDA     (UP),Y
-                STA     SCRATCH1
-
-                ; Load >IN
-                LDY     #U_TOIN
-                LDA     (UP),Y
-                TAY
+                LDY     U_TOIN          ; Load >IN
 
                 OFF16MEM
-@skip_loop:
-                CPY     SCRATCH1        ; >IN >= source length?
+                LDA     a:TOS,X         ; char is whitespace?
+                CMP     #' '
+                BEQ     @SkipWhite2
+                BRA     @skip2
+
+@SkipWhite1:    INY                     ; white space special case.
+@SkipWhite2:    CPY     U_SOURCELEN
+                BCS     @done
+                CMP     (U_TIB),y
+                BCS     @SkipWhite1     ; skip any character <= ' '
+                BRA     @done
+
+@skip_loop:     INY                     ; >IN++
+@skip2:         CPY     U_SOURCELEN     ; >IN >= source length?
                 BCS     @done           ; end of input
+                CMP     (U_TIB),Y       ; char at scan ptr matches delimiter?
+                BEQ     @skip_loop
 
-                ; Fetch char at scan pointer
-                LDA     (SCRATCH0),Y
-                CMP     TOS,X           ; matches delimiter?
-                BNE     @done           ; no → stop skipping
-
-                INY                     ; >IN++
-                BRA     @skip_loop
-@done:
+@done:          STY     U_TOIN          ; update >IN
                 ON16MEM
-
-                ; Write updated >IN back to user area
-                TYA
-                LDY     #U_TOIN
-                STA     (UP),Y
-
-                DROP                    ; Drop char from parameter stack
+                DROP
                 PLY
+                PLD
                 NEXT
         ENDPUBLIC
 
@@ -3530,123 +3523,61 @@ ABORTQUOTE_CLOOP:
         .a16
         .i16
 
-        LOC_CHAR    = 1         ; delimiter char
-        LOC_TIB     = 3         ; TIB base address
-        LOC_TOIN    = 5         ; >IN at entry
-        LOC_CURPTR  = 7         ; current scan pointer
-        LOC_ENDADDR = 9         ; TIB + SOURCE-LEN
-        LOC_UP      = 11        ; cached UP
-        LOC_SIZE    = LOC_UP + 1
+        @DELIM  = 5                     ; delimiter char
+        @START  = 3
 
-                PHD
-                PHY
-
-                TSC
-                SEC
-                SBC     #LOC_SIZE
-                TCS
+                PHY                     ; save IP
+                LDA     TOS,X           ; peek delimiter char
+                PHA                     ; save delimiter char as @DELIM
+                PHA                     ; @START
+                PHD                     ; switch D to user area
+                LDA     UP
                 TCD
 
-                ;--------------------------------------------------------------
-                ; Peek delimiter
-                ;--------------------------------------------------------------
-                LDA     a:TOS,X
-                AND     #$00FF
-                STA     LOC_CHAR
-
-                ;--------------------------------------------------------------
-                ; Cache UP, then load TIB, >IN, SOURCE-LEN
-                ;--------------------------------------------------------------
-                LDA     a:UP
-                STA     LOC_UP
-
-                LDY     #U_TIB
-                LDA     (LOC_UP),Y
-                STA     LOC_TIB
-
-                LDY     #U_TOIN
-                LDA     (LOC_UP),Y
-                STA     LOC_TOIN
-
-                ; CURPTR = TIB + >IN
-                LDA     LOC_TIB
-                CLC
-                ADC     LOC_TOIN
-                STA     LOC_CURPTR
-
-                ; ENDADDR = TIB + SOURCE-LEN
-                LDY     #U_SOURCELEN
-                LDA     (LOC_UP),Y
-                CLC
-                ADC     LOC_TIB
-                STA     LOC_ENDADDR
-
-                ;--------------------------------------------------------------
-                ; Scan loop
-                ;--------------------------------------------------------------
-@scan_loop:
-                LDA     LOC_CURPTR
-                CMP     LOC_ENDADDR
+                LDY     U_TOIN          ; start scan loop
+                TYA                     ; remember start offset
+                STA     @START,S
+                OFF16MEM
+                LDA     @DELIM,S
+                DEY
+@next:          INY
+                CPY     U_SOURCELEN
                 BCS     @end_of_input
 
-                ; Fetch char at CURPTR
-                OFF16MEM
-                LDA     (LOC_CURPTR)    ; fetch byte
-                ON16MEM
-                AND     #$00FF
+                CMP     #' '
+                BNE     @norm
 
-                CMP     LOC_CHAR
-                BEQ     @found
+                CMP     (U_TIB),Y
+                BCC     @next
+                BRA     @found
 
-                INC     LOC_CURPTR
-                BRA     @scan_loop
+@norm:          CMP     (U_TIB),Y       ; Fetch char at CURPTR
+                BNE     @next
 
-@found:
-                INC     LOC_CURPTR      ; advance past delimiter
-                ; u = CURPTR - 1 - (TIB + TOIN)
-                LDA     LOC_CURPTR
-                DEC     A               ; ptr before delimiter
-                SEC
-                SBC     LOC_TIB
-                SEC
-                SBC     LOC_TOIN        ; u = offset from TIB+TOIN
+@found:         ON16MEM
+                TYA
+                INY                     ; advance past delimiter
                 BRA     @update_in
 
-@end_of_input:
-                ; u = SOURCE-LEN - TOIN = ENDADDR - TIB - STARTIN
-                LDA     LOC_ENDADDR
-                SEC
-                SBC     LOC_TIB
-                SEC
-                SBC     LOC_TOIN
+@end_of_input:  ON16MEM
+                TYA
+@update_in:     STY     U_TOIN
 
-@update_in:
-                PHA                     ; save u
+                SEC                     ; calc length
+                SBC     @START,S
+                STA     @DELIM,S
 
-                ; Write CURPTR back as >IN offset: >IN = CURPTR - TIB
-                LDA     LOC_CURPTR
-                SEC
-                SBC     LOC_TIB
-                LDY     #U_TOIN
-                STA     (LOC_UP),Y
+                CLC                     ; calc start addr
+                LDA     @START,S
+                ADC     U_TIB
+                STA     @START,S
 
-                ; c-addr = TIB + STARTIN
-                LDA     LOC_TIB
-                CLC
-                ADC     LOC_TOIN
-
-                STA     a:TOS,X         ; overwrite TOS with c-addr
-
-                PLA                     ; restore u
-                ADVANCE
-                STA     a:TOS,X         ; push u (TOS)
-
-                TSC
-                CLC
-                ADC     #LOC_SIZE
-                TCS
-                PLY
-                PLD
+                PLD                     ; switch D back
+                PLA                     ; @START
+                STA     TOS,X
+                PLA                     ; @DELIM
+                PUSH
+                PLY                     ; restore IP
                 NEXT
         ENDPUBLIC
 
