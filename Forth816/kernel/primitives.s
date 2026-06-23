@@ -2321,47 +2321,32 @@ DMIN_THEN:
         PUBLIC  DOPLUSLOOP_CODE
         .a16
         .i16
-                LOC_IP      = 1         ; saved IP (our PHY)
-                LOC_INDEX   = 3         ; index
-                LOC_LIMIT   = 5         ; limit
-                LOC_LEAVE   = 7         ; leave target
-                PHY                     ; Save IP
+                LOC_INDEX   = 1         ; index
+                LOC_LIMIT   = 3         ; limit
+                LOC_LEAVE   = 5         ; leave target
 
-                ; Pop step from parameter stack
-                POP
-                STA     SCRATCH1        ; step
-
-                ; old_diff = index - limit
-                LDA     LOC_INDEX,S
-                SEC
-                SBC     LOC_LIMIT,S
-                STA     SCRATCH0        ; old_diff
-
-                ; new_index = index + step, update frame
-                LDA     LOC_INDEX,S
+                LDA     TOS,x           ; index+= n
                 CLC
-                ADC     SCRATCH1
-                STA     LOC_INDEX,S     ; new_index stored back into frame
-
-                ; new_diff = new_index - limit
-                SEC
-                SBC     LOC_LIMIT,S
-
-                ; Sign change or zero crossing
-                EOR     SCRATCH0
-                BMI     @done           ; Sign changed → done
+                ADC     LOC_INDEX,s
+                STA     LOC_INDEX,s
+                SEC                     ; A= distance beyond limit
+                SBC     LOC_LIMIT,s
+                CMP     TOS,x           ; compare with n
+                ROR     A               ; get ~borrow
+                EOR     TOS,x           ; correct for n sign
+                BPL     @done
 
                 ; Continue
-                PLY                     ; Restore IP (points to branch target)
+                DROP
                 IPFETCH_BRANCH          ; Fetch branch target, IP = loop top
-                BRA     @return
+@next:          NEXT
 @done:
-                PLY                     ; Restore IP
+                DROP
                 PLA                     ; Discard index
                 PLA                     ; Discard limit
                 PLA                     ; Discard leave-target
                 IPINC                   ; Skip branch target cell
-@return:        NEXT
+                BRA     @next
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
