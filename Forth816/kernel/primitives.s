@@ -6683,10 +6683,48 @@ SIGN_DONE:
 ;==============================================================================
 
 ;------------------------------------------------------------------------------
+; CODE ( "<spaces>name" -- ) Skip leading spaces. Parse name delimited by a
+; space. Create a definition for name, called a "code definition", with the
+; subsequent instructions in machine code.
+; https://forth-standard.org/standard/tools/CODE
+;------------------------------------------------------------------------------
+        HEADER  "CODE", CODE_ENTRY, CODE_CFA, 0, DDOTR_ENTRY
+        CODEPTR DOCOL
+CODE_BODY:
+        CELL    BL_CFA                  ; get name
+        CELL    WORD_CFA                ; ( addr )
+        CELL    QREDEFINE_CFA           ; ( addr ) print warnings if needed
+        CELL    DOCREATE_CFA            ; ( ) build header
+        CELL    HERE_CFA                ; compile CFA
+        CELL    ONEPLUS_CFA
+        CELL    ONEPLUS_CFA
+        CELL    COMMA_CFA
+        CELL    EXIT_CFA
+
+;------------------------------------------------------------------------------
+; ;CODE ( -- ) end code word definition
+; Appends a call to NEXT to allow threading to cotinue.
+; https://forth-standard.org/standard/tools/SemiCODE
+;------------------------------------------------------------------------------
+        HEADER  ";CODE", SCODE_ENTRY, SCODE_CFA, 0, CODE_ENTRY
+        CODEPTR DOCOL
+SCODE_BODY:
+        CELL    LIT_CFA                 ; compile jmp @Next
+        CELL    $4c
+        CELL    CCOMMA_CFA
+        CELL    LIT_CFA
+        CELL    @next
+        CELL    COMMA_CFA
+        CELL    REVEAL_CFA              ; clear F_HIDDEN
+        CELL    EXIT_CFA
+
+@next:  NEXT
+
+;------------------------------------------------------------------------------
 ; DUMP ( caddr len -- )  Dump memory in hex
 ; https://forth-standard.org/standard/tools/DUMP
 ;------------------------------------------------------------------------------
-        HEADER  "DUMP", DUMP_ENTRY, DUMP_CFA, 0, DDOTR_ENTRY
+        HEADER  "DUMP", DUMP_ENTRY, DUMP_CFA, 0, SCODE_ENTRY
         CODEPTR DOCOL
         CELL    ZERO_CFA                ; line length
 @line:  CELL    CR_CFA
