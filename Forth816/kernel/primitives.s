@@ -618,124 +618,51 @@ calc_depth:     TXA
 ;
 ; Two's-complement word multiplication gives the same bit pattern for
 ; both signed and unsigned inputs, so no sign handling is needed.
-; Algorithm: shift-and-add, 16 iterations.
-;
-; Note: While UM* DROP returns the same result, it's slightly more
-; expensive. Also use of page zero variables is waranted for efficiency.
 ; https://forth-standard.org/standard/core/Times
 ;------------------------------------------------------------------------------
         HEADER  "*", STAR_ENTRY, STAR_CFA, 0, MPLUS_ENTRY
         CODEPTR STAR_CODE
-        PUBLIC  STAR_CODE
+	PUBLIC STAR_CODE
         .a16
         .i16
-                POP                     ; b = multiplier
-                STA     TMPA
-                LDA     TOS,X           ; a = multiplicand
-                STA     TMPB            ; shifting multiplicand lives in TMPB
-                STZ     SCRATCH0        ; product accumulator = 0
-.ifndef UNROLL
-                PHY
-                LDY     #16
-@loop:
-.else
-.macro SHIFTADD16
-.scope
-.endif
-                LSR     TMPA            ; multiplier >>= 1; LSB → carry
-                BCC     @skip
-                LDA     SCRATCH0
-                CLC
-                ADC     TMPB            ; product += curr shifted multiplicand
-                STA     SCRATCH0
-@skip:
-                ASL     TMPB            ; shift multiplicand, not the sum
-.ifndef UNROLL
-                DEY
-                BNE     @loop
-.else
-.endscope
-.endmacro
-                ; Unroll the loop for performance.
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-                SHIFTADD16
-.endif
-                LDA     SCRATCH0
-                STA     TOS,X
-.ifndef UNROLL
-                PLY
-.endif
+		jsr UMSTAR_IMPL
+		DROP			; drop result.hi
                 NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; UM* ( u1 u2 -- ud )   unsigned 16×16 → 32-bit product
 ; On exit: NOS = ud_low, TOS = ud_high   (ANS Forth convention)
-;
-; Algorithm: shift-and-add over a 32-bit accumulator.
-;   TMPA       = multiplier   (16-bit, shifted right)
-;   TMPB       = multiplicand low  word (shifted left, carry tracked below)
-;   SCRATCH1   = multiplicand high word (starts 0; receives carry from TMPB)
-;   SCRATCH0   = product low  word (accumulator)
-;   NOS,X slot = product high word (accumulator, kept on stack)
 ;------------------------------------------------------------------------------
         HEADER  "UM*", UMSTAR_ENTRY, UMSTAR_CFA, 0, STAR_ENTRY
         CODEPTR UMSTAR_CODE
         PUBLIC  UMSTAR_CODE
         .a16
         .i16
-                LDA     TOS,X           ; u2 → TMPA (multiplier)
-                STA     TMPA
-                LDA     NOS,X           ; u1 → TMPB (multiplicand low)
-                STA     TMPB
-                STZ     SCRATCH1        ; multiplicand high = 0
-                STZ     SCRATCH0        ; product low  = 0
-                STZ     TOS,X           ; product high = 0  (reuse TOS slot)
+                JSR     UMSTAR_IMPL
+                NEXT
+        ENDPUBLIC
+
+.macro SHIFTADD32
+        .local @skip
+                ROR     NOS,x           ; shift multiplier & result.lo
+                BCC     @skip           ; if bit set
+                CLC                     ;   add multiplicand to result.hi
+                ADC     TOS,x
+@skip:          ROR     A               ; shift result.hi
+.endmacro
+
+UMSTAR_IMPL:
+                LDA #0                  ; product high = 0
 .ifndef UNROLL
                 PHY                     ; save IP
-                LDY     #16             ; 16 iterations
-@loop:
-.else
-                ; Put the contents of an iteration in a macro.
-.macro SHIFTADD32
-.scope
-.endif
-                LSR     TMPA            ; multiplier >>= 1; old LSB → carry
-                BCC     @skip           ; bit 0 was 0, nothing to add
-
-                ; Add 32-bit multiplicand (SCRATCH1:TMPB) to prod (TOS:SCRATCH0)
-                CLC
-                LDA     SCRATCH0
-                ADC     TMPB            ; product_low  += multiplicand_low
-                STA     SCRATCH0
-                LDA     TOS,X
-                ADC     SCRATCH1        ; product_high += multiplicand_high + c
-                STA     TOS,X
-@skip:
-                ; Shift 32-bit multiplicand left
-                ASL     TMPB            ; multiplicand_low <<= 1
-                ROL     SCRATCH1        ; multiplicand_high <<= 1
-.ifndef UNROLL
+                LDY     #16             ; for 16 bits
+@Loop:
+                SHIFTADD32
                 DEY
-                BNE     @loop
-.else
-.endscope
-.endmacro
-                ; Unroll the loop for performance.
+                BNE     @Loop
+                PLY                     ; restore IP
+.else     ; Unroll the loop for performance.
                 SHIFTADD32
                 SHIFTADD32
                 SHIFTADD32
@@ -755,13 +682,9 @@ calc_depth:     TXA
 .endif
                 ; Place results on parameter stack:
                 ;   TOS = ud_high, NOS = ud_low
-                LDA     SCRATCH0
-                STA     NOS,X           ; NOS = low
-.ifndef UNROLL
-                PLY                     ; restore IP
-.endif
-                NEXT
-        ENDPUBLIC
+                STA     TOS,x           ; save result.hi
+                ROR     NOS,x           ; finish result.lo
+                RTS
 
 ;------------------------------------------------------------------------------
 ; UM/MOD ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
