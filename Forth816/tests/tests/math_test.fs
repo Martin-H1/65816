@@ -25,8 +25,18 @@ T{ 65533 20 UM* -> 65476 19 }T
 
 \ UM/MOD
 T{ 1025 0 14 UM/MOD -> 3 73 }T
-T{ 1025 0 0 UM/MOD -> 1025 -1 }T
+T{ 1025 0 0  UM/MOD -> 1025 -1 }T
+T{ 10 0 5712 UM/MOD -> 10 0 }T
 T{ 418410. 57121 UM/MOD -> 18563 7 }T
+
+\ Extended tests from Forth-standard.org
+T{        0            0        1 UM/MOD -> 0        0 }T
+T{        1            0        1 UM/MOD -> 0        1 }T
+T{        1            0        2 UM/MOD -> 1        0 }T
+T{        3            0        2 UM/MOD -> 1        1 }T
+T{ MAX-UINT        2 UM*        2 UM/MOD -> 0 MAX-UINT }T
+T{ MAX-UINT        2 UM* MAX-UINT UM/MOD -> 0        2 }T
+T{ MAX-UINT MAX-UINT UM* MAX-UINT UM/MOD -> 0 MAX-UINT }T
 
 \ /MOD
 T{ 4133 20 /MOD -> 13 206 }T
