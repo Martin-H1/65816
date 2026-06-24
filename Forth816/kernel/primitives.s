@@ -494,9 +494,18 @@ calc_depth:     TXA
         CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
+; MAX-UINT ( -- n ) pushes highest single precision unsigned integer
+;------------------------------------------------------------------------------
+        HEADER  "MAX-UINT", MAXUINT_ENTRY, MAXUINT_CFA, 0, MAXINT_ENTRY
+        CODEPTR DOCOL
+        CELL    LIT_CFA
+        CELL    UINT_MAX                ; Platform dependant constant
+        CELL    EXIT_CFA
+
+;------------------------------------------------------------------------------
 ; MIN-2INT ( -- d ) pushes lowest single precision integer
 ;------------------------------------------------------------------------------
-        HEADER  "MIN-2INT", MINTWOINT_ENTRY, MINTWOINT_CFA, 0, MAXINT_ENTRY
+        HEADER  "MIN-2INT", MINTWOINT_ENTRY, MINTWOINT_CFA, 0, MAXUINT_ENTRY
         CODEPTR DOCOL
         CELL    ZERO_CFA
         CELL    MININT_CFA              ; Sign bit only
@@ -645,46 +654,34 @@ calc_depth:     TXA
 
 .macro SHIFTADD32
         .local @skip
-                ROR     NOS,x           ; shift multiplier & result.lo
+                ROR     NOS,X           ; shift multiplier & result.lo
                 BCC     @skip           ; if bit set
                 CLC                     ;   add multiplicand to result.hi
-                ADC     TOS,x
+                ADC     TOS,X
 @skip:          ROR     A               ; shift result.hi
 .endmacro
 
-UMSTAR_IMPL:
+.proc UMSTAR_IMPL
                 LDA #0                  ; product high = 0
 .ifndef UNROLL
                 PHY                     ; save IP
                 LDY     #16             ; for 16 bits
-@Loop:
+@loop:
                 SHIFTADD32
                 DEY
-                BNE     @Loop
+                BNE     @loop
                 PLY                     ; restore IP
-.else     ; Unroll the loop for performance.
+.else           ; Unroll the loop for performance.
+.repeat 16
                 SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
-                SHIFTADD32
+.endrepeat
 .endif
                 ; Place results on parameter stack:
                 ;   TOS = ud_high, NOS = ud_low
-                STA     TOS,x           ; save result.hi
-                ROR     NOS,x           ; finish result.lo
+                STA     TOS,X           ; save result.hi
+                ROR     NOS,X           ; finish result.lo
                 RTS
+.endproc
 
 ;------------------------------------------------------------------------------
 ; UM/MOD ( ud u -- ur uq ) unsigned 32/16 -> 16 remainder, 16 quotient
@@ -710,18 +707,7 @@ UMSTAR_IMPL:
 
 ;------------------------------------------------------------------------------
 ; UMSLASHMOD_IMPL  –  shared subroutine: unsigned 32÷16 → 16r 16q
-;
 ; Called via JSR from UM/MOD and SLASHMOD_IMPL.
-;
-; Entry stack layout (X = PSP before JSR):
-;   TOS,X  = divisor  (u16)
-;   NOS,X  = ud_high  (high cell of 32-bit dividend)
-;   PSP2,X = ud_low   (low  cell of 32-bit dividend)
-;
-; Exit stack layout (after internal INX/INX that pops divisor):
-;   TOS,X = quotient   (u16)
-;   NOS,X = remainder  (u16)
-;
 ; Algorithm: restoring shift-and-subtract, 16 iterations.
 ;   We treat the pair (NOS,X  remainder:quotient TOS,X) as a single 32-bit
 ;   shift register.  Each iteration:
@@ -733,22 +719,8 @@ UMSTAR_IMPL:
 ;            keep new remainder, set quotient LSB (bit 0, now 0 after ASL) to 1
 ;          Else restore remainder.
 ;------------------------------------------------------------------------------
-        .export UMSLASHMOD_IMPL
-        .proc   UMSLASHMOD_IMPL
-        .a16
-        .i16
-                POP                     ; load divisor
-                STA     TMPA            ; TMPA = divisor
-                ; Now: TOS,X = ud_high (remainder register)
-                ;      NOS,X = ud_low  (quotient register)
-.ifndef UNROLL
-                PHY                     ; save IP
-                LDY     #16             ; 16 iterations
-@loop:
-.else
 .macro SHIFTSUB32
 .scope
-.endif
                 ASL     NOS,X           ; quotient  <<= 1; old bit15 → carry
                 ROL     TOS,X           ; remainder <<= 1; carry → bit0
                 BCS     @forced_sub     ; bit 16 overflow - remainder is >= divisor
@@ -766,29 +738,28 @@ UMSTAR_IMPL:
                 STA     TOS,X           ; subtraction is guaranteed valid here
                 INC     NOS,X
 @restore:
-.ifndef UNROLL
-                DEY
-                BNE     @loop
-.else
 .endscope
 .endmacro
-                ; Unroll the loop for performance.
+
+        .proc   UMSLASHMOD_IMPL
+        .a16
+        .i16
+                POP                     ; load divisor
+                STA     TMPA            ; TMPA = divisor
+                ; Now: TOS,X = ud_high (remainder register)
+                ;      NOS,X = ud_low  (quotient register)
+.ifndef UNROLL
+                PHY                     ; save IP
+                LDY     #16             ; 16 iterations
+@loop:
                 SHIFTSUB32
+                DEY
+                BNE     @loop
+                PLY                     ; restore IP
+.else
+.repeat 16      ; Unroll the loop for performance.
                 SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
-                SHIFTSUB32
+.endrepeat
 .endif
                 ; TOS,X = remainder, NOS,X = quotient
                 ; swap to ANS order TOS=quotient NOS=remainder
@@ -798,9 +769,6 @@ UMSTAR_IMPL:
                 STA     TOS,X
                 LDA     SCRATCH0
                 STA     NOS,X
-.ifndef UNROLL
-                PLY                     ; restore IP
-.endif
                 RTS
         .endproc
 
@@ -1885,8 +1853,8 @@ DMIN_THEN:
         PUBLIC  MOVE_CODE
         .a16
         .i16
-                LDA     PSP2,x
-                CMP     NOS,x
+                LDA     PSP2,X
+                CMP     NOS,X
                 BCS     CMOVE_CODE
                 BRA     CMOVEU_CODE
         ENDPUBLIC
@@ -1900,20 +1868,20 @@ DMIN_THEN:
         PUBLIC  CMOVEU_CODE
         .a16
         .i16
-                LDA     TOS,x           ; get u (# of bytes to move)
+                LDA     TOS,X           ; get u (# of bytes to move)
                 BEQ     @return         ;   if 0, we're done
                 PHY                     ; save IP
                 PHX                     ; save PSP
                 CLC                     ; calc src end addr
-                ADC     PSP2,x
+                ADC     PSP2,X
                 DEA
                 PHA
-                LDA     TOS,x           ; calc dest end addr
+                LDA     TOS,X           ; calc dest end addr
                 CLC
-                ADC     NOS,x
+                ADC     NOS,X
                 DEA
                 TAY
-                LDA     TOS,x           ; get u (# of bytes to move)
+                LDA     TOS,X           ; get u (# of bytes to move)
                 DEA                     ; adjust for mvp
                 PLX                     ; point at src last byte
                 MVP     0,0             ; do the move
@@ -1934,7 +1902,7 @@ DMIN_THEN:
         PUBLIC  CMOVE_CODE
         .a16
         .i16
-                LDA     TOS,x           ; get u (# of bytes to move)
+                LDA     TOS,X           ; get u (# of bytes to move)
                 BEQ     @return
                 DEA                     ; decrement byte count for mvn
                 PHX                     ; save PSP
@@ -2291,15 +2259,15 @@ DMIN_THEN:
                 LOC_LIMIT   = 3         ; limit
                 LOC_LEAVE   = 5         ; leave target
 
-                LDA     TOS,x           ; index+= n
+                LDA     TOS,X           ; index+= n
                 CLC
                 ADC     LOC_INDEX,s
                 STA     LOC_INDEX,s
                 SEC                     ; A= distance beyond limit
                 SBC     LOC_LIMIT,s
-                CMP     TOS,x           ; compare with n
+                CMP     TOS,X           ; compare with n
                 ROR     A               ; get ~borrow
-                EOR     TOS,x           ; correct for n sign
+                EOR     TOS,X           ; correct for n sign
                 BPL     @done
 
                 ; Continue
@@ -6631,14 +6599,14 @@ SCODE_BODY:
         CELL    EXIT_CFA
 
 @addr:  .word   *+2                     ; CFA
-        LDA     PSP2,x                  ; get caddr
+        LDA     PSP2,X                  ; get caddr
         BRA     @pusha
 
 @get:   .word *+2                       ; CFA
-        LDA     (PSP2,x)                ; get byte
-        INC     PSP2,x                  ; addr++
-        DEC     NOS,x                   ; len--
-        INC     TOS,x                   ; line position++
+        LDA     (PSP2,X)                ; get byte
+        INC     PSP2,X                  ; addr++
+        DEC     NOS,X                   ; len--
+        INC     TOS,X                   ; line position++
 @pusha: PUSH                            ; Push accumulator
         NEXT
 
