@@ -78,7 +78,7 @@ T{ $0057 CHAR+ -> $0058 }T
  ok 
 
  ok 
-VARIABLE MOVE-SRC 6 ALLOT
+VARIABLE MOVE-SRC 8 ALLOT
  ok 
 MOVE-SRC $48 C!
  ok 
@@ -98,13 +98,29 @@ MOVE-SRC 7 CHARS + $20 C!
  ok 
 
  ok 
-VARIABLE MOVE-DST 6 ALLOT
+VARIABLE MOVE-DST 8 ALLOT
  ok 
 MOVE-DST 8 $20 FILL
  ok 
 
  ok 
+\ Move higher in RAM
+ ok 
 T{ MOVE-SRC MOVE-DST 8 MOVE
+ ok 
+   MOVE-SRC 8 MOVE-DST 8 COMPARE -> 0 }T
+ ok 
+
+ ok 
+\ Reinitialize src buffer.
+ ok 
+MOVE-SRC 8 $20 FILL
+ ok 
+
+ ok 
+\ Move lower in RAM
+ ok 
+T{ MOVE-DST MOVE-SRC 8 MOVE
  ok 
    MOVE-SRC 8 MOVE-DST 8 COMPARE -> 0 }T
  ok 

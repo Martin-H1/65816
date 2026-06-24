@@ -1877,42 +1877,85 @@ DMIN_THEN:
         CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
-; MOVE ( src dst u -- ) copy u bytes from src to dst
+; MOVE ( src dst u -- ) Move count address units from src to dst
+; https://forth-standard.org/standard/core/MOVE
 ;------------------------------------------------------------------------------
         HEADER  "MOVE", MOVE_ENTRY, MOVE_CFA, 0, ALIGNED_ENTRY
         CODEPTR MOVE_CODE
         PUBLIC  MOVE_CODE
         .a16
         .i16
-                LOC_SRCPTR = 1
-                LOC_DSTPTR = 3
-                PHY                     ; Save IP
-                POP                     ; pop u (byte count) to Y
+                LDA     PSP2,x
+                CMP     NOS,x
+                BCS     CMOVE_CFA+2
+                BRA     CMOVEU_CFA+2
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; CMove> ( src dest u -- ) copy u bytes from src to dst descending
+; https://forth-standard.org/standard/string/CMOVEtop
+;------------------------------------------------------------------------------
+        HEADER  "CMOVE>", CMOVEU_ENTRY, CMOVEU_CFA, 0, MOVE_ENTRY
+        CODEPTR CMOVEU_CODE
+        PUBLIC  CMOVEU_CODE
+        .a16
+        .i16
+                LDA     TOS,x           ; get u (# of bytes to move)
+                BEQ     @return         ;   if 0, we're done
+                PHY                     ; save IP
+                PHX                     ; save PSP
+                CLC                     ; calc src end addr
+                ADC     PSP2,x
+                DEA
+                PHA
+                LDA     TOS,x           ; calc dest end addr
+                CLC
+                ADC     NOS,x
+                DEA
                 TAY
-                POP                     ; pop dst to LOC_DSTPTR
-                PHA
-                POP                     ; pop src to LOC_SRCPTR
-                PHA
-                TYA                     ; Test for zero count = no-op
-                BEQ     @done
-                DEY                     ; Change count to an index
-@loop:
-                OFF16MEM
-                LDA     (LOC_SRCPTR,S),Y
-                STA     (LOC_DSTPTR,S),Y
-                ON16MEM
-                DEY
-                BPL     @loop           ; loop terminates at -1 to copy 0 byte as well.
-@done:          PLA                     ; Drop stack locals
-                PLA
-                PLY                     ; Restore IP
+                LDA     TOS,x           ; get u (# of bytes to move)
+                DEA                     ; adjust for mvp
+                PLX                     ; point at src last byte
+                MVP     0,0             ; do the move
+                PLX                     ; restore PSP
+                PLY                     ; restore IP
+@return:        DROP                    ; drop ucount
+                DROP                    ; drop dest
+                DROP                    ; src
+                NEXT
+        ENDPUBLIC
+
+;------------------------------------------------------------------------------
+; CMove ( src dst u -- ) copy u bytes from src to dst ascending
+; https://forth-standard.org/standard/string/CMOVE
+;------------------------------------------------------------------------------
+        HEADER  "CMOVE", CMOVE_ENTRY, CMOVE_CFA, 0, CMOVEU_ENTRY
+        CODEPTR CMOVE_CODE
+        PUBLIC  CMOVE_CODE
+        .a16
+        .i16
+                LDA     TOS,x           ; get u (# of bytes to move)
+                BEQ     @return
+                DEA                     ; decrement byte count for mvn
+                PHX                     ; save PSP
+                PHY                     ; save IP
+                LDY     PSP2,X          ; prefetch src
+                PHY
+                LDY     NOS,X           ; Y= dst
+                PLX                     ; X= src
+                MVN     #0,#0
+                PLY                     ; restore IP
+                PLX                     ; restore PSP
+@return:        DROP                    ; Drop u
+                DROP                    ; Drop dst
+                DROP                    ; Drop src
                 NEXT
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
 ; FILL ( addr u byte -- ) fill u bytes starting at addr with byte
 ;------------------------------------------------------------------------------
-        HEADER  "FILL", FILL_ENTRY, FILL_CFA, 0, MOVE_ENTRY
+        HEADER  "FILL", FILL_ENTRY, FILL_CFA, 0, CMOVE_ENTRY
         CODEPTR FILL_CODE
         PUBLIC  FILL_CODE
         .a16
