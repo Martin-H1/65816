@@ -1742,10 +1742,10 @@ DMIN_THEN:
         PUBLIC  STORE_CODE
         .a16
         .i16
-                POP                     ; addr
-                STA     SCRATCH0
-                POP                     ; val
-                STA     (SCRATCH0)
+                LDA     NOS,X           ; val
+                STA     (TOS,X)         ; addr
+                DROP
+                DROP
                 NEXT
         ENDPUBLIC
 
@@ -1757,10 +1757,8 @@ DMIN_THEN:
         PUBLIC  CFETCH_CODE
         .a16
         .i16
-                LDA     TOS,X
-                STA     SCRATCH0
                 OFF16MEM
-                LDA     (SCRATCH0)
+                LDA     (TOS,X)
                 ON16MEM
                 AND     #$00FF
                 STA     TOS,X
@@ -1775,12 +1773,12 @@ DMIN_THEN:
         PUBLIC  CSTORE_CODE
         .a16
         .i16
-                POP                     ; addr
-                STA     SCRATCH0
-                POP                     ; byte
+                LDA     NOS,X           ; byte
                 OFF16MEM
-                STA     (SCRATCH0)
+                STA     (TOS,X)         ; addr
                 ON16MEM
+                DROP
+                DROP
                 NEXT
         ENDPUBLIC
 
