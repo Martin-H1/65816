@@ -625,8 +625,8 @@ calc_depth:     TXA
 	PUBLIC STAR_CODE
         .a16
         .i16
-		jsr UMSTAR_IMPL
-		DROP			; drop result.hi
+                JSR     UMSTAR_IMPL
+                DROP                    ; drop result.hi
                 NEXT
         ENDPUBLIC
 
@@ -3691,8 +3691,7 @@ HEX_BODY:
                 PHD
                 LDA     #$0000
                 TCD
-                LDY     #RTS_CFA_LIST
-                JSR     UMSTAR_CODE     ; ( prod_lo prod_hi )
+                JSR     UMSTAR_IMPL     ; ( prod_lo prod_hi )
                 PLD                     ; D -> frame
 
                 ; --- Step 2: ud_hi * BASE via UM* ---
@@ -3706,8 +3705,7 @@ HEX_BODY:
                 PHD
                 LDA     #$0000
                 TCD
-                LDY     #RTS_CFA_LIST
-                JSR     UMSTAR_CODE     ; ( prod_lo prod_hi ud_hi*BASE_lo ud_hi*BASE_hi )
+                JSR     UMSTAR_IMPL     ; ( prod_lo prod_hi ud_hi*BASE_lo ud_hi*BASE_hi )
                 PLD                     ; D -> frame
 
                 ; Discard ud_hi*BASE high word (ANS: no overflow beyond 32 bits)

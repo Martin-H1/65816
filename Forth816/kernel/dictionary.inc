@@ -190,7 +190,6 @@ F_LENMASK       = $1F
         .global DODEFER
         .global DOMARKER
         .global DOTRACE
-        .global RTS_CFA_LIST
 
 ; Tracing functions in the DEBUG build.
 .ifdef DEBUG

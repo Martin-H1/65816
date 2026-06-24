@@ -280,19 +280,6 @@ TRACE_EN:       .res 2                  ; Trace enable flag
         ENDPUBLIC
 .endif
 
-;------------------------------------------------------------------------------
-; RTS_CFA_LIST trampoline used to handle the NEXT at the end of code that
-; is entered via a JSR. This allows assembly primitives to call each other.
-;------------------------------------------------------------------------------
-RTS_CFA_LIST:
-	.word RTS_CFA
-        HEADER "RTS", RTS_ENTRY, RTS_CFA, 0, 0
-        CODEPTR RTS_CODE
-        PUBLIC  RTS_CODE
-                LDY     #RTS_CFA_LIST
-                RTS
-        ENDPUBLIC
-
 ;==============================================================================
 ; SYSTEM INITIALIZATION
 ;==============================================================================
