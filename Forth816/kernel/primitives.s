@@ -1887,8 +1887,8 @@ DMIN_THEN:
         .i16
                 LDA     PSP2,x
                 CMP     NOS,x
-                BCS     CMOVE_CFA+2
-                BRA     CMOVEU_CFA+2
+                BCS     CMOVE_CODE
+                BRA     CMOVEU_CODE
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
