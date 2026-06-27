@@ -461,46 +461,36 @@ calc_depth:     TXA
 ; ZERO ( -- 0 ) pushes zero, shortcut to LIT 0.
 ;------------------------------------------------------------------------------
         HEADER  "ZERO", ZERO_ENTRY, ZERO_CFA, 0, TWORFETCH_ENTRY
-        CODEPTR DOCOL
-        CELL    LIT_CFA
+        CODEPTR DOCON
         CELL    0                       ; push zero
-        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; ONE ( -- 1 ) pushes one, shortcut to LIT 1.
 ;------------------------------------------------------------------------------
         HEADER  "ONE", ONE_ENTRY, ONE_CFA, 0, ZERO_ENTRY
-        CODEPTR DOCOL
-        CELL    LIT_CFA
+        CODEPTR DOCON
         CELL    1                       ; push one
-        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MIN-INT ( -- n ) pushes lowest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MIN-INT", MININT_ENTRY, MININT_CFA, 0, ONE_ENTRY
-        CODEPTR DOCOL
-        CELL    LIT_CFA
+        CODEPTR DOCON
         CELL    INT_MIN                 ; Platform dependant constant
-        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MAX-INT ( -- n ) pushes highest single precision integer
 ;------------------------------------------------------------------------------
         HEADER  "MAX-INT", MAXINT_ENTRY, MAXINT_CFA, 0, MININT_ENTRY
-        CODEPTR DOCOL
-        CELL    LIT_CFA
+        CODEPTR DOCON
         CELL    INT_MAX                 ; Platform dependant constant
-        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MAX-UINT ( -- n ) pushes highest single precision unsigned integer
 ;------------------------------------------------------------------------------
         HEADER  "MAX-UINT", MAXUINT_ENTRY, MAXUINT_CFA, 0, MAXINT_ENTRY
-        CODEPTR DOCOL
-        CELL    LIT_CFA
+        CODEPTR DOCON
         CELL    UINT_MAX                ; Platform dependant constant
-        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; MIN-2INT ( -- d ) pushes lowest single precision integer
@@ -516,8 +506,7 @@ calc_depth:     TXA
 ;------------------------------------------------------------------------------
         HEADER  "MAX-2INT", MAXTWOINT_ENTRY, MAXTWOINT_CFA, 0, MINTWOINT_ENTRY
         CODEPTR DOCOL
-        CELL    LIT_CFA
-        CELL    UINT_MAX                ; UINT_MAX has all bits set.
+        CELL    MAXUINT_CFA             ; UINT_MAX has all bits set.
         CELL    MAXINT_CFA              ; Sign bit clear, all other bits set.
         CELL    EXIT_CFA
 
@@ -652,7 +641,7 @@ calc_depth:     TXA
                 NEXT
         ENDPUBLIC
 
-.macro SHIFTADD32
+.macro SHIFTADD32                       ; do next multiplier bit
         .local @skip
                 ROR     NOS,X           ; shift multiplier & result.lo
                 BCC     @skip           ; if bit set
@@ -665,8 +654,9 @@ calc_depth:     TXA
                 LDA #0                  ; product high = 0
 .ifndef UNROLL
                 PHY                     ; save IP
-                LDY     #16             ; for 16 bits
+                LDY     #CELL_BITS/2    ; for all cell bits in groups of two
 @loop:
+                SHIFTADD32
                 SHIFTADD32
                 DEY
                 BNE     @loop
@@ -707,67 +697,74 @@ calc_depth:     TXA
 
 ;------------------------------------------------------------------------------
 ; UMSLASHMOD_IMPL  –  shared subroutine: unsigned 32÷16 → 16r 16q
+;
 ; Called via JSR from UM/MOD and SLASHMOD_IMPL.
-; Algorithm: restoring shift-and-subtract, 16 iterations.
-;   We treat the pair (NOS,X  remainder:quotient TOS,X) as a single 32-bit
-;   shift register.  Each iteration:
-;     1. Shift 32-bit register left 1 bit:
-;          ASL quotient_slot   → old bit 15 goes to carry
-;          ROL remainder_slot  → carry comes in at LSB
-;     2. Attempt subtraction: remainder - divisor
-;          If no borrow (remainder ≥ divisor):
-;            keep new remainder, set quotient LSB (bit 0, now 0 after ASL) to 1
-;          Else restore remainder.
+;
+; Entry stack layout (X = PSP before JSR):
+;   TOS,X  = divisor  (u16)
+;   NOS,X  = ud_high  (high cell of 32-bit dividend)
+;   PSP2,X = ud_low   (low  cell of 32-bit dividend)
+;
+; Exit stack layout (after internal INX/INX that pops divisor):
+;   TOS,X = quotient   (u16)
+;   NOS,X = remainder  (u16)
+;
+; 2 problems can arise depending on the values of dividend & divisor:
+;  * quotient overflow
+;  * divide by zero (sort of a special case of overflow)
+; Overflow example: $80058000. 10 um/mod u. u. 36044 8  ok
+; Possible responses are:
+;  * ignore it, return weird values.
+;  * return MAX-UINT.
+;  * type an error message & abort.
+;  * throw an exception (which will type a message & abort).
+;     ANS FORTH defines some exception codes for this.
+; So far we choose to ignore it - see the commented out "bcs @overflow".
 ;------------------------------------------------------------------------------
-.macro SHIFTSUB32
-.scope
-                ASL     NOS,X           ; quotient  <<= 1; old bit15 → carry
-                ROL     TOS,X           ; remainder <<= 1; carry → bit0
-                BCS     @forced_sub     ; bit 16 overflow - remainder is >= divisor
-                LDA     TOS,X           ; current remainder
+
+.macro SHIFTSUB32                       ; do next quotient bit
+        .local L3,L8                    ; A contains dividend.hi
+                ROL     A               ; shift dividend.hi up
+                BCS     L3              ; dividend.hi >= divisor ?
+                CMP     TMPA
+                BCC     L8
+L3:             SBC     TMPA            ; dividend.hi-= divisor
                 SEC
-                SBC     TMPA            ; remainder - divisor
-                BCC     @restore        ; borrow → remainder < divisor, skip
-                STA     TOS,X           ; update remainder
-                INC     NOS,X           ; set quotient LSB
-                BRA     @restore
-@forced_sub:
-                LDA     TOS,X
-                SEC
-                SBC     TMPA
-                STA     TOS,X           ; subtraction is guaranteed valid here
-                INC     NOS,X
-@restore:
-.endscope
+L8:             ROL     NOS,X           ; shift c into quotient, div.lo into c
 .endmacro
 
         .proc   UMSLASHMOD_IMPL
         .a16
         .i16
-                POP                     ; load divisor
+                POP                     ; pop divisor
                 STA     TMPA            ; TMPA = divisor
                 ; Now: TOS,X = ud_high (remainder register)
                 ;      NOS,X = ud_low  (quotient register)
+                LDA     TOS,X           ; A= dividend.hi
+;               CMP     TMPA		; overflow or divide_by_zero ?
+;               BCS     @overflow
+                ASL     NOS,X           ; shift dividend.lo up for 1st bit
+
 .ifndef UNROLL
                 PHY                     ; save IP
-                LDY     #16             ; 16 iterations
-@loop:
-                SHIFTSUB32
+                LDY     #CELL_BITS/2    ; for each quotient bits in groups of 2
+loop:
+                SHIFTSUB32              ; do next quotient bit
+                SHIFTSUB32              ; do next quotient bit
                 DEY
-                BNE     @loop
+                BNE     loop
                 PLY                     ; restore IP
 .else
 .repeat 16      ; Unroll the loop for performance.
-                SHIFTSUB32
+                SHIFTSUB32              ; do next quotient bit
 .endrepeat
 .endif
                 ; TOS,X = remainder, NOS,X = quotient
                 ; swap to ANS order TOS=quotient NOS=remainder
-                LDA     TOS,X
-                STA     SCRATCH0
-                LDA     NOS,X
+                PHA                     ; save remainder
+                LDA     NOS,X           ; move quotient
                 STA     TOS,X
-                LDA     SCRATCH0
+                PLA
                 STA     NOS,X
                 RTS
         .endproc
@@ -1605,19 +1602,15 @@ DMIN_THEN:
 ; TRUE ( -- TRUE )
 ;------------------------------------------------------------------------------
         HEADER  "TRUE", TRUE_ENTRY, TRUE_CFA, 0, WITHIN_ENTRY
-        CODEPTR DOCOL
-        CELL    LIT_CFA
+        CODEPTR DOCON
         CELL    FORTH_TRUE              ; ( TRUE )
-        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; FALSE ( -- FALSE )
 ;------------------------------------------------------------------------------
         HEADER  "FALSE", FALSE_ENTRY, FALSE_CFA, 0, TRUE_ENTRY
-        CODEPTR DOCOL
-        CELL    LIT_CFA
+        CODEPTR DOCON
         CELL    FORTH_FALSE             ; ( TRUE )
-        CELL    EXIT_CFA
 
 ;------------------------------------------------------------------------------
 ; AND ( a b -- a&b )
@@ -1872,15 +1865,15 @@ DMIN_THEN:
                 PHX                     ; save PSP
                 CLC                     ; calc src end addr
                 ADC     PSP2,X
-                DEA
+                DEC     A
                 PHA
                 LDA     TOS,X           ; calc dest end addr
                 CLC
                 ADC     NOS,X
-                DEA
+                DEC     A
                 TAY
                 LDA     TOS,X           ; get u (# of bytes to move)
-                DEA                     ; adjust for mvp
+                DEC     A               ; adjust for mvp
                 PLX                     ; point at src last byte
                 MVP     0,0             ; do the move
                 PLX                     ; restore PSP
@@ -1902,7 +1895,7 @@ DMIN_THEN:
         .i16
                 LDA     TOS,X           ; get u (# of bytes to move)
                 BEQ     @return
-                DEA                     ; decrement byte count for mvn
+                DEC     A               ; decrement byte count for mvn
                 PHX                     ; save PSP
                 PHY                     ; save IP
                 LDY     PSP2,X          ; prefetch src
@@ -4403,167 +4396,100 @@ QUIT_LOOP:
 ;   +3  name chars   (len bytes)
 ;       .align CELL_SIZE
 ;       CFA:         code pointer (2 bytes) <- execution token
+; Note: this name compare is case insensitive.  'A'=='a'
 ;------------------------------------------------------------------------------
         HEADER  "FIND", FIND_ENTRY, FIND_CFA, 0, ACCEPT_ENTRY
         CODEPTR FIND_CODE
         PUBLIC  FIND_CODE
         .a16
         .i16
-
-        ; Stack frame locals (DP points here after TCD):
-        LOC_ADDR    = 1         ; input lp string addr (preserved for not-found)
-        LOC_LEN     = 3         ; name length from search string (cached)
-        LOC_ENTRY   = 5         ; current dictionary entry pointer
-        LOC_NAMEPTR = 7         ; pointer to name chars in current entry
-        LOC_FLAGS   = 9         ; flags|len byte of current entry
-        LOC_CFA     = 11        ; CFA of matched entry
-        LOC_RESULT  = 13        ; result flag (1 or -1)
-        LOC_SIZE    = LOC_RESULT + 1    ; = 14 bytes
-        ;   (saved IP at LOC_SIZE+1,S pushed by PHY)
-        ;   (saved DP at LOC_SIZE+3,S pushed by PHD)
-
-                PHD                     ; Save DP
                 PHY                     ; Save IP
 
-                TSC                     ; Reserve stack frame
-                SEC
-                SBC     #LOC_SIZE
-                TCS
-                TCD                     ; DP -> stack frame
-
-                ;--------------------------------------------------------------
-                ; Load LATEST to start dictionary walk
-                ;--------------------------------------------------------------
-                LDA     a:UP
-                STA     LOC_ADDR        ; Use LOC_ADDR before it is initialized
-                LDY     #U_LATEST
-                LDA     (LOC_ADDR),Y    ; LATEST -> first entry to check
-                STA     LOC_ENTRY
-
-                ;--------------------------------------------------------------
-                ; Load input addr from TOS, cache name length
-                ;--------------------------------------------------------------
-                LDA     a:TOS,X         ; addr (counted string)
-                STA     LOC_ADDR
-
-                OFF16MEM
-                LDA     (LOC_ADDR)      ; length byte of search string
-                ON16MEM
+                LDY     0,X             ; get pattern addr
+                STY     SCRATCH1        ; copy to indirect-able variable
+                LDA     a:0,Y           ; get pattern length
                 AND     #$00FF
-                STA     LOC_LEN         ; cache search name length
+                STA     TMPA
+
+                LDY     UP
+                LDA     a:U_LATEST,Y    ; get first word to check
+                BRA     @nextw2
 
                 ;--------------------------------------------------------------
-                ; Main dictionary walk loop
+@next_word:     ; Main wordlist walk loop
                 ;--------------------------------------------------------------
-@next_entry:
-                LDA     LOC_ENTRY
-                BEQ     @not_found      ; Link = 0 -> end of chain
-
-                ;--------------------------------------------------------------
-                ; Fetch flags|len byte at entry+2, check hidden
-                ;--------------------------------------------------------------
-                LDA     LOC_ENTRY
-                CLC
-                ADC     #CELL_SIZE      ; Point to flags|len byte
-                STA     LOC_NAMEPTR     ; Temporarily use LOC_NAMEPTR as ptr
-
-                OFF16MEM
-                LDA     (LOC_NAMEPTR)   ; flags|len byte
                 ON16MEM
-                AND     #$00FF
-                STA     LOC_FLAGS       ; Save full flags|len
+                LDY     SCRATCH0        ; Y = ptr to word length & name
+                DEY                     ; move back to start of word header
+                DEY
+@next_link:     LDA     a:0,Y           ; follow link to next word
+@nextw2:        TAY                     ; Y = base to the word header
+                BEQ     @not_found      ; end of wordlist?
 
-                ; Check hidden flag
-                AND     #F_HIDDEN
-                BNE     @follow_link    ; Hidden -> skip this entry
+                LDA     a:2,Y           ; get flags | length byte
 
-                ; Check name length match
-                LDA     LOC_FLAGS
-                AND     #F_LENMASK      ; Isolate length field
-                CMP     LOC_LEN         ; Compare with search length
-                BNE     @follow_link    ; Lengths differ -> no match
+                ; isolate length & hidden bits, include F_HIDDEN
+                ; because if set it causes a length mismatch
+                AND     #F_LENMASK|F_HIDDEN
+                CMP     TMPA            ;  same as pattern length?
+                BNE     @next_link
 
-                ;--------------------------------------------------------------
                 ; Lengths match: compare name bytes
-                ; LOC_NAMEPTR currently points to flags|len byte;
-                ; advance by 1 to point to first name character.
-                ; Search string chars start at LOC_ADDR+1.
-                ;--------------------------------------------------------------
-                INC     LOC_NAMEPTR     ; Now points to entry name chars
 
-                LDA     LOC_ADDR
-                INC     A               ; Point past length byte
-                STA     LOC_CFA         ; Borrow LOC_CFA as search char ptr
-
-                LDY     #0              ; Byte index
-@cmp_loop:
-                OFF16MEM
-                LDA     (LOC_NAMEPTR),Y ; Entry name byte
-                CMP     (LOC_CFA),Y     ; Search string byte
-                ON16MEM
-                BNE     @follow_link    ; Mismatch -> try next entry
-
+                INY                     ; move up to start of length & name
                 INY
-                CPY     LOC_LEN         ; Compared all bytes?
-                BNE     @cmp_loop       ; No -> continue
+                STY     SCRATCH0
 
-                ;--------------------------------------------------------------
-                ; Full name match. Compute CFA.
+                LDY     TMPA            ; Y = offset of last char of name+1
+                INY
+                OFF16MEM
+@next_char:     DEY                     ;   step to previous char of name
+                BEQ     @found
+                LDA     (SCRATCH0),Y    ;   get header char
+                EOR     (SCRATCH1),Y    ;   compare with pattern char
+                BEQ     @next_char      ;   exact match?
+                BIT     #$DF            ;   possible ASCII case mismatch?
+                BNE     @next_word
+                LDA     (SCRATCH0),Y    ;   make sure it is a letter
+                AND     #$DF
+                SBC     #'A'
+                CMP     #'Z'-'A'+1
+                BCC     @next_char
+                BRA     @next_word
+
+@found:         ; Full name match. Compute CFA.
                 ; CFA = entry + 2 (link) + 1 (flags|len) + namelen, .align 2
                 ; i.e. (entry + 3 + namelen) rounded up to next even address.
-                ;--------------------------------------------------------------
-                LDA     LOC_ENTRY
+                ON16MEM
+                LDA     SCRATCH0        ; get addr of flags|length byte
+                INC     A               ; + offset to 1st char of name
                 CLC
-                ADC     #3              ; Skip link(2) + flags|len(1)
-                ADC     LOC_LEN         ; Skip name bytes
-                INC     A               ; Round up: if odd, +1 makes even;
-                AND     #(UINT_MAX - 1) ; if even, +1 then mask gives same even
-                STA     LOC_CFA         ; LOC_CFA = CFA (execution token)
+                ADC     TMPA            ; + name_length
+                INC     A               ; .align CELL_SIZE
+                AND     #$FFFE
+                STA     0,X             ; save xt
 
                 ; Determine result flag from F_IMMEDIATE
-                LDA     LOC_FLAGS
+                LDA     (SCRATCH0)      ; get flags|length byte
                 AND     #F_IMMEDIATE
                 BEQ     @normal_word
                 LDA     #FORTH_TRUE     ; Immediate -> -1
-                BRA     @store_result
+                BRA     @return
+
 @normal_word:
                 LDA     #1              ; Normal -> 1
-@store_result:
-                STA     LOC_RESULT
-
-                ; Push xt then flag
-                LDA     LOC_CFA
-                STA     a:TOS,X         ; Replace addr on TOS with xt
-                LDA     LOC_RESULT
                 BRA     @return
 
                 ;--------------------------------------------------------------
-                ; Follow link to next entry
+@not_found:     ; Not found: leave original addr on stack, push 0
                 ;--------------------------------------------------------------
-@follow_link:
-                LDA     (LOC_ENTRY)     ; Fetch link field (at offset 0)
-                STA     LOC_ENTRY
-                BRA     @next_entry
+                LDA     #0
 
                 ;--------------------------------------------------------------
-                ; Not found: leave original addr on stack, push 0
+@return:        ; Single return path
                 ;--------------------------------------------------------------
-@not_found:
-                ; addr is still at a:TOS,X (untouched)
-                LDA     #FORTH_FALSE    ; 0
-
-                ;--------------------------------------------------------------
-                ; Single return path
-                ;--------------------------------------------------------------
-@return:
-                ADVANCE                 ; Push flag onto parameter stack
-                STA     a:TOS,X
-                TSC                     ; Tear down frame
-                CLC
-                ADC     #LOC_SIZE
-                TCS
+                PUSH                    ; push result flag
                 PLY                     ; Restore IP
-                PLD                     ; Restore DP
                 NEXT
         ENDPUBLIC
 
@@ -4830,7 +4756,7 @@ print_udec:
                 PHA
 @while:	                                ; divide TOS by base
                 STZ     BCD             ; clr BCD
-                LDY     #16             ; {>} = loop counter
+                LDY     #CELL_BITS      ; {>} = loop counter
 @foreachbit:
                 ASL     NUM_LSB         ; TOS is gradually replaced
                 ROL     NUM_MSB         ; with the quotient
