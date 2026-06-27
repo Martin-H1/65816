@@ -24,9 +24,10 @@ T{ 65533 65533 UM* -> 9 65530 }T
 T{ 65533 20 UM* -> 65476 19 }T
 
 \ UM/MOD
-T{ 1025 0 14 UM/MOD -> 3 73 }T
-T{ 1025 0 0  UM/MOD -> 1025 -1 }T
-T{ 10 0 5712 UM/MOD -> 10 0 }T
+T{ 1025 0   14   UM/MOD ->    3 73 }T
+T{ 1025 0    0   UM/MOD -> 1025 -1 }T
+T{ 10   0 5712   UM/MOD ->   10  0 }T
+T{ -1  -3   -1   UM/MOD ->   -3 -2 }T
 T{ 418410. 57121 UM/MOD -> 18563 7 }T
 
 \ Extended tests from Forth-standard.org

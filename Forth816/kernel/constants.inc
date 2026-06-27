@@ -18,7 +18,8 @@ PAD_BASE        = $0400         ; PAD at $0400
 PAD_SIZE        = $00FF         ; PAD area is one page.
 PAD_END         = PAD_BASE + PAD_SIZE
 
-CELL_SIZE = 2                   ; Cells are 16 bits wide.
+CELL_SIZE = 2                   ; Cells are two bytes wide.
+CELL_BITS = 16                  ; Cells are 16 bits wide.
 
 ; User area base and offsets
 UP_BASE         = $0500
