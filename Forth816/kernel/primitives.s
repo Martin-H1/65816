@@ -713,13 +713,7 @@ calc_depth:     TXA
 ;  * quotient overflow
 ;  * divide by zero (sort of a special case of overflow)
 ; Overflow example: $80058000. 10 um/mod u. u. 36044 8  ok
-; Possible responses are:
-;  * ignore it, return weird values.
-;  * return MAX-UINT.
-;  * type an error message & abort.
-;  * throw an exception (which will type a message & abort).
-;     ANS FORTH defines some exception codes for this.
-; So far we choose to ignore it - see the commented out "bcs @overflow".
+; To handle it return MAX-UINT for quotient and remainder
 ;------------------------------------------------------------------------------
 
 .macro SHIFTSUB32                       ; do next quotient bit
@@ -737,23 +731,51 @@ L8:             ROL     NOS,X           ; shift c into quotient, div.lo into c
         .a16
         .i16
                 POP                     ; pop divisor
+                PHY                     ; save IP
                 STA     TMPA            ; TMPA = divisor
                 ; Now: TOS,X = ud_high (remainder register)
                 ;      NOS,X = ud_low  (quotient register)
-                LDA     TOS,X           ; A= dividend.hi
-;               CMP     TMPA		; overflow or divide_by_zero ?
-;               BCS     @overflow
-                ASL     NOS,X           ; shift dividend.lo up for 1st bit
+                LDY     TOS,X           ; A= dividend.hi
+                CPY     TMPA            ; overflow or divide_by_zero ?
+                BCC     @no_overflow
 
+                LDA     #UINT_MAX       ; on error return -1 for both values.
+                STA     TOS,X
+                STA     NOS,X
+                PLY
+                RTS
+
+@no_overflow:   EOR     #$FFFF          ; check divisor for power of 2
+                INC     A
+                AND     TMPA
+                CMP     TMPA
+                BNE     @not_power_of_two
+
+                ; Power of two allows special case performance optimization.
+                DEC     A               ; mask to get remainder
+                AND     NOS,X
+                TAY
+                LDA     NOS,X           ; shift to get quotient
+                STY     NOS,X
+                BRA     @skip
+@shift_loop:    LSR     TOS,X
+                ROR     A
+@skip:          LSR     TMPA
+                BNE     @shift_loop
+                STA     TOS,X
+                PLY
+                RTS
+
+@not_power_of_two:
+                LDA     TOS,X           ; A= dividend.hi
+                ASL     NOS,X           ; shift dividend.lo up for 1st bit
 .ifndef UNROLL
-                PHY                     ; save IP
                 LDY     #CELL_BITS/2    ; for each quotient bits in groups of 2
-loop:
+@loop:
                 SHIFTSUB32              ; do next quotient bit
                 SHIFTSUB32              ; do next quotient bit
                 DEY
-                BNE     loop
-                PLY                     ; restore IP
+                BNE     @loop
 .else
 .repeat 16      ; Unroll the loop for performance.
                 SHIFTSUB32              ; do next quotient bit
@@ -766,6 +788,7 @@ loop:
                 STA     TOS,X
                 PLA
                 STA     NOS,X
+                PLY                     ; restore IP
                 RTS
         .endproc
 
@@ -3379,8 +3402,7 @@ ABORTQUOTE_CLOOP:
         ENDPUBLIC
 
 ;------------------------------------------------------------------------------
-; PLACE ( c-addr u dest -- ) copy addr/len string to dest as counted string
-; with uppercase conversion.
+; PLACE ( c-addr u dest -- ) copy addr/len string to dest as counted string.
 ;------------------------------------------------------------------------------
         HEADER  "PLACE", PLACE_ENTRY, PLACE_CFA, 0, SKIPCHAR_ENTRY
         CODEPTR PLACE_CODE
@@ -3403,38 +3425,21 @@ ABORTQUOTE_CLOOP:
                 ; Store count byte at dest
                 LDY     #0
                 LDA     LOC_COUNT,S
-                OFF16MEM
                 STA     (LOC_DEST,S),Y  ; count byte at dest+0
-                ON16MEM
-
-                ; Advance dest to dest+1 for char copy
-                LDA     LOC_DEST,S
-                INC     A
-                STA     LOC_DEST,S
-
-                OFF16MEM
 @copy_loop:
                 TYA
                 CMP     LOC_COUNT,S
                 BCS     @done
 
                 LDA     (LOC_SRC,S),Y   ; fetch src char
-                ; Uppercase conversion
-                CMP     #'a'
-                BCC     @not_lower
-                CMP     #'z'+1
-                BCS     @not_lower
-                AND     #$DF
-@not_lower:
-                STA     (LOC_DEST,S),Y  ; store to dest+1+Y
                 INY
+                STA     (LOC_DEST,S),Y  ; store to dest+1+Y
                 BRA     @copy_loop
 
 @done:
-                ON16MEM
-                PLA                     ; drop LOC_SRC
-                PLA                     ; drop LOC_COUNT
-                PLA                     ; drop LOC_DEST
+                PLA                     ; RDrop LOC_SRC
+                PLA                     ; RDrop LOC_COUNT
+                PLA                     ; RDrop LOC_DEST
                 PLY
                 NEXT
         ENDPUBLIC
@@ -4403,12 +4408,13 @@ QUIT_LOOP:
         PUBLIC  FIND_CODE
         .a16
         .i16
+
                 PHY                     ; Save IP
 
-                LDY     0,X             ; get pattern addr
+                LDY     TOS,X           ; get pattern addr
                 STY     SCRATCH1        ; copy to indirect-able variable
-                LDA     a:0,Y           ; get pattern length
-                AND     #$00FF
+                LDA     a:0,Y           ; get pattern length & 1st char
+                AND     #$DFFF          ; force 1st char to ASCII uppercase
                 STA     TMPA
 
                 LDY     UP
@@ -4426,21 +4432,22 @@ QUIT_LOOP:
 @nextw2:        TAY                     ; Y = base to the word header
                 BEQ     @not_found      ; end of wordlist?
 
-                LDA     a:2,Y           ; get flags | length byte
-
-                ; isolate length & hidden bits, include F_HIDDEN
-                ; because if set it causes a length mismatch
-                AND     #F_LENMASK|F_HIDDEN
-                CMP     TMPA            ;  same as pattern length?
+                LDA     a:CELL_SIZE,Y   ; get flags|length byte & 1st char
+                                        ; isolate length, hidden bit & 1st char.
+                                        ; Also force to ASCII uppercase
+                AND     #$DF00|F_LENMASK|F_HIDDEN
+                ;  trick: F_HIDDEN flag set will cause a mismatch
+                CMP     TMPA            ;  same as pattern length & 1st char?
                 BNE     @next_link
 
-                ; Lengths match: compare name bytes
+                ; Lengths match, 1st char probably matches : compare name bytes
 
                 INY                     ; move up to start of length & name
                 INY
                 STY     SCRATCH0
 
-                LDY     TMPA            ; Y = offset of last char of name+1
+                AND     #F_LENMASK      ; Y = offset of last char of name+1
+                TAY
                 INY
                 OFF16MEM
 @next_char:     DEY                     ;   step to previous char of name
@@ -4448,10 +4455,11 @@ QUIT_LOOP:
                 LDA     (SCRATCH0),Y    ;   get header char
                 EOR     (SCRATCH1),Y    ;   compare with pattern char
                 BEQ     @next_char      ;   exact match?
-                BIT     #$DF            ;   possible ASCII case mismatch?
+                BIT     #$DF            ;   not just a possible ASCII case mismatch?
                 BNE     @next_word
                 LDA     (SCRATCH0),Y    ;   make sure it is a letter
                 AND     #$DF
+                SEC
                 SBC     #'A'
                 CMP     #'Z'-'A'+1
                 BCC     @next_char
@@ -4461,10 +4469,10 @@ QUIT_LOOP:
                 ; CFA = entry + 2 (link) + 1 (flags|len) + namelen, .align 2
                 ; i.e. (entry + 3 + namelen) rounded up to next even address.
                 ON16MEM
-                LDA     SCRATCH0        ; get addr of flags|length byte
-                INC     A               ; + offset to 1st char of name
-                CLC
-                ADC     TMPA            ; + name_length
+                LDA     TMPA
+                AND     #$FF            ; get length
+                SEC                     ; + offset to 1st char of name
+                ADC     SCRATCH0        ; + addr of flags|length byte
                 INC     A               ; .align CELL_SIZE
                 AND     #$FFFE
                 STA     0,X             ; save xt

@@ -67,7 +67,7 @@ T{ STR-BACKSLASH DROP 2 + C@ -> $5C }T
 \ Quote escape
  ok 
 : STR-QUOTE S\" hi\"bye" ;
-error: Undefined word BYE"
+error: Undefined word bye"
 T{ STR-QUOTE NIP -> 6 }T
 error: Undefined word STR-QUOTE
 T{ STR-QUOTE DROP 2 + C@ -> $22 }T
